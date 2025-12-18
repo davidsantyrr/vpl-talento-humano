@@ -28,7 +28,7 @@
             <label for="password">Contraseña:</label>
             <input id="password" type="password" name="password" required>
             @error('password')
-                <p style="color: red;">{{ $message }}</p>
+                <p style="color:red;">{{ $message }}</p>
             @enderror
         </div>
         <button type="submit">Iniciar sesión</button>
