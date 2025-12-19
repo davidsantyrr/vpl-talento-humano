@@ -13,3 +13,7 @@ Route::get('/login', function () {
 });
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
+
+Route::get('/menu', function () {
+    return view('menu');
+});
