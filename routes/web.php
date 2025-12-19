@@ -17,3 +17,9 @@ Route::post('/login', [AuthController::class, 'login'])->name('login');
 Route::get('/menu', function () {
     return view('menu');
 });
+Route::get('/entregas', function () {
+    return view('sidebarComponente');
+});
+Route::get('/registro', function () {
+    return view('formRegitreUserExtern');
+});
