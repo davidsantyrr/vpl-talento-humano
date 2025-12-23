@@ -1,0 +1,39 @@
+.header{
+    background-color: #F78008;
+    border-radius: 10px;
+    align-items: center;
+}
+.navegacion{
+    display: flex;
+    gap: 15px;
+    justify-content: space-evenly;
+    color: white;
+    padding: 2px;
+}
+.logoVigia{
+            height: 50px;
+            width: auto;
+            margin: 0;
+            border-radius: 8px;
+}
+.cerrarSesion{
+    background-color: #0929b8;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.header nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+        
+        }
+.opciones{
+    display: flex;
+    gap: 30px;
+    align-items: center;
+    justify-content: space-between;
+}
