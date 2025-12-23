@@ -14,7 +14,9 @@ class VplAuth
         $token = session('auth.token');
 
         if (!$user || !$token) {
-            return redirect('/login');
+            // Redirigir a inicio con mensaje para el toast
+            return redirect('/')
+                ->with('errorMessage', 'Debes iniciar sesión para poder ingresar.');
         }
 
         View::share('authUser', $user);
