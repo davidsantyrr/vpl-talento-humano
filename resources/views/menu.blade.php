@@ -34,7 +34,7 @@
                 </div>
 
                 <div class="card__actions">
-                    <button class="btn" type="button">Ingresar</button>
+                    <button class="btn" type="button" href="#">Ingresar</button>
                 </div>
             </div>
 

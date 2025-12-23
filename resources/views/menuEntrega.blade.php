@@ -5,126 +5,101 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú de Entregas</title>
     <link rel="stylesheet" href="{{ asset('css/menuEntrega.css') }}">
+    <!-- Font Awesome 6 (reliable CDN) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 </head>
 <body>
-  <div class="page-head">
+  <header class="page-head" role="banner">
     <h1>Menú de Entregas</h1>
     <p>Accede rápidamente a las funciones de inventario y gestión de entregas</p>
-  </div>
-  <div class="container">
-    <div class="cards">
+  </header>
+  <main class="container" role="main">
+    <section class="cards" aria-label="Accesos rápidos">
       <!-- Inventario -->
-      <article class="card c-blue">
+      <article class="card c-blue" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon cajas -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
-              <rect x="13" y="3" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
-              <rect x="3" y="13" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M17 13v8" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M13 17h8" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-boxes-stacked"></i>
           </div>
           <h3>Inventario</h3>
+          <p class="desc">Administra y consulta el stock de elementos disponibles</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-blue" aria-label="Ingresar a Inventario">Ingresar</a></div>
       </article>
 
       <!-- Realizar cambio -->
-      <article class="card c-orange">
+      <article class="card c-orange" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon cambio -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M7 7h10l-3-3M17 17H7l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-arrows-rotate"></i>
           </div>
           <h3>Realizar cambio</h3>
+          <p class="desc">Registra cambios o reemplazos de elementos entregados</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-orange" aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
       </article>
 
       <!-- Realizar entrega -->
-      <article class="card c-green">
+      <article class="card c-green" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon caja entrega -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M3 9l9-5 9 5v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M12 4v16" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-box-open"></i>
           </div>
           <h3>Realizar entrega</h3>
+          <p class="desc">Procesa nuevas entregas de elementos a usuarios</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-green" aria-label="Ingresar a Realizar entrega">Ingresar</a></div>
       </article>
 
       <!-- Histórico de entregas -->
-      <article class="card c-red">
+      <article class="card c-red" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon reloj-lista -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="7" cy="7" r="3.5" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M7 5v2l1.2 1.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-              <rect x="12" y="6" width="8" height="2" rx="1" fill="currentColor"/>
-              <rect x="12" y="11" width="8" height="2" rx="1" fill="currentColor"/>
-              <rect x="12" y="16" width="8" height="2" rx="1" fill="currentColor"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-clock-rotate-left"></i>
           </div>
-          <h3>Historico de entregas</h3>
+          <h3>Histórico de entregas</h3>
+          <p class="desc">Consulta y gestiona el registro de entregas realizadas</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-red" aria-label="Ingresar a Histórico de entregas">Ingresar</a></div>
       </article>
 
       <!-- Configuración de notificación -->
-      <article class="card c-yellow">
+      <article class="card c-yellow" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon campana -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M18 8a6 6 0 10-12 0c0 7-3 7-3 7h18s-3 0-3-7" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" stroke-width="1.6"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-bell"></i>
           </div>
           <h3>Configuración de notificación</h3>
+          <p class="desc">Define alertas y avisos automáticos para el inventario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-yellow" aria-label="Ingresar a Configuración de notificación">Ingresar</a></div>
       </article>
 
       <!-- Consultar elementos por usuario -->
-      <article class="card c-purple">
+      <article class="card c-purple" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon lupa -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M16.5 16.5L20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-magnifying-glass"></i>
           </div>
           <h3>Consultar elementos por usuario</h3>
+          <p class="desc">Busca rápidamente los elementos asignados a un usuario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-purple" aria-label="Ingresar a Consultar elementos por usuario">Ingresar</a></div>
       </article>
 
       <!-- Configurar elementos por cargo -->
-      <article class="card c-cyan">
+      <article class="card c-cyan" role="article">
         <div class="card__top">
-          <div class="icon">
-            <!-- icon engranaje usuario -->
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M3 20a7 7 0 0 1 14 0" stroke="currentColor" stroke-width="1.6"/>
-              <path d="M18.5 10.5l1 .6 1-.6v-1.2l-1-.6-1 .6z" stroke="currentColor" stroke-width="1.4"/>
-            </svg>
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-user-gear"></i>
           </div>
           <h3>Configurar elementos por cargo</h3>
+          <p class="desc">Establece los elementos por tipo de cargo o rol</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-cyan" aria-label="Ingresar a Configurar elementos por cargo">Ingresar</a></div>
       </article>
 
-    </div>
-  </div>
+    </section>
+  </main>
 </body>
 </html>
