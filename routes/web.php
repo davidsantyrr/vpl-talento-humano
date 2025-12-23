@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Middleware\VplAuth;
 
 Route::get('/', function () {
     return view('index');
@@ -14,6 +15,8 @@ Route::get('/login', function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-Route::get('/menu', function () {
-    return view('menu');
+// Proteger rutas con el middleware por clase directamente
+Route::middleware([VplAuth::class])->group(function () {
+    Route::get('/menu', function () { return view('menu'); });
+    Route::get('/menuentrega', function () { return view('menuEntrega'); });
 });

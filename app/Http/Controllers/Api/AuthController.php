@@ -34,19 +34,37 @@ class AuthController extends Controller
 
         if ($response->successful()) {
             $data = $response->json();
-            // Soporta el esquema de la API: access_token + token_type
             $accessToken = $data['access_token'] ?? null;
             $tokenType = $data['token_type'] ?? 'Bearer';
             $token = $accessToken ? ($tokenType . ' ' . $accessToken) : null;
 
-            if (!$token) {
+            if (!$token || empty($data['user'])) {
                 return back()->withInput()->with(['errorMessage' => 'Respuesta inválida del servidor de autenticación.']);
             }
 
-            // Guardar token en cookie segura httpOnly (1 día)
+            // Guardar cookie httpOnly (1 día)
             Cookie::queue(Cookie::make('auth_token', $token, 60 * 24, '/', null, false, true, false, 'Lax'));
 
-            return back()->with(['successMessage' => 'Inicio de sesión exitoso.']);
+            // Persistir en sesión para middleware y vistas
+            session([
+                'auth.user' => $data['user'],
+                'auth.token' => $token,
+            ]);
+
+            // Determinar redirección por rol
+            $roles = collect($data['user']['roles'] ?? [])
+                ->pluck('roles')
+                ->filter()
+                ->map(fn($r) => strtolower(trim($r)));
+
+            if ($roles->contains('talento_humano') || $roles->contains('talento humano')) {
+                return redirect('/menu');
+            }
+            if ($roles->contains('hseq')) {
+                return redirect('/menuentrega');
+            }
+            // Por defecto, enviar a /menu
+            return redirect('/menu');
         }
 
         $message = $response->json('message') ?? 'Credenciales inválidas.';

@@ -1,0 +1,230 @@
+/* Menú Entregas (UI refinada) */
+:root {
+    --radius: 16px;
+    --shadow: 0 12px 28px rgba(2, 6, 23, 0.12);
+    --shadow-hover: 0 20px 60px rgba(2, 6, 23, 0.16);
+    --text: #0f172a;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0
+}
+
+body {
+    background: #dcdcdc;
+    font-family: 'Poppins', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: var(--text);
+}
+
+.page-head {
+    max-width: 1200px;
+    margin: 20px auto 6px auto;
+    padding: 0 14px;
+    text-align: center
+}
+
+.page-head h1 {
+    margin: 0 0 4px 0;
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827
+}
+
+.page-head p {
+    margin: 0;
+    color: #475569;
+    font-size: 13px
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 14px
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 28px
+}
+
+.card {
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+    transition: transform .25s ease, box-shadow .25s ease
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover)
+}
+
+.card:focus-within {
+    outline: 2px solid rgba(79, 70, 229, 0.25);
+    outline-offset: 2px
+}
+
+.card__top {
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative
+}
+
+.icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
+    transition: transform .2s ease
+}
+
+.icon svg {
+    width: 70px;
+    height: 70px;
+    display: block;
+    stroke: #0b1220
+}
+
+.card:hover .icon {
+    transform: translateY(-4px)
+}
+
+.card__top h3 {
+    margin: 0 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    text-align: center
+}
+
+.card__footer {
+    background: #fff;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.btn {
+    display: inline-block;
+    padding: 9px 20px;
+    border-radius: 999px;
+    font-weight: 800;
+    color: #111827;
+    text-decoration: none;
+    box-shadow: 0 8px 26px rgba(0, 0, 0, 0.10);
+    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.14);
+    filter: brightness(.98)
+}
+
+.btn:focus {
+    outline: 3px solid rgba(50, 200, 150, 0.18);
+    outline-offset: 2px
+}
+
+/* Paletas por tarjeta */
+.c-blue .card__top {
+    background: #cfe9ff
+}
+
+.c-blue .btn {
+    background: #b9dbff
+}
+
+.c-orange .card__top {
+    background: #f9c980
+}
+
+.c-orange .btn {
+    background: #f7b961
+}
+
+.c-green .card__top {
+    background: #16a34a
+}
+
+.c-green .icon svg {
+    stroke: #081a14
+}
+
+.c-green .card__top h3 {
+    color: #052e26
+}
+
+.c-green .btn {
+    background: #8cd0a8
+}
+
+.c-red .card__top {
+    background: #ff6b6b
+}
+
+.c-red .btn {
+    background: #ff9a9a
+}
+
+.c-yellow .card__top {
+    background: #f7ff8a
+}
+
+.c-yellow .btn {
+    background: #eef26e
+}
+
+.c-purple .card__top {
+    background: #c7a2ff
+}
+
+.c-purple .btn {
+    background: #b38cff
+}
+
+.c-cyan .card__top {
+    background: #98f1ff
+}
+
+.c-cyan .btn {
+    background: #80e6fb
+}
+
+@media (max-width:520px) {
+    .card__top {
+        height: 180px
+    }
+
+    .icon {
+        width: 84px;
+        height: 84px
+    }
+
+    .icon svg {
+        width: 64px;
+        height: 64px
+    }
+}

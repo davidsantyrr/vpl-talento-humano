@@ -25,13 +25,7 @@
 
                 <h1>Inicio de sesion</h1>
 
-                @if (session('successMessage'))
-                    <p class="session-message success">{{ session('successMessage') }}</p>
-                @endif
-
-                @if (session('errorMessage'))
-                    <p class="session-message error">{{ session('errorMessage') }}</p>
-                @endif
+                {{-- Eliminar mensaje superior; se mostrará como popup --}}
 
                 <div class="input-group">
                     <label for="email">Correo:</label>
@@ -173,6 +167,22 @@
         }
       });
     }
+
+    // Mostrar error como toast en esquina si existe en sesión
+    @if (session('errorMessage'))
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+          toast.addEventListener('mouseenter', Swal.stopTimer)
+          toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+      });
+      Toast.fire({ icon: 'error', title: @json(session('errorMessage')) });
+    @endif
     </script>
 </body>
 </html>
