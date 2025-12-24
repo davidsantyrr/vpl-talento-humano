@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menu Principal</title>
-    <link rel="stylesheet" href="{{ asset('css/styleMenu.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/menus/styleMenu.css') }}">
 </head>
 <body>
     <div class="head">

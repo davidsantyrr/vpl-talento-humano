@@ -12,11 +12,6 @@
   @stack('styles')
 </head>
 <body style="font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial">
-  <nav class="navbar navbar-expand-lg navbar-light bg-light mb-3 border-bottom">
-    <div class="container-fluid">
-      <a class="navbar-brand fw-bold" href="{{ url('/') }}">{{ config('app.name', 'VPL') }}</a>
-    </div>
-  </nav>
 
   <main class="py-3">
     @yield('content')

@@ -65,12 +65,12 @@ class AuthController extends Controller
 
         // Mapa de rutas por rol principal
         $roleRouteMap = [
-            'talento_humano' => '/menu',
-            'talento humano' => '/menu',
-            'hseq' => '/menuentrega',
+            'talento_humano' => '/menus/menu',
+            'talento humano' => '/menus/menu',
+            'hseq' => '/menus/menuentrega',
         ];
 
-        $redirect = '/menu'; // ruta por defecto
+        $redirect = '/menus/menu'; // ruta por defecto
         foreach ($roles as $role) {
             if (array_key_exists($role, $roleRouteMap)) {
                 $redirect = $roleRouteMap[$role];
@@ -79,5 +79,30 @@ class AuthController extends Controller
         }
 
         return redirect($redirect);
+    }
+
+    public function logout(Request $request)
+    {
+        $baseUrl = rtrim(config('app.vpl_core') ?: env('VPL_CORE'), '/');
+        $endpoint = $baseUrl . '/api/auth/logout';
+
+        $token = session('auth.token');
+        if ($token) {
+            try {
+                Http::withHeaders(['Authorization' => $token])
+                    ->acceptJson()
+                    ->post($endpoint);
+            } catch (\Throwable $e) {
+                Log::warning('VPL logout error', ['error' => $e->getMessage()]);
+            }
+        }
+
+        // Clear session and cookie
+        Cookie::queue(Cookie::forget('auth_token'));
+        $request->session()->forget(['auth.user', 'auth.token']);
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/')->with('status', 'Sesión cerrada correctamente.');
     }
 }

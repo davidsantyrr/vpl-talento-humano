@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menú de Entregas</title>
-    <link rel="stylesheet" href="{{ asset('css/menuEntrega.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/menus/menuEntrega.css') }}">
     <!-- Font Awesome 6 (reliable CDN) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 </head>
 <body>
+  <x-NavEntregasComponente />
   <header class="page-head" role="banner">
     <h1>Menú de Entregas</h1>
     <p>Accede rápidamente a las funciones de inventario y gestión de entregas</p>
@@ -24,7 +25,7 @@
           <h3>Inventario</h3>
           <p class="desc">Administra y consulta el stock de elementos disponibles</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-blue" aria-label="Ingresar a Inventario">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('articulos.index') }}" class="btn btn-blue" aria-label="Ingresar a Inventario">Ingresar</a></div>
       </article>
 
       <!-- Realizar cambio -->
