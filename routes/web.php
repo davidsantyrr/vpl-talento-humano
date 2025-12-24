@@ -22,3 +22,6 @@ Route::middleware([VplAuth::class])->group(function () {
     Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
     Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
 });
+Route::get('/formularioEntregas', function () {
+    return view('formularioEntregas');
+})->name('formularioEntregas');

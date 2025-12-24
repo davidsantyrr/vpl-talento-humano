@@ -1,0 +1,223 @@
+/* =========================
+    CONTENEDOR PRINCIPAL
+========================= */
+.container {
+    /* aumentado para que el formulario sea más ancho */
+    max-width: 1200px;
+    width: min(1200px, 95%);
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+
+}
+
+/* Wrapper que centra el contenido en la pantalla */
+.page-center {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* Evitar margen superior heredado y que el contenedor se adapte al centrado */
+.page-center .container {
+    margin: 0;
+    width: min(1200px, 95%);
+}
+
+/* =========================
+    TÍTULOS
+========================= */
+h2, h1 {
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* =========================
+    FORMULARIO
+========================= */
+.form-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control,
+select {
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+}
+
+.form-control:focus,
+select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.15rem rgba(13,110,253,.25);
+}
+
+/* Grid para inputs */
+form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+form .mb-3,
+form > div {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Botones */
+.btn {
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+form button {
+    grid-column: span 2;
+    justify-self: center;
+}
+
+/* =========================
+    TABLA DE ELEMENTOS
+========================= */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    overflow: hidden;
+    border-radius: 10px;
+}
+
+table thead,
+table tr:first-child {
+    background: #000;
+    color: #fff;
+}
+
+table td, table th {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+}
+
+table tr:last-child td {
+    border-bottom: none;
+}
+
+/* =========================
+    FIRMA
+========================= */
+.firma-container {
+    margin-top: 30px;
+    padding: 20px;
+    border-radius: 12px;
+    background: #f9f9f9;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+}
+
+#firmaCanvas {
+    width: 100%;
+    /* aumentar para que la firma ocupe más espacio en el formulario ancho */
+    max-width: 900px;
+    height: 180px;
+    border: 2px dashed #ccc;
+    border-radius: 12px;
+    background: #fff;
+    display: block;
+    margin: 0 auto 15px;
+}
+
+.acciones {
+    text-align: center;
+}
+
+.acciones button {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* =========================
+    MODAL PERSONALIZADA (REEMPLAZO)
+========================= */
+/* Overlay: degradado + blur, centrado y transición */
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+
+    /* degradado y ligero desenfoque */
+    background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.45));
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+
+    /* animación de entrada/salida */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+}
+
+/* Modal visible */
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Cuadro interno del modal: ampliar en pantallas grandes */
+.modal > div {
+    background: #fff;
+    width: 800px;
+    max-width: 95%;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+
+    /* evitar sobresalir de la pantalla y permitir scroll interno */
+    max-height: calc(100vh - 60px);
+    overflow: auto;
+}
+
+/* Etiquetas y formularios dentro del modal */
+.modal label {
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.modal select,
+.modal input {
+    margin-bottom: 15px;
+}
+
+/* Ajustes responsivos: ancho del cuadro más cómodo en móviles */
+@media (max-width: 480px) {
+    .modal > div {
+        width: calc(100% - 32px);
+        padding: 20px;
+        border-radius: 12px;
+    }
+}
+
+/* =========================
+    RESPONSIVE
+========================= */
+@media (max-width: 768px) {
+    form {
+        grid-template-columns: 1fr;
+    }
+
+    .container {
+        padding: 20px;
+    }
+}
