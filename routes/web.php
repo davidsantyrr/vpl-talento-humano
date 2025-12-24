@@ -2,6 +2,8 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Middleware\VplAuth;
+use App\Http\Controllers\articulos\ArticulosController;
 
 Route::get('/', function () {
     return view('index');
@@ -14,15 +16,10 @@ Route::get('/login', function () {
 
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
-Route::get('/menu', function () {
-    return view('menuth');
-});
-Route::get('/entregas', function () {
-    return view('NavEntregasComponente');
-});
-Route::get('/registro', function () {
-    return view('formRegitreUserExtern');
-});
-Route::get('/sidebar', function () {
-    return view('sidebarComponente');
+// Proteger rutas con el middleware por clase directamente
+Route::middleware([VplAuth::class])->group(function () {
+    Route::get('/menu', function () { return view('menu'); });
+    Route::get('/menuentrega', function () { return view('menuEntrega'); });
+    Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
+    Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
 });
