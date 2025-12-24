@@ -15,11 +15,14 @@ Route::get('/login', function () {
 Route::post('/login', [AuthController::class, 'login'])->name('login');
 
 Route::get('/menu', function () {
-    return view('menu');
+    return view('menuth');
 });
 Route::get('/entregas', function () {
-    return view('sidebarComponente');
+    return view('NavEntregasComponente');
 });
 Route::get('/registro', function () {
     return view('formRegitreUserExtern');
+});
+Route::get('/sidebar', function () {
+    return view('sidebarComponente');
 });
