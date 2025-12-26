@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/articulos/articulos.css') }}">
+<link rel="stylesheet" href="{{ asset('css/elementoxcargo/cargo.css') }}">
 <style>
   .cargo-page .actions { display:flex; gap:8px; align-items:center }
   .cargo-form, .cargo-edit-form { display:flex; gap:8px; align-items:center }
@@ -15,25 +15,16 @@
 <div class="container cargo-page">
   <h1>Gestión de Cargos</h1>
 
-  @if(session('status'))
-    <div class="alert success">{{ session('status') }}</div>
-  @endif
+  <div class="cargo-top">
+    <form class="cargo-form" method="POST" action="{{ route('cargos.store') }}">
+      @csrf
+      <input type="text" name="nombre" placeholder="Nuevo cargo" required>
+      <button class="btn primary" type="submit">Crear</button>
+    </form>
 
-  <form class="cargo-form" method="POST" action="{{ route('cargos.store') }}">
-    @csrf
-    <input type="text" name="nombre" placeholder="Nuevo cargo" required>
-    <button class="btn primary" type="submit">Crear</button>
-  </form>
-
-  <div class="actions" style="margin-top:10px">
-    <form method="GET" action="{{ route('cargos.index') }}" style="display:flex; gap:8px; align-items:center">
+    <form method="GET" action="{{ route('cargos.index') }}" class="search-bar">
       <input type="text" name="q" value="{{ $q }}" placeholder="Buscar cargo...">
-      <select name="per_page" onchange="this.form.submit()">
-        @foreach([5,10,20,50] as $n)
-          <option value="{{ $n }}" {{ (int)$perPage===$n?'selected':'' }}>{{ $n }}</option>
-        @endforeach
-      </select>
-      <button class="btn" type="submit">Filtrar</button>
+      <button class="btn" type="submit">Buscar</button>
     </form>
   </div>
 
@@ -59,7 +50,7 @@
               </form>
             </td>
             <td>
-              <form method="POST" action="{{ route('cargos.destroy', $cargo) }}" onsubmit="return confirm('¿Eliminar cargo?')">
+              <form method="POST" action="{{ route('cargos.destroy', $cargo) }}" class="form-delete">
                 @csrf
                 @method('DELETE')
                 <button class="btn danger" type="submit">Eliminar</button>
@@ -72,7 +63,47 @@
   </div>
 
   <div class="paginacion paginacion-compact">
-    {{ $cargos->links() }}
+    <form method="GET" action="{{ route('cargos.index') }}" class="page-size-form">
+      <input type="hidden" name="q" value="{{ $q }}">
+      <label for="per_page">Ver</label>
+      <select id="per_page" name="per_page" onchange="this.form.submit()">
+        @foreach([5,10,20,50] as $n)
+          <option value="{{ $n }}" {{ (int)$perPage===$n?'selected':'' }}>{{ $n }}</option>
+        @endforeach
+      </select>
+      <span>cargos</span>
+    </form>
+    {{ $cargos->links('pagination::bootstrap-4') }}
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+  (function(){
+    function toast(type, title){
+      Swal.fire({ toast:true, position:'top-end', icon:type, title:title, showConfirmButton:false, timer:2500, timerProgressBar:true });
+    }
+    @if(session('status'))
+      toast('success', @json(session('status')));
+    @endif
+
+    document.querySelectorAll('.form-delete').forEach(function(form){
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        Swal.fire({
+          title: '¿Eliminar cargo?',
+          text: 'Esta acción no se puede deshacer',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#2563eb',
+          cancelButtonColor: '#64748b',
+          confirmButtonText: 'Sí, eliminar',
+          cancelButtonText: 'Cancelar'
+        }).then(function(result){
+          if(result.isConfirmed){ form.submit(); }
+        });
+      });
+    });
+  })();
+</script>
 @endsection

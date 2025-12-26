@@ -33,4 +33,5 @@ Route::middleware([VplAuth::class])->group(function () {
     // Asignación de productos por cargo
     Route::get('/elementoxcargo/productos', [CargoProductosController::class, 'index'])->name('elementoxcargo.productos');
     Route::post('/elementoxcargo/productos', [CargoProductosController::class, 'store'])->name('elementoxcargo.productos.store');
+    Route::delete('/elementoxcargo/productos/{cargoProducto}', [CargoProductosController::class, 'destroy'])->name('elementoxcargo.productos.destroy');
 });
