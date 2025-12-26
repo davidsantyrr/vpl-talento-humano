@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menú de Entregas</title>
-    <link rel="stylesheet" href="{{ asset('css/menus/menuEntrega.css') }}">
-    <!-- Font Awesome 6 (reliable CDN) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú de Entregas</title>
+  <link rel="stylesheet" href="{{ asset('css/menus/menuEntrega.css') }}">
+  <!-- Font Awesome 6 (reliable CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 </head>
+
 <body>
   <x-NavEntregasComponente />
   <header class="page-head" role="banner">
@@ -25,7 +27,8 @@
           <h3>Inventario</h3>
           <p class="desc">Administra y consulta el stock de elementos disponibles</p>
         </div>
-        <div class="card__footer"><a href="{{ route('articulos.index') }}" class="btn btn-blue" aria-label="Ingresar a Inventario">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('articulos.index') }}" class="btn btn-blue"
+            aria-label="Ingresar a Inventario">Ingresar</a></div>
       </article>
 
       <!-- Realizar cambio -->
@@ -37,7 +40,8 @@
           <h3>Realizar cambio</h3>
           <p class="desc">Registra cambios o reemplazos de elementos entregados</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-orange" aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-orange"
+            aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
       </article>
 
       <!-- Realizar entrega -->
@@ -49,7 +53,8 @@
           <h3>Realizar entrega</h3>
           <p class="desc">Procesa nuevas entregas de elementos a usuarios</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-green" aria-label="Ingresar a Realizar entrega">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-green"
+            aria-label="Ingresar a Realizar entrega">Ingresar</a></div>
       </article>
 
       <!-- Histórico de entregas -->
@@ -61,7 +66,8 @@
           <h3>Histórico de entregas</h3>
           <p class="desc">Consulta y gestiona el registro de entregas realizadas</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-red" aria-label="Ingresar a Histórico de entregas">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-red"
+            aria-label="Ingresar a Histórico de entregas">Ingresar</a></div>
       </article>
 
       <!-- Configuración de notificación -->
@@ -73,7 +79,8 @@
           <h3>Configuración de notificación</h3>
           <p class="desc">Define alertas y avisos automáticos para el inventario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-yellow" aria-label="Ingresar a Configuración de notificación">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-yellow"
+            aria-label="Ingresar a Configuración de notificación">Ingresar</a></div>
       </article>
 
       <!-- Consultar elementos por usuario -->
@@ -85,7 +92,8 @@
           <h3>Consultar elementos por usuario</h3>
           <p class="desc">Busca rápidamente los elementos asignados a un usuario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-purple" aria-label="Ingresar a Consultar elementos por usuario">Ingresar</a></div>
+        <div class="card__footer"><a href="#" class="btn btn-purple"
+            aria-label="Ingresar a Consultar elementos por usuario">Ingresar</a></div>
       </article>
 
       <!-- Configurar elementos por cargo -->
@@ -97,10 +105,12 @@
           <h3>Configurar elementos por cargo</h3>
           <p class="desc">Establece los elementos por tipo de cargo o rol</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-cyan" aria-label="Ingresar a Configurar elementos por cargo">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('elementoxcargo.productos') }}" class="btn btn-cyan"
+            aria-label="Ingresar a Configurar elementos por cargo">Ingresar</a></div>
       </article>
 
     </section>
   </main>
 </body>
+
 </html>

@@ -1,12 +1,12 @@
 /* Navbar modern styles */
-.header{
+.header {
     background-color: #F78008;
     border-radius: 12px;
     margin: 12px;
-    box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
 }
 
-.navegacion{
+.navegacion {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -14,18 +14,34 @@
     color: #fff;
 }
 
-.nav-left .brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800 }
-.brand-text { letter-spacing: .4px }
+.nav-left .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 800
+}
 
-.logoVigia{ height: 44px; width: auto; margin: 0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.15) }
+.brand-text {
+    letter-spacing: .4px
+}
 
-.opciones{
+.logoVigia {
+    height: 44px;
+    width: auto;
+    margin: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15)
+}
+
+.opciones {
     display: flex;
     gap: 20px;
     align-items: center;
 }
 
-.opciones .nav-link{
+.opciones .nav-link {
     color: #fff;
     text-decoration: none;
     font-weight: 600;
@@ -34,17 +50,17 @@
     transition: background .18s ease, color .18s ease, transform .18s ease;
 }
 
-.opciones .nav-link:hover{
-    background: rgba(255,255,255,0.18);
+.opciones .nav-link:hover {
+    background: rgba(255, 255, 255, 0.18);
     transform: translateY(-1px);
 }
 
-.opciones .nav-link.active{
-    background: rgba(255,255,255,0.28);
+.opciones .nav-link.active {
+    background: rgba(255, 255, 255, 0.28);
     color: #08111f;
 }
 
-.nav-actions .cerrarSesion{
+.nav-actions .cerrarSesion {
     background-color: #0929b8;
     border: none;
     color: white;
@@ -52,16 +68,24 @@
     border-radius: 8px;
     cursor: pointer;
     font-weight: 700;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.14);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
 }
 
-a{
+a {
     text-decoration: none;
 }
 
-.nav-actions .cerrarSesion:hover { filter: brightness(1.06) }
+.nav-actions .cerrarSesion:hover {
+    filter: brightness(1.06)
+}
 
 @media (max-width: 640px) {
-  .opciones { gap: 10px; flex-wrap: wrap }
-  .logoVigia { height: 36px }
+    .opciones {
+        gap: 10px;
+        flex-wrap: wrap
+    }
+
+    .logoVigia {
+        height: 36px
+    }
 }

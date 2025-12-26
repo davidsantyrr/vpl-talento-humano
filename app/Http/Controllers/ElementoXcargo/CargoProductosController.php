@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\ElementoXcargo;
 
 use App\Http\Controllers\Controller;
@@ -13,12 +14,12 @@ class CargoProductosController extends Controller
     {
         $cargoId = (int) $request->get('cargo_id');
         $perPage = (int) $request->get('per_page', 5);
-        $perPage = in_array($perPage, [5,10,20,50]) ? $perPage : 5;
+        $perPage = in_array($perPage, [5, 10, 20, 50]) ? $perPage : 5;
         $q = trim((string) $request->get('q', ''));
 
         $cargos = Cargo::orderBy('nombre')->get();
 
-        $allProducts = Producto::select('sku','name_produc')->orderBy('name_produc')->get();
+        $allProducts = Producto::select('sku', 'name_produc')->orderBy('name_produc')->get();
 
         // Paginar asignaciones según per_page (tabla principal)
         $asignaciones = CargoProducto::with('cargo')
@@ -26,20 +27,20 @@ class CargoProductosController extends Controller
             ->paginate($perPage, ['*'], 'page')
             ->appends(['per_page' => $perPage]);
 
-        return view('elementoxcargo.productos', compact('cargos','cargoId','asignaciones','perPage','allProducts'));
+        return view('elementoxcargo.productos', compact('cargos', 'cargoId', 'asignaciones', 'perPage', 'allProducts'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'cargo_id' => ['required','integer','exists:cargos,id'],
-            'sku' => ['required','string'],
+            'cargo_id' => ['required', 'integer', 'exists:cargos,id'],
+            'sku' => ['required', 'string'],
         ]);
 
         // Buscar nombre del producto por sku
-        $name = Producto::where('sku',$data['sku'])->value('name_produc');
+        $name = Producto::where('sku', $data['sku'])->value('name_produc');
         if (!$name) {
-            return back()->with('errorMessage','Producto no encontrado');
+            return back()->with('errorMessage', 'Producto no encontrado');
         }
 
         CargoProducto::updateOrCreate(
@@ -47,12 +48,12 @@ class CargoProductosController extends Controller
             ['name_produc' => $name]
         );
 
-        return back()->with('status','Producto añadido al cargo');
+        return back()->with('status', 'Producto añadido al cargo');
     }
 
     public function destroy(CargoProducto $cargoProducto)
     {
         $cargoProducto->delete();
-        return back()->with('status','Asignación eliminada');
+        return back()->with('status', 'Asignación eliminada');
     }
 }
