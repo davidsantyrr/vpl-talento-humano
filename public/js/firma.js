@@ -30,15 +30,17 @@ canvas.addEventListener('mousemove', (e) => {
     ctx.stroke();
     lastX = x;
     lastY = y;
-    guardarFirma();
+    // removed frequent guardarFirma() calls to reduce overhead
 });
 canvas.addEventListener('mouseup', () => {
     dibujando = false;
     ctx.beginPath();
+    guardarFirma();
 });
 canvas.addEventListener('mouseleave', () => {
     dibujando = false;
     ctx.beginPath();
+    guardarFirma();
 });
 
 // Touch (móvil)
@@ -65,16 +67,19 @@ canvas.addEventListener('touchmove', (e) => {
     ctx.stroke();
     lastX = x;
     lastY = y;
-    guardarFirma();
 });
 canvas.addEventListener('touchend', () => {
     dibujando = false;
     ctx.beginPath();
+    guardarFirma();
 });
 
 // Guardar firma en Base64
 function guardarFirma() {
-    document.getElementById('firmaInput').value = canvas.toDataURL('image/png');
+    const canvas = document.getElementById('firmaCanvas');
+    const input = document.getElementById('firmaInput');
+    if (!canvas || !input) return;
+    input.value = canvas.toDataURL('image/png');
 }
 
 // Limpiar canvas

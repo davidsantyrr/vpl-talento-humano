@@ -1,0 +1,86 @@
+:root{
+	--bg:#f5f7fb;
+	--card:#ffffff;
+	--primary:#0d6efd;
+	--muted:#6c757d;
+	--danger:#dc3545;
+	--radius:8px;
+}
+
+body{
+	background:var(--bg);
+	font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	color:#223;
+	font-size:18px; /* tamaño base aumentado */
+	line-height:1.5;
+}
+
+/* Contenedor principal (puedes añadir la clase .gestion-card al wrapper) */
+.gestion-card{
+	max-width:1200px;
+	margin:32px auto;
+	padding:32px; /* más espacio interior */
+	background:var(--card);
+	border-radius:var(--radius);
+	box-shadow:0 8px 24px rgba(15,15,15,0.08);
+}
+.btn.btn-primary{
+	font-size: 1.1rem;
+	background-color: #0d6efd;
+	color: #fff;
+	border: none;
+	border-radius: 10px;
+	padding: 7px 10px;
+}
+.gestion-card h1,
+h1{
+	font-size:2rem; /* título más grande */
+	margin:0 0 12px 0;
+	color:#0b2a66;
+}
+.gestion-card p,
+p{ color:var(--muted); margin-bottom:18px; font-size:1.05rem; }
+
+/* Botón principal */
+a.btn.btn-primary{
+	background:linear-gradient(180deg,var(--primary),#0056d6);
+	border:none;
+	box-shadow:0 6px 14px rgba(13,110,253,0.14);
+	border-radius:8px;
+	padding:12px 18px; /* botones más grandes */
+	font-size:1rem;
+	color:#fff;
+}
+/* Tabla más legible */
+.table{
+	width:100%;
+	border-collapse:separate;
+	border-spacing:0 8px; /* espacio entre filas */
+}
+.table th,
+.table td{
+	padding:14px 16px; /* más espacio en celdas */
+	text-align:left;
+	vertical-align:middle;
+}
+.table thead th{
+	background:var(--bg);
+	color:#445566;
+	font-weight:600;
+	font-size:1rem;
+	border-bottom:2px solid #e0e0e0;
+}
+.table tbody tr{
+	background:#fff;
+	box-shadow:0 2px 8px rgba(15,15,15,0.05);
+	border-radius:6px;
+}
+.table tbody tr:hover{
+	background:#f0f8ff;
+}
+
+.table, .table th, .table td{ font-size:1.02rem; }
+
+
+
+

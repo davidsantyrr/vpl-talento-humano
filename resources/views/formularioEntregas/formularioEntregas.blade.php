@@ -4,12 +4,12 @@
 <link rel="stylesheet" href="{{ asset('css/formularioEntregas.css') }}">
 @endpush
 @section('content')
-<x-sidebarComponente/>
+<x-NavEntregasComponente/>
 
 <div class="page-center">
     <div class="container">
         <h2 class="mb-4">Formulario de Entregas</h2>
-        <form action="#" method="POST">
+        <form action="{{ route('entregas.store') }}" method="POST" onsubmit="guardarFirma()">
             @csrf
             <div class="mb-3">
                 <label class="form-label">Nombres</label>
@@ -17,29 +17,29 @@
             </div>
             <div class="mb-3">
                 <label for="apellidos" class="form-label">Apellidos</label>
-                <input type="text" class="form-control" id="apellidos" name="apellidos" required>
+                <input type="text" class="form-control" id="apellidos" name="apellidos">
             </div>
             <div class="mb-3">
                 <label for="fecha_entrega" class="form-label">tipo</label>
-                <select>
-                    <option value="">primera vez</option>
-                    <option value="">periodica</option>
-                    <option value="">prestamo</option>
+                <select name="tipo">
+                    <option value="primera_vez">primera vez</option>
+                    <option value="periodica">periodica</option>
+                    <option value="prestamo">prestamo</option>
                 </select>
             </div>
             <div class="mb-3">
                 <label for="destinatario" class="form-label">operacion</label>
-                <select>
+                <select name="operacion">
                     <option value="">......</option>
-                    <option value="">.....</option>
+                    <option value="op1">op1</option>
                 </select>
             </div>
             <div>
                 <label  class="form-label">tipo de documento</label>
-                <select>
-                    <option value="">C.C</option>
-                    <option value="">T.I</option>
-                    <option value="">EXTRANJERA</option>
+                <select name="tipo_documento">
+                    <option value="CC">C.C</option>
+                    <option value="TI">T.I</option>
+                    <option value="EXTRANJERA">EXTRANJERA</option>
                 </select>
             </div>
             <div>
@@ -87,14 +87,12 @@
     <div>
         <h1>Elementos a entregar</h1>
         <label for="elemento">seleccione elemento</label>
-        <!-- añadido id -->
         <select id="elementoSelect">
             <option value="item1">Item 1</option>
             <option value="item2">Item 2</option>
             <option value="item3">Item 3</option>
         </select>
         <label for="cantidad">Cantidad</label>
-        <!-- añadido id -->
         <input type="number" class="form-control" id="cantidadInput" name="cantidad" min="1" required>
 
         <table>
@@ -109,7 +107,6 @@
         <!-- filas añadidas dinámicamente (preview en modal) -->
         </tbody>
         </table>
-        <!-- botón ahora invoca función JS y es type="button" -->
         <button type="button" class="btn btn-primary" onclick="agregarElementoModal()">añadir elemento</button>
         <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cerrar</button>
     </div>
