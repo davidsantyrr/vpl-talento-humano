@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Log;
 
+
 class AuthController extends Controller
 {
     public function login(Request $request)
@@ -32,12 +33,12 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($response->failed()) {
-            $message = $response->json('message') ?? 'Credenciales inválidas.';
+        if ($this->isFailed($response)) {
+            $message = $this->getJson($response, 'message') ?? 'Credenciales inválidas.';
             return back()->withInput()->with(['errorMessage' => $message]);
         }
 
-        $data = $response->json();
+        $data = $this->getJson($response) ?: [];
         $accessToken = $data['access_token'] ?? null;
         $tokenType = $data['token_type'] ?? 'Bearer';
         $token = $accessToken ? ($tokenType . ' ' . $accessToken) : null;
@@ -104,5 +105,32 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect('/')->with('status', 'Sesión cerrada correctamente.');
+    }
+
+    // Helpers para compatibilidad con diferentes versiones del cliente HTTP
+    private function isFailed($response): bool
+    {
+        if (is_object($response)) {
+            if (method_exists($response, 'failed')) {
+                return (bool) $response->failed();
+            }
+            if (method_exists($response, 'status')) {
+                return (int) $response->status() >= 400;
+            }
+        }
+        // Si no es un objeto esperado, considerar fallo
+        return true;
+    }
+
+    private function getJson($response, ?string $key = null)
+    {
+        if (is_object($response) && method_exists($response, 'json')) {
+            $data = $response->json();
+        } elseif (is_object($response) && method_exists($response, 'body')) {
+            $data = json_decode($response->body(), true) ?: [];
+        } else {
+            $data = [];
+        }
+        return $key ? ($data[$key] ?? null) : $data;
     }
 }
