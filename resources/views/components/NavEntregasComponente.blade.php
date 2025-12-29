@@ -20,7 +20,7 @@
       </div>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
       <div class="opciones" id="navOpciones">
-        <a href="#" class="nav-link">Home</a>
+        <a href="{{ url('/menus/menu') }}" class="nav-link">Home</a>
         <a href="{{ url('/menus/menuentrega') }}" class="nav-link">Menú</a>
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
         <a href="#" class="nav-link">Entrega</a>
