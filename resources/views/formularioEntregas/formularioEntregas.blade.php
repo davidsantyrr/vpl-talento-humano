@@ -21,17 +21,23 @@
             </div>
             <div class="mb-3">
                 <label for="fecha_entrega" class="form-label">tipo</label>
-                <select name="tipo">
-                    <option value="primera_vez">primera vez</option>
-                    <option value="periodica">periodica</option>
-                    <option value="prestamo">prestamo</option>
+                <select name="operacion_id" class="form-control" required>
+                    <option>prestamo</option>
+                    <option>primera vez</option>
+                    <option>periodica</option>
                 </select>
             </div>
             <div class="mb-3">
                 <label for="destinatario" class="form-label">operacion</label>
-                <select name="operacion">
-                    <option value="">......</option>
-                    <option value="op1">op1</option>
+                
+                <select name="operacion_id" class="form-control" required>
+                    <option value="">Seleccione una operación</option>
+
+                    @foreach($operations as $op)
+                    <option value="{{ $op->id }}">
+                    {{ $op->operationName }}
+                    </option>
+                    @endforeach
                 </select>
             </div>
             <div>

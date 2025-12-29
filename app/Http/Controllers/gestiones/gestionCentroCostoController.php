@@ -6,61 +6,58 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CentroCosto;
 
-class gestionCentroCostoController extends Controller
+class GestionCentroCostoController extends Controller
 {
-    /** Mostrar listado de centros de costo y formulario de creación */
     public function index()
     {
         $centros = CentroCosto::orderBy('id', 'desc')->get();
         return view('gestiones.gestionCentroCosto', compact('centros'));
     }
-
-    /** Guardar nuevo centro de costo */
     public function store(Request $request)
     {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-        ]);
+    $request->validate([
+        'centroCostoName' => 'required|string|max:255',
+    ]);
 
-        CentroCosto::create([
-            'nombre_centro_costo' => $request->input('nombre'),
-            'descripcion' => $request->input('descripcion'),
-        ]);
+    CentroCosto::create([
+        'nombre_centro_costo' => $request->centroCostoName,
+    ]);
 
-        return redirect()->route('gestionCentroCosto.index')->with('success', 'Centro de costo creado correctamente');
+    return redirect()
+        ->route('gestionCentroCosto.index')
+        ->with('success', 'Centro de costo creado correctamente');
     }
 
-    /** Mostrar el formulario de edición */
     public function edit($id)
     {
         $editCentro = CentroCosto::findOrFail($id);
         $centros = CentroCosto::orderBy('id', 'desc')->get();
+
         return view('gestiones.gestionCentroCosto', compact('centros', 'editCentro'));
     }
 
-    /** Actualizar centro de costo */
     public function update(Request $request, $id)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
+            'centroCostoName' => 'required|string|max:255',
         ]);
 
         $centro = CentroCosto::findOrFail($id);
         $centro->update([
-            'nombre_centro_costo' => $request->input('nombre'),
-            'descripcion' => $request->input('descripcion'),
-        ]);
+        'nombre_centro_costo' => $request->centroCostoName,
+]);
 
-        return redirect()->route('gestionCentroCosto.index')->with('success', 'Centro de costo actualizado');
+        return redirect()
+            ->route('gestionCentroCosto.index')
+            ->with('success', 'Centro de costo actualizado correctamente');
     }
 
-    /** Eliminar centro de costo */
     public function destroy($id)
     {
-        $centro = CentroCosto::findOrFail($id);
-        $centro->delete();
-        return redirect()->route('gestionCentroCosto.index')->with('success', 'Centro de costo eliminado');
+        CentroCosto::findOrFail($id)->delete();
+
+        return redirect()
+            ->route('gestionCentroCosto.index')
+            ->with('success', 'Centro de costo eliminado correctamente');
     }
 }

@@ -2,179 +2,160 @@
     --bg:#f5f7fb;
     --card:#ffffff;
     --primary:#0d6efd;
-    --secondary:#6c757d;
     --warning:#ffc107;
     --danger:#dc3545;
     --muted:#6c757d;
     --radius:10px;
 }
 
-
+/* ===== BASE ===== */
 body{
     background:var(--bg);
-    font-family:"Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family:"Segoe UI", Roboto, Arial, sans-serif;
     color:#223;
-    font-size:16px;
-    line-height:1.5;
 }
 
+/* ===== CARD ===== */
 .gestion-card{
     max-width:1200px;
     margin:32px auto;
-    padding:32px;
+    padding:28px 32px 32px;
     background:var(--card);
     border-radius:var(--radius);
-    box-shadow:0 8px 24px rgba(15,15,15,0.08);
+    box-shadow:0 8px 24px rgba(0,0,0,0.06);
 }
 
-
 .gestion-card h1{
-    font-size:2rem;
-    margin-bottom:8px;
+    font-size:1.9rem;
+    margin-bottom:4px;
     color:#0b2a66;
     font-weight:600;
 }
 
 .gestion-card p{
     color:var(--muted);
-    font-size:1.05rem;
     margin-bottom:20px;
 }
 
-
+/* ===== ALERT ===== */
 .alert{
     border-radius:8px;
-    padding:12px 16px;
-    font-size:0.95rem;
+    padding:10px 14px;
+    margin-bottom:16px;
 }
 
+/* ===== FORM ===== */
+form{
+    margin-bottom:24px;
+}
 
-.form-label{
-    font-weight:500;
-    color:#334;
+/* Fila input + botón (igual que Áreas) */
+form > div,
+form{
+    display:flex;
+    gap:12px;
+    align-items:center;
 }
 
 .form-control{
+    flex:1;
     border-radius:8px;
     padding:10px 12px;
+    border:1px solid #ced4da;
     font-size:0.95rem;
 }
 
 .form-control:focus{
     border-color:var(--primary);
-    box-shadow:0 0 0 0.15rem rgba(13,110,253,0.15);
+    box-shadow:0 0 0 0.15rem rgba(13,110,253,.15);
+    outline:none;
 }
 
-
+/* ===== BOTONES ===== */
 .btn{
     border-radius:8px;
-    font-size:0.9rem;
     padding:8px 14px;
+    font-size:0.9rem;
+    border:none;
+    white-space:nowrap;
 }
 
 .btn-primary{
-    background:linear-gradient(180deg, var(--primary), #0056d6);
-    border:none;
-    box-shadow:0 6px 14px rgba(13,110,253,0.18);
-}
-
-.btn-primary:hover{
-    opacity:0.95;
-}
-
-.btn-secondary{
-    background:#e9ecef;
-    color:#333;
-    border:none;
+    background:#0d6efd;
+    color:#fff;
 }
 
 .btn-warning{
-    background:#fff3cd;
-    color:#856404;
-    border:none;
+    background:#ffc107;
+    color:#212529;
 }
 
 .btn-danger{
-    background:#f8d7da;
-    color:#842029;
-    border:none;
+    background:#dc3545;
+    color:#fff;
 }
-
 
 .btn-sm{
     padding:6px 10px;
     font-size:0.8rem;
 }
 
-
+/* ===== TABLA ===== */
 .table{
     width:100%;
-    border-collapse:separate;
-    border-spacing:0 8px;
+    border-collapse:collapse;
 }
 
 .table thead th{
-    background:var(--bg);
-    color:#445566;
+    background:#f8f9fa;
     font-weight:600;
     font-size:0.9rem;
-    border-bottom:2px solid #e0e0e0;
+    color:#344767;
     padding:14px 16px;
+    border-bottom:2px solid #dee2e6;
 }
 
-.table tbody tr{
-    background:#ffffff;
-    box-shadow:0 2px 8px rgba(15,15,15,0.05);
-    border-radius:8px;
-    transition:background 0.2s ease;
-}
-
-.table tbody tr:hover{
-    background:#f0f8ff;
-}
-
-.table td{
+.table tbody td{
     padding:14px 16px;
-    vertical-align:middle;
+    border-bottom:1px solid #dee2e6;
     font-size:0.95rem;
 }
 
+.table tbody tr:last-child td{
+    border-bottom:none;
+}
 
+/* ===== ACCIONES ===== */
 .action-buttons{
     display:flex;
     gap:8px;
-    flex-wrap:wrap;
 }
 
-
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px){
     .gestion-card{
-        padding:20px;
         margin:16px;
+        padding:20px;
     }
 
-    .table thead{
-        display:none;
-    }
-
-    .table tbody tr{
-        display:block;
-        padding:12px;
-    }
-
-    .table td{
-        display:flex;
-        justify-content:space-between;
-        padding:8px 0;
-    }
-
-    .table td::before{
-        content:attr(data-label);
-        font-weight:600;
-        color:#555;
+    form{
+        flex-direction:column;
+        align-items:stretch;
     }
 
     .action-buttons{
         justify-content:flex-end;
     }
+}
+/* ===== FIX TAMAÑO BOTONES ACCIONES ===== */
+.action-buttons .btn{
+    min-width:80px;          /* mismo ancho */
+    height:34px;             /* misma altura */
+    padding:0 12px;          /* elimina diferencia vertical */
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:0.85rem;
+    line-height:1;
+    white-space:nowrap;
 }

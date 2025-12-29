@@ -11,7 +11,6 @@ class CentroCosto extends Model
 
     protected $fillable = [
         'nombre_centro_costo',
-        'descripcion',
     ];
 
     // Make a virtual attribute `centroCostoName` that maps to DB column `nombre_centro_costo`

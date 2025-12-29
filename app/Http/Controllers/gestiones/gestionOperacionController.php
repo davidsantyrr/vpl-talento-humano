@@ -14,6 +14,12 @@ class gestionOperacionController extends Controller
 		$operations = Operation::orderBy('id', 'desc')->get();
 		return view('gestiones.gestionOperacion', compact('operations'));
 	}
+	public function create()
+    {
+        $operations = Operation::orderBy('operationName')->get();
+
+        return view('formularioEntregas.formularioEntregas', compact('operations'));
+    }
 
 	/** Guardar nueva operación */
 	public function store(Request $request)

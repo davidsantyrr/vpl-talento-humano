@@ -14,4 +14,14 @@ class Operation extends Model
     protected $fillable = [
         'operationName',
     ];
+
+    public function entregas()
+    {
+        return $this->hasMany(Entrega::class, 'operacion_id');
+    }
+
+    public function usuarios()
+    {
+        return $this->hasMany(Usuarios::class, 'operacion_id');
+    }
 }
