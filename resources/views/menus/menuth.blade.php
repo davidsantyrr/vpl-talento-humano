@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Menu Principal</title>
     <link rel="stylesheet" href="{{ asset('css/menus/styleMenu.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 
 <body>
@@ -18,7 +19,10 @@
                 <h1 class="title">Menu Principal</h1>
             </div>
             <div class="nav-right">
-                <button class="logout-btn" type="button">Cerrar sesión</button>
+                <form id="logoutFormMenu" action="{{ route('logout') }}" method="POST" style="margin:0">
+                    @csrf
+                    <button class="logout-btn" type="submit">Cerrar sesión</button>
+                </form>
             </div>
         </nav>
     </div>
@@ -38,7 +42,7 @@
                 </div>
 
                 <div class="card__actions">
-                    <button class="btn" type="button" href="#">Ingresar</button>
+                    <a class="btn" role="button" href="#" style="text-decoration: none;">Ingresar</a>
                 </div>
             </div>
 
@@ -55,11 +59,51 @@
                 </div>
 
                 <div class="card__actions">
-                    <button class="btn" type="button" href="{{ url('/menus/menuentrega') }}">Ingresar</button>
+                    <a class="btn" role="button" href="{{ url('/menus/menuentrega') }}" style="text-decoration: none;">Ingresar</a>
                 </div>
             </div>
         </div>
     </div>
+
+    <script>
+      (function(){
+        const form = document.getElementById('logoutFormMenu');
+        if(form){
+          form.addEventListener('submit', function(e){
+            e.preventDefault();
+            Swal.fire({
+              title: '¿Cerrar sesión?',
+              text: 'Se cerrará tu sesión actual.',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, cerrar',
+              cancelButtonText: 'Cancelar'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                Swal.fire({ title: 'Cerrando sesión...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                form.submit();
+              }
+            });
+          });
+        }
+
+        // Toast for unavailable modules (links without route)
+        document.querySelectorAll('.card__actions a[href="#"]').forEach(function(link){
+          link.addEventListener('click', function(e){
+            e.preventDefault();
+            Swal.fire({
+              toast: true,
+              position: 'top-end',
+              icon: 'info',
+              title: 'Módulo no disponible por el momento',
+              showConfirmButton: false,
+              timer: 2500,
+              timerProgressBar: true
+            });
+          });
+        });
+      })();
+    </script>
 </body>
 
 </html>

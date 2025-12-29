@@ -229,6 +229,9 @@ h1.title {
     outline-offset: 3px;
 }
 
+/* SweetAlert always on top of navbar */
+.swal2-container { z-index: 100000 !important; }
+
 /* Responsive adjustments */
 @media (max-width: 900px) {
     :root {

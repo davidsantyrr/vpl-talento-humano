@@ -56,30 +56,8 @@ class AuthController extends Controller
             'auth.token' => $token,
         ]);
 
-        // Determinar redirección por rol usando mapa/switch
-        $rolesRaw = collect($data['user']['roles'] ?? [])
-            ->pluck('roles')
-            ->filter();
-
-        // Normalizar roles (minúsculas, sin espacios extra)
-        $roles = $rolesRaw->map(fn($r) => strtolower(trim($r)))->unique();
-
-        // Mapa de rutas por rol principal
-        $roleRouteMap = [
-            'talento_humano' => '/menus/menu',
-            'talento humano' => '/menus/menu',
-            'hseq' => '/menus/menuentrega',
-        ];
-
-        $redirect = '/menus/menu'; // ruta por defecto
-        foreach ($roles as $role) {
-            if (array_key_exists($role, $roleRouteMap)) {
-                $redirect = $roleRouteMap[$role];
-                break; // primera coincidencia
-            }
-        }
-
-        return redirect($redirect);
+        // Siempre redirigir a menú principal independientemente del rol
+        return redirect('/menus/menu');
     }
 
     public function logout(Request $request)
