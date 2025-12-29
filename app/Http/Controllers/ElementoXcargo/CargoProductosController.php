@@ -13,8 +13,8 @@ class CargoProductosController extends Controller
     public function index(Request $request)
     {
         $cargoId = (int) $request->get('cargo_id');
-        $perPage = (int) $request->get('per_page', 5);
-        $perPage = in_array($perPage, [5, 10, 20, 50]) ? $perPage : 5;
+        $perPage = (int) $request->get('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 20, 50]) ? $perPage : 10;
         $q = trim((string) $request->get('q', ''));
 
         $cargos = Cargo::orderBy('nombre')->get();

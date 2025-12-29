@@ -5,7 +5,7 @@
 @section('content')
 <x-NavEntregasComponente />
 <div class="container">
-    <h1>Asignar productos a cargo</h1>
+    <h1>Asignar elementos a cargo</h1>
 
     <form method="POST" action="{{ route('elementoxcargo.productos.store') }}">
         @csrf

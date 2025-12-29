@@ -18,14 +18,16 @@
           <img src="{{ asset('img/logoVigia.jpeg') }}" alt="Logo" class="logoVigia">
         </a>
       </div>
-      <div class="opciones">
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
+      <div class="opciones" id="navOpciones">
         <a href="#" class="nav-link">Home</a>
         <a href="{{ url('/menus/menuentrega') }}" class="nav-link">Menú</a>
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
         <a href="#" class="nav-link">Entrega</a>
         <a href="#" class="nav-link">Cambio</a>
         <a href="#" class="nav-link">Consulta</a>
-        <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Configuración</a>
+        <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
+        <a href="" class="nav-link">Configuración</a>
         {{ $slot ?? '' }}
       </div>
       <div class="nav-actions">
@@ -61,6 +63,15 @@
             }
           });
         });
+
+        const toggle = document.querySelector('.nav-toggle');
+        const opciones = document.getElementById('navOpciones');
+        if(toggle && opciones){
+          toggle.addEventListener('click', function(){
+            const isOpen = opciones.classList.toggle('open');
+            toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+          });
+        }
       })();
   </script>
 </body>
