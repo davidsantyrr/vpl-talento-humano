@@ -66,7 +66,7 @@ class ArticulosController extends Controller
                       . '<button type="button" class="btn-icon edit" title="Editar" aria-label="Editar">'
                       . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L18.37 9.38l-3.75-3.75L3 17.25z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M14.62 5.63l3.75 3.75" stroke="currentColor" stroke-width="1.2"/></svg>'
                       . '</button>'
-                      . '<button type="button" class="btn-icon delete" title="Eliminar" aria-label="Eliminar" onclick="alert(\'Eliminar aún no implementado\')">'
+                      . '<button type="button" class="btn-icon delete" title="Destruir" aria-label="Destruir">'
                       . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
                       . '</button>'
                       . '</div>'
@@ -121,10 +121,11 @@ class ArticulosController extends Controller
             'estatus' => ['nullable','in:disponible,perdido,prestado,destruido'],
             'stock' => ['required','integer','min:0'],
             'per_page' => ['nullable','integer'],
-            'from_status' => ['nullable','in:disponible,perdido,prestado,destruido']
+            'from_status' => ['nullable','in:disponible,perdido,prestado,destruido'],
+            'new_location' => ['nullable','in:1']
         ]);
 
-        // upsert ubicaciones
+        // upsert ubicaciones si el usuario envía datos
         $ubicacionesId = null;
         if (!empty($data['bodega']) || !empty($data['ubicacion'])) {
             $existingU = DB::connection('mysql_third')->table('ubicaciones')
@@ -132,9 +133,9 @@ class ArticulosController extends Controller
                 ->where('ubicacion', $data['ubicacion'] ?? '')
                 ->first();
             if ($existingU) {
-                $ubicacionesId = $existingU->id;
+                $ubicacionesId = (int) $existingU->id;
             } else {
-                $ubicacionesId = DB::connection('mysql_third')->table('ubicaciones')->insertGetId([
+                $ubicacionesId = (int) DB::connection('mysql_third')->table('ubicaciones')->insertGetId([
                     'bodega' => $data['bodega'] ?? '',
                     'ubicacion' => $data['ubicacion'] ?? '',
                     'created_at' => now(),
@@ -143,20 +144,43 @@ class ArticulosController extends Controller
             }
         }
 
+        // helper: ubicacion por defecto
+        $getDefaultUbicId = function() {
+            $row = DB::connection('mysql_third')->table('ubicaciones')
+                ->where('bodega', '')
+                ->where('ubicacion', '')
+                ->first();
+            if ($row) return (int) $row->id;
+            return (int) DB::connection('mysql_third')->table('ubicaciones')->insertGetId([
+                'bodega' => '',
+                'ubicacion' => '',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        };
+
         $targetStatus = $data['estatus'] ?? 'disponible';
         $qty = (int) $data['stock'];
         $fromStatus = $data['from_status'] ?? null;
+        $isNewLocation = isset($data['new_location']) && $data['new_location'] === '1';
 
-        // Transferencia entre estatus (generalizado)
-        if ($fromStatus && $fromStatus !== $targetStatus && $qty > 0) {
-            // origen
+        if ($isNewLocation) {
+            // Crear nueva fila de inventarios para la nueva ubicación
+            $insertUbicId = !is_null($ubicacionesId) ? $ubicacionesId : $getDefaultUbicId();
+            DB::connection('mysql_third')->table('inventarios')->insert([
+                'sku' => $sku,
+                'stock' => 0, // comienza en 0; luego podrá transferir
+                'estatus' => $targetStatus,
+                'ubicaciones_id' => $insertUbicId,
+            ]);
+        } else if ($fromStatus && $fromStatus !== $targetStatus && $qty > 0) {
+            // Transferencia entre estatus (generalizado)
             $origin = DB::connection('mysql_third')->table('inventarios')
                 ->where('sku', $sku)
                 ->where('estatus', $fromStatus)
                 ->first();
             if ($origin) {
                 $move = min($qty, (int) $origin->stock);
-                // actualizar/eliminar origen
                 $newOriginStock = max(0, (int) $origin->stock - $move);
                 if ($newOriginStock > 0) {
                     DB::connection('mysql_third')->table('inventarios')->where('id', $origin->id)->update(['stock' => $newOriginStock]);
@@ -164,28 +188,26 @@ class ArticulosController extends Controller
                     DB::connection('mysql_third')->table('inventarios')->where('id', $origin->id)->delete();
                 }
 
-                // destino
                 $dest = DB::connection('mysql_third')->table('inventarios')
                     ->where('sku', $sku)
                     ->where('estatus', $targetStatus)
                     ->first();
 
-                $payloadDest = [
-                    'sku' => $sku,
-                    'stock' => $move,
-                    'estatus' => $targetStatus,
-                ];
-                if ($ubicacionesId) { $payloadDest['ubicaciones_id'] = $ubicacionesId; }
+                $destUbicId = !is_null($ubicacionesId)
+                    ? $ubicacionesId
+                    : ($dest->ubicaciones_id ?? ($origin->ubicaciones_id ?? $getDefaultUbicId()));
 
                 if ($dest) {
-                    DB::connection('mysql_third')->table('inventarios')->where('id', $dest->id)->update([
-                        'stock' => ((int) $dest->stock) + $move,
-                    ] + ($ubicacionesId ? ['ubicaciones_id' => $ubicacionesId] : []));
+                    $update = [ 'stock' => ((int) $dest->stock) + $move ];
+                    if (!is_null($ubicacionesId)) { $update['ubicaciones_id'] = $destUbicId; }
+                    DB::connection('mysql_third')->table('inventarios')->where('id', $dest->id)->update($update);
                 } else {
-                    if (!isset($payloadDest['ubicaciones_id'])) {
-                        $payloadDest['ubicaciones_id'] = $ubicacionesId ?? 0;
-                    }
-                    DB::connection('mysql_third')->table('inventarios')->insert($payloadDest);
+                    DB::connection('mysql_third')->table('inventarios')->insert([
+                        'sku' => $sku,
+                        'stock' => $move,
+                        'estatus' => $targetStatus,
+                        'ubicaciones_id' => $destUbicId,
+                    ]);
                 }
             }
         } else {
@@ -195,20 +217,18 @@ class ArticulosController extends Controller
                 ->where('estatus', $targetStatus)
                 ->first();
 
-            $payload = [
-                'sku' => $sku,
-                'stock' => $qty,
-                'estatus' => $targetStatus,
-            ];
-            if ($ubicacionesId) { $payload['ubicaciones_id'] = $ubicacionesId; }
-
             if ($inv) {
-                DB::connection('mysql_third')->table('inventarios')->where('id', $inv->id)->update($payload);
+                $update = [ 'sku' => $sku, 'stock' => $qty, 'estatus' => $targetStatus ];
+                if (!is_null($ubicacionesId)) { $update['ubicaciones_id'] = $ubicacionesId; }
+                DB::connection('mysql_third')->table('inventarios')->where('id', $inv->id)->update($update);
             } else {
-                if (!isset($payload['ubicaciones_id'])) {
-                    $payload['ubicaciones_id'] = $ubicacionesId ?? 0;
-                }
-                DB::connection('mysql_third')->table('inventarios')->insert($payload);
+                $insertUbicId = !is_null($ubicacionesId) ? $ubicacionesId : $getDefaultUbicId();
+                DB::connection('mysql_third')->table('inventarios')->insert([
+                    'sku' => $sku,
+                    'stock' => $qty,
+                    'estatus' => $targetStatus,
+                    'ubicaciones_id' => $insertUbicId,
+                ]);
             }
         }
 

@@ -15,7 +15,7 @@
     <nav class="navegacion" aria-label="Navegación principal">
       <div class="nav-left">
         <a href="{{ url('/') }}" class="brand">
-          <img src="{{ asset('img/logoVigia.jpeg') }}" alt="Logo" class="logoVigia">
+          <img src="{{ asset('img/Logo.png') }}" alt="Logo" class="logoVigia">
         </a>
       </div>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
@@ -24,7 +24,7 @@
         <a href="{{ url('/menus/menuentrega') }}" class="nav-link">Menú</a>
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
         <a href="{{ route('formularioEntregas') }}" class="nav-link">Entrega</a>
-        <a href="#" class="nav-link">Cambio</a>
+        <a href="#" class="nav-link">Recepción</a>
         <a href="#" class="nav-link">Consulta</a>
         <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
         <a href="" class="nav-link">Configuración</a>

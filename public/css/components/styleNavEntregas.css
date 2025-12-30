@@ -38,7 +38,6 @@
     width: auto;
     margin: 0;
     border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15)
 }
 
 /* toggle button */
@@ -118,13 +117,31 @@ a {
         padding: 8px 12px;
     }
 
-    .nav-toggle { display:inline-flex; justify-self:start; margin:0 }
-    .nav-left { justify-self:center }
-    .nav-left .brand { justify-content:center }
-    .logoVigia { height:36px }
+    .nav-toggle {
+        display: inline-flex;
+        justify-self: start;
+        margin: 0
+    }
+
+    .nav-left {
+        justify-self: center
+    }
+
+    .nav-left .brand {
+        justify-content: center
+    }
+
+    .logoVigia {
+        height: 36px
+    }
 
     /* keep logout fixed on the top row, right side */
-    .nav-actions { justify-self:end; margin:0; grid-row:1; grid-column:3 }
+    .nav-actions {
+        justify-self: end;
+        margin: 0;
+        grid-row: 1;
+        grid-column: 3
+    }
 
     /* collapsible menu spans full width on the second row */
     .opciones {
@@ -138,10 +155,19 @@ a {
         padding: 8px 0;
         margin-top: 6px;
     }
-    .opciones.open { display:flex }
+
+    .opciones.open {
+        display: flex
+    }
 }
 
 @media (max-width: 480px) {
-    .nav-actions .cerrarSesion { padding: 6px 10px; font-size: 14px; }
-    .opciones .nav-link { padding: 8px 10px; }
+    .nav-actions .cerrarSesion {
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+
+    .opciones .nav-link {
+        padding: 8px 10px;
+    }
 }

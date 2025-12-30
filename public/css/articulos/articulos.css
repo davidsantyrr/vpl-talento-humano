@@ -283,6 +283,47 @@ body {
 .sw-popup .modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .sw-popup .field { display: flex; flex-direction: column; gap: 6px; }
 .sw-popup .field label { font-weight: 600; color: var(--text); }
+/* Centered destroy modal layout */
+.sw-popup .modal-grid.center { grid-template-columns: 1fr; justify-items: center; }
+.sw-popup .modal-grid.center .field { width: 100%; max-width: 360px; text-align: center; }
+.sw-popup .modal-grid.center .sw-input { text-align: center; }
+.sw-popup .modal-grid.center .field small { display: block; margin-top: 8px; color: var(--muted); }
+
+/* Tabs (Chrome-like) */
+.tabs { position: relative; display: flex; align-items: flex-end; gap: 0; margin: 14px 0 10px; padding-left: 6px; }
+.tabs::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: rgba(15,23,42,0.15); z-index: 0; }
+
+.tab-btn { position: relative; appearance: none; border: 0; cursor: pointer; user-select: none;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); color: #334155;
+  height: 40px; padding: 0 16px; border-top-left-radius: 12px; border-top-right-radius: 12px;
+  margin-right: -6px; /* overlap like browser tabs */
+  box-shadow: 0 1px 0 rgba(0,0,0,0.05), inset 0 -1px 0 rgba(0,0,0,0.08);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+  z-index: 1; font-weight: 700;
+}
+.tab-btn:hover { background: #ffffff; }
+.tab-btn:focus-visible { outline: 3px solid rgba(37,99,235,0.35); outline-offset: 2px; border-radius: 14px 14px 0 0; }
+.tab-btn.active { background: var(--card); color: var(--text); transform: translateY(1px);
+  box-shadow: 0 10px 22px rgba(2,6,23,0.12);
+  z-index: 2;
+}
+/* top accent line */
+.tab-btn::before { content: ""; position: absolute; left: 10px; right: 10px; top: 0; height: 3px; border-radius: 3px; background: transparent; }
+.tab-btn.active::before { background: var(--primary); }
+.tab-btn[data-status="prestado"].active::before { background: #f59e0b; }
+.tab-btn[data-status="perdido"].active::before { background: #ef4444; }
+.tab-btn[data-status="destruido"].active::before { background: #64748b; }
+/* Tabs panel container to highlight tabs */
+.tabs-panel {
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  border: 1px solid rgba(15,23,42,0.08);
+  margin-top: -6px; /* seem attached to tabs */
+}
+/* make top corners align with active tab look */
+.tabs + .tabs-panel { border-top-left-radius: 0; border-top-right-radius: 0; }
 
 @media (max-width: 640px) {
   .page-header {
