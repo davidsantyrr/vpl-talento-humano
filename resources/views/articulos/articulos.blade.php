@@ -7,7 +7,7 @@
 <x-NavEntregasComponente />
 <div class="articulos-page container">
   <header class="page-header">
-    <h1>Artículos (requisición) y Stock (VSP)</h1>
+    <h1>Listado de articulos</h1>
   </header>
 
   <div class="tabs-panel">

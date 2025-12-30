@@ -37,8 +37,8 @@
           <div class="icon" aria-hidden="true">
             <i class="fa-solid fa-arrows-rotate"></i>
           </div>
-          <h3>Realizar cambio</h3>
-          <p class="desc">Registra cambios o reemplazos de elementos entregados</p>
+          <h3>Recepción de elementos</h3>
+          <p class="desc">Registra reemplazos de elementos entregados</p>
         </div>
         <div class="card__footer"><a href="#" class="btn btn-orange"
             aria-label="Ingresar a Realizar cambio">Ingresar</a></div>

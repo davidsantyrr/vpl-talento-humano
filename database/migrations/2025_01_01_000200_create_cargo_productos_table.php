@@ -8,10 +8,11 @@ return new class extends Migration {
         Schema::create('cargo_productos', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cargo_id')->constrained('cargos')->cascadeOnDelete();
+            $table->foreignId('operation_id')->constrained('operation')->cascadeOnDelete();
             $table->string('sku')->index();
             $table->string('name_produc');
             $table->timestamps();
-            $table->unique(['cargo_id','sku']);
+            $table->unique(['cargo_id','operation_id','sku']);
         });
     }
 
