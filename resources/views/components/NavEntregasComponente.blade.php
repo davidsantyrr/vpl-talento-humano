@@ -23,7 +23,7 @@
         <a href="{{ url('/menus/menu') }}" class="nav-link">Home</a>
         <a href="{{ url('/menus/menuentrega') }}" class="nav-link">Menú</a>
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
-        <a href="#" class="nav-link">Entrega</a>
+        <a href="{{ route('formularioEntregas') }}" class="nav-link">Entrega</a>
         <a href="#" class="nav-link">Cambio</a>
         <a href="#" class="nav-link">Consulta</a>
         <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>

@@ -258,6 +258,32 @@ body {
   font-size: 12px
 }
 
+/* Action buttons (icon-only) */
+.actions .btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(15,23,42,0.2);
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.actions .btn-icon:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(2,6,23,0.10); background: #f8fafc; }
+.actions .btn-icon.edit { color: #2563eb; border-color: rgba(37,99,235,0.35); }
+.actions .btn-icon.delete { color: #dc2626; border-color: rgba(220,38,38,0.35); }
+.actions .btn-icon.location { color: #059669; border-color: rgba(5,150,105,0.35); }
+.actions .btn-icon svg { pointer-events: none; }
+
+/* SweetAlert modal customization */
+.sw-popup { border-radius: 16px !important; box-shadow: 0 20px 48px rgba(2,6,23,0.18) !important; }
+.sw-popup .sw-select, .sw-popup .sw-input { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.12); background: #fff; }
+.sw-popup .modal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.sw-popup .field { display: flex; flex-direction: column; gap: 6px; }
+.sw-popup .field label { font-weight: 600; color: var(--text); }
+
 @media (max-width: 640px) {
   .page-header {
     flex-direction: column;
@@ -284,4 +310,6 @@ body {
   .paginacion-compact nav {
     width: 100%
   }
+
+  .sw-popup .modal-grid { grid-template-columns: 1fr; }
 }
