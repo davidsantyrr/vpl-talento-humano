@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('nombres');
             $table->string('apellidos');
             $table->string('documento');
-            $table->foreignId('operacion_id')->constrained('operation')->onDelete('restrict');
+            $table->foreignId('operacion_id')->constrained('sub_areas')->onDelete('restrict');
             $table->timestamps();
         });
     }

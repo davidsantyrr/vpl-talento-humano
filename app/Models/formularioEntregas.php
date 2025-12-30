@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\SubArea;
 
 class Entrega extends Model
 {
@@ -35,7 +36,7 @@ class Entrega extends Model
      */
     public function operacion()
     {
-        return $this->belongsTo(Operation::class, 'operacion_id');
+        return $this->belongsTo(SubArea::class, 'operacion_id');
     }
 
     

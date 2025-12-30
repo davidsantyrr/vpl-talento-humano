@@ -4,6 +4,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\SubArea;
 class Usuarios extends Model
 {
     use HasFactory, SoftDeletes;
@@ -11,7 +12,7 @@ class Usuarios extends Model
     protected $table = 'usuarios_entregas';
 
     protected $fillable = [
-        'nombre',
+        'nombres',
         'apellidos',
         'tipo_documento',
         'numero_documento',
@@ -22,21 +23,16 @@ class Usuarios extends Model
     ];
     protected $dates = ['fecha_ingreso'];
 
-    public function getUsuarioNameAttribute()
-    {
-        return $this->attributes['nombre'] ?? null;
-    }
-    public function setUsuarioNameAttribute($value)
-    {
-        $this->attributes['nombre'] = $value;
-    }
 
-    /**
-     * Relación: un usuario pertenece a una operación
-     */
+
     public function operacion()
     {
-        return $this->belongsTo(Operation::class, 'operacion_id');
+        return $this->belongsTo(SubArea::class, 'operacion_id');
+    }
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class, 'area_id');
     }
 
 }

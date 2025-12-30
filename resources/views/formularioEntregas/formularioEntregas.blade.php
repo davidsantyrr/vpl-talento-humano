@@ -11,35 +11,7 @@
         <h2 class="mb-4">Formulario de Entregas</h2>
         <form action="{{ route('entregas.store') }}" method="POST" onsubmit="guardarFirma()">
             @csrf
-            <div class="mb-3">
-                <label class="form-label">Nombres</label>
-                <input type="text" class="form-control" id="nombre" name="nombre" required>
-            </div>
-            <div class="mb-3">
-                <label for="apellidos" class="form-label">Apellidos</label>
-                <input type="text" class="form-control" id="apellidos" name="apellidos">
-            </div>
-            <div class="mb-3">
-                <label for="fecha_entrega" class="form-label">tipo</label>
-                <select name="operacion_id" class="form-control" required>
-                    <option>prestamo</option>
-                    <option>primera vez</option>
-                    <option>periodica</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="destinatario" class="form-label">operacion</label>
-                
-                <select name="operacion_id" class="form-control" required>
-                    <option value="">Seleccione una operación</option>
 
-                    @foreach($operations as $op)
-                    <option value="{{ $op->id }}">
-                    {{ $op->operationName }}
-                    </option>
-                    @endforeach
-                </select>
-            </div>
             <div>
                 <label  class="form-label">tipo de documento</label>
                 <select name="tipo_documento">
@@ -50,8 +22,39 @@
             </div>
             <div>
                 <label for="descripcion" class="form-label">numero de documento</label>
-                <input type="number" class="form-control" id="numberDocumento" name="numberDocumento" required>
+                <input type="text" class="form-control" id="numberDocumento" name="numberDocumento" required>
+                <div id="usuarioLookup" data-crear-url="{{ route('gestionUsuario.index') }}" class="small text-muted mt-1"></div>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Nombres</label>
+                <input type="text" class="form-control" id="nombre" name="nombre" required>
+            </div>
+            <div class="mb-3">
+                <label for="apellidos" class="form-label">Apellidos</label>
+                <input type="text" class="form-control" id="apellidos" name="apellidos">
+            </div>
+            <div class="mb-3">
+                <label for="fecha_entrega" class="form-label">tipo</label>
+                <select id="tipoSelect" name="tipo" class="form-control" required>
+                    <option value="prestamo">prestamo</option>
+                    <option value="primera vez">primera vez</option>
+                    <option value="periodica">periodica</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="destinatario" class="form-label">operacion</label>
+                
+                <select id="operacionSelect" name="operacion_id" class="form-control" required>
+                    <option value="">Seleccione una operación</option>
+
+                    @foreach($operations as $op)
+                    <option value="{{ $op->id }}">
+                    {{ $op->operationName }}
+                    </option>
+                    @endforeach
+                </select>
+            </div>
+            
             <button type="button" class="btn btn-primary" onclick="abrirModal()">añadir elemento</button>
 
             <!-- Tabla donde se mostrarán los elementos seleccionados para enviar con el formulario -->
@@ -119,4 +122,5 @@
 </div>
 
 <script src="{{ asset('js/firma.js') }}"></script>
+<script src="{{ asset('js/formularioEntregas.js') }}"></script>
 @endsection

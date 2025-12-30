@@ -42,3 +42,6 @@ Route::resource('gestionArea', gestionAreaController::class);
 Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
+
+// AJAX: buscar usuario por número de documento
+Route::get('/usuarios/buscar', [GestionUsuarioController::class, 'findByDocumento'])->name('usuarios.find');
