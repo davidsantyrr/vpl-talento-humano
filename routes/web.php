@@ -11,6 +11,7 @@ use App\Http\Controllers\gestiones\gestionCentroCostoController;
 
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
+use App\Http\Controllers\Recepcion\RecepcionController;
 
 Route::get('/', function () {
     return view('index');
@@ -58,4 +59,8 @@ Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
     Route::get('/elementoxcargo/productos', [CargoProductosController::class, 'index'])->name('elementoxcargo.productos');
     Route::post('/elementoxcargo/productos', [CargoProductosController::class, 'store'])->name('elementoxcargo.productos.store');
     Route::delete('/elementoxcargo/productos/{cargoProducto}', [CargoProductosController::class, 'destroy'])->name('elementoxcargo.productos.destroy');
+
+    // Recepción de devoluciones
+    Route::get('/recepcion', [RecepcionController::class, 'create'])->name('recepcion.create');
+    Route::post('/recepcion', [RecepcionController::class, 'store'])->name('recepcion.store');
 });
