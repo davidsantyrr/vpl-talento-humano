@@ -36,11 +36,7 @@ Route::middleware([VplAuth::class])->group(function () {
     Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
     Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
 
-Route::get('/formularioEntregas', [EntregaController::class, 'create'])
-    ->name('formularioEntregas');
 
-Route::post('/formularioEntregas', [EntregaController::class, 'store'])
-    ->name('entregas.store');
 
 Route::resource('gestionOperacion', gestionOperacionController::class);
 
@@ -65,3 +61,8 @@ Route::resource('gestionUsuario', GestionUsuarioController::class);
 
 // AJAX: buscar usuario por número de documento
 Route::get('/usuarios/buscar', [GestionUsuarioController::class, 'findByDocumento'])->name('usuarios.find');
+Route::get('/formularioEntregas', [EntregaController::class, 'create'])
+    ->name('formularioEntregas');
+
+Route::post('/formularioEntregas', [EntregaController::class, 'store'])
+    ->name('entregas.store');

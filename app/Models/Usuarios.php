@@ -17,6 +17,7 @@ class Usuarios extends Model
         'tipo_documento',
         'numero_documento',
         'email',
+        'cargo_id',
         'fecha_ingreso',
         'operacion_id',
         'area_id',
@@ -33,6 +34,14 @@ class Usuarios extends Model
     public function area()
     {
         return $this->belongsTo(Area::class, 'area_id');
+    }
+    public function entregas()
+    {
+        return $this->hasMany(Entrega::class, 'usuarios_id');
+    }
+    public function cargo()
+    {
+        return $this->belongsTo(Cargo::class, 'cargo_id');
     }
 
 }

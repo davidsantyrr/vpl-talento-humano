@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 use Exception;
-use App\Models\Operation;
+use App\Models\SubArea;
 
 
 class EntregaController extends Controller
@@ -16,7 +16,7 @@ class EntregaController extends Controller
     /** Mostrar el formulario de entregas */
     public function create()
     {
-        $operations = Operation::orderBy('operationName')->get();
+        $operations = SubArea::orderBy('operationName')->get();
 
         return view('formularioEntregas.formularioEntregas', compact('operations'));
     }

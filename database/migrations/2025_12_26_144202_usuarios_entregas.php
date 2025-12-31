@@ -18,11 +18,12 @@ return new class extends Migration
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento');
             $table->string('email');
+            $table->foreignId('cargo_id')->nullable()->constrained('cargos')->onDelete('cascade');
             $table->date('fecha_ingreso');
-            $table->foreignId('operacion_id')->constrained('sub_areas')->onDelete('cascade')->nullable();
-            $table->foreignId('area_id')->constrained('area')->onDelete('cascade')->nullable();
+            $table->foreignId('operacion_id')->nullable()->constrained('sub_areas')->onDelete('cascade');
+            $table->foreignId('area_id')->nullable()->constrained('area')->onDelete('cascade');
             $table->timestamps();
-            $table->softdeletes();
+            $table->softDeletes();
         });
     }
     /**

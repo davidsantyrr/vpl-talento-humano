@@ -14,17 +14,9 @@ class Area extends Model
     protected $fillable = [
         'nombre_area',
     ];
-
-    // Make a virtual attribute `areaName` that maps to DB column `nombre_area`
-    protected $appends = ['areaName'];
-
-    public function getAreaNameAttribute()
+    public function usuarios()
     {
-        return $this->attributes['nombre_area'] ?? null;
-    }
-
-    public function setAreaNameAttribute($value)
-    {
-        $this->attributes['nombre_area'] = $value;
+        return $this->hasMany(Usuarios::class, 'area_id');
     }
 }
+
