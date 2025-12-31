@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,9 @@ class Producto extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'sku', 'name_produc', 'categoria_produc'
+        'sku',
+        'name_produc',
+        'categoria_produc'
     ];
 
     protected $primaryKey = 'sku';

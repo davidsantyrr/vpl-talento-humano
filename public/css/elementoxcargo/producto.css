@@ -1,0 +1,483 @@
+/* public/css/elementoxcargo/producto.css */
+:root {
+    --bg: #f7f9fc;
+    --card: #ffffff;
+    --text: #0b1b2b;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --danger: #ef4444;
+    --radius: 12px;
+    --shadow-sm: 0 6px 18px rgba(2, 6, 23, 0.06);
+    --shadow-md: 0 10px 30px rgba(2, 6, 23, 0.08);
+}
+
+body {
+    background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial
+}
+
+.container {
+    max-width: 1200px;
+    margin: 18px auto;
+    padding: 0 16px
+}
+
+/* Header */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px
+}
+
+.page-title {
+    font-size: 22px;
+    margin: 0;
+    font-weight: 700
+}
+
+.muted-text {
+    color: var(--muted);
+    font-size: 13px
+}
+
+/* Alerts */
+.alert {
+    padding: 10px 12px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.alert.success {
+    background: #e6f4ea;
+    color: #054d2e
+}
+
+.alert.error {
+    background: #fff2f2;
+    color: #7f1d1d
+}
+
+.mb-2 {
+    margin-bottom: 10px
+}
+
+/* Controls */
+.header-actions {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap
+}
+
+.form-inline {
+    display: flex;
+    gap: 10px;
+    align-items: center
+}
+
+.form-inline label {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px
+}
+
+select,
+.product-input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(2, 6, 23, 0.06);
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+    font-size: 14px
+}
+
+.product-search .product-input,
+.form-inline select {
+    min-width: 320px;
+    max-width: 520px
+}
+
+/* Controls row extracted from view */
+.controls-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin: 10px;
+}
+
+.controls-row .left {
+    min-width: 280px;
+    flex: 0 0 280px
+}
+
+.controls-row .center {
+    flex: 1 1 auto;
+    min-width: 420px
+}
+
+.controls-row .right {
+    flex: 0 0 auto;
+    min-width: 140px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center
+}
+
+.form-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 600
+}
+
+.cargo-search {
+    position: relative
+}
+
+.cargo-search .cargo-input {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(2, 6, 23, 0.06);
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+    font-size: 14px;
+    width: 100%
+}
+
+.cargo-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    z-index: 80;
+    max-height: calc(3 * 48px);
+    overflow: auto;
+    padding: 6px;
+    list-style: none;
+    margin: 0;
+    border: 1px solid rgba(2, 6, 23, 0.06)
+}
+
+.cargo-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text)
+}
+
+.cargo-item+.cargo-item {
+    margin-top: 6px
+}
+
+.cargo-item:hover {
+    background: #f1f5ff
+}
+
+.cargo-dropdown[aria-hidden='true'] {
+    display: none
+}
+
+.product-search.form-field {
+    margin-left: 2%
+}
+
+.right.actions {
+    margin-right: 22%;
+    margin-top: 2%
+}
+
+/* Product searchable dropdown */
+.product-search {
+    position: relative;
+    min-width: 320px;
+    width: 100%
+}
+
+.product-search label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--muted)
+}
+
+.product-input {
+    width: 100%
+}
+
+.product-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    background: var(--card);
+    border-radius: 10px;
+    box-shadow: var(--shadow-md);
+    z-index: 80;
+    max-height: calc(5 * 48px);
+    overflow: auto;
+    padding: 6px;
+    list-style: none;
+    margin: 0;
+    border: 1px solid rgba(2, 6, 23, 0.06);
+}
+
+.product-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    gap: 10px;
+    align-items: center
+}
+
+.product-item span {
+    color: var(--muted);
+    font-weight: 500
+}
+
+.product-item+.product-item {
+    margin-top: 6px
+}
+
+.product-item:hover {
+    background: #f1f5ff
+}
+
+.product-dropdown[aria-hidden='true'] {
+    display: none
+}
+
+/* scrollbar */
+.product-dropdown::-webkit-scrollbar {
+    width: 10px
+}
+
+.product-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.06);
+    border-radius: 10px
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none
+}
+
+.btn.primary {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12)
+}
+
+.btn.danger {
+    background: var(--danger);
+    color: #fff
+}
+
+.btn[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed
+}
+
+/* Table */
+.table-wrapper {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden
+}
+
+.tabla-articulos {
+    width: 100%;
+    border-collapse: collapse
+}
+
+.tabla-articulos thead th {
+    text-align: left;
+    padding: 12px 16px;
+    background: #f3f6fb;
+    font-weight: 700;
+    color: var(--text)
+}
+
+.tabla-articulos tbody td {
+    padding: 14px 16px;
+    border-top: 1px solid rgba(2, 6, 23, 0.04);
+    vertical-align: middle
+}
+
+.tabla-articulos tbody tr:nth-child(even) {
+    background: #fbfdff
+}
+
+/* Pagination polished */
+.paginacion {
+    margin-top: 14px;
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow-md);
+    padding: 16px;
+}
+
+.paginacion .form-inline {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    white-space: nowrap
+}
+
+.pagination-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 0
+}
+
+.pagination-row nav {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px
+}
+
+.pagination-row nav * {
+    box-sizing: border-box
+}
+
+.pagination-row nav .pagination {
+    margin: 0;
+    list-style: none;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: flex-end
+}
+
+.pagination-row nav .page-item {
+    margin: 0
+}
+
+.pagination-row nav .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 38px;
+    padding: 0 10px;
+    margin: 0;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    background: #f3f6fb;
+    color: var(--text);
+    border: 1px solid rgba(2, 6, 23, 0.08);
+    transition: all 0.2s ease;
+}
+
+.pagination-row nav .page-item:not(.disabled) .page-link:hover {
+    background: #eef2ff;
+    border-color: var(--primary)
+}
+
+.pagination-row nav .page-item.active .page-link {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary)
+}
+
+.pagination-row nav .page-item.disabled .page-link {
+    opacity: .4;
+    pointer-events: none;
+}
+
+.pagination-row nav svg {
+    width: 18px;
+    height: 18px
+}
+
+/* Per-page control alignment */
+.paginacion .form-inline {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: flex-start
+}
+
+.paginacion select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(2, 6, 23, 0.08);
+    background: var(--card);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+@media (max-width:900px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch
+    }
+
+    .product-search {
+        min-width: unset
+    }
+
+    .per-page-row {
+        justify-content: flex-start
+    }
+
+    .controls-row {
+        flex-wrap: wrap
+    }
+
+    .controls-row .left,
+    .controls-row .center,
+    .controls-row .right {
+        flex: 1 1 100%;
+        min-width: unset
+    }
+
+    .controls-row .right {
+        justify-content: flex-start
+    }
+}
+
+@media (max-width:520px) {
+    .tabla-articulos thead {
+        display: none
+    }
+
+    .tabla-articulos tbody td {
+        display: block;
+        width: 100%
+    }
+
+    .tabla-articulos tbody tr {
+        display: block;
+        margin-bottom: 10px;
+        padding: 10px;
+        border-radius: 8px
+    }
+
+    .tabla-articulos tbody td::before {
+        content: attr(data-label);
+        display: block;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 6px
+    }
+}

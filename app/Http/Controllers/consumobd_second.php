@@ -11,9 +11,9 @@ class TestConexionController extends Controller
         try {
             // Consulta simple a una tabla real de la segunda BD
             $datos = DB::connection('mysql_secundaria')
-                        ->table('usuarios') // CAMBIA el nombre de la tabla si es necesario
-                        ->limit(1)
-                        ->get();
+                ->table('usuarios') // CAMBIA el nombre de la tabla si es necesario
+                ->limit(1)
+                ->get();
 
             return response()->json([
                 'conexion' => 'OK',
