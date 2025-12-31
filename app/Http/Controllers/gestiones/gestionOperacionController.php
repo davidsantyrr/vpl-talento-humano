@@ -4,16 +4,22 @@ namespace App\Http\Controllers\gestiones;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Operation;
+use App\Models\SubArea;
 
 class gestionOperacionController extends Controller
 {
 	/** Mostrar listado de operaciones y formulario de creación */
 	public function index()
 	{
-		$operations = Operation::orderBy('id', 'desc')->get();
+		$operations = SubArea::orderBy('id', 'desc')->get();
 		return view('gestiones.gestionOperacion', compact('operations'));
 	}
+	public function create()
+    {
+		$operations = SubArea::orderBy('operationName')->get();
+
+		return view('formularioEntregas.formularioEntregas', compact('operations'));
+    }
 
 	/** Guardar nueva operación */
 	public function store(Request $request)
@@ -22,7 +28,7 @@ class gestionOperacionController extends Controller
 			'operationName' => 'required|string|max:255',
 		]);
 
-		Operation::create($request->only('operationName'));
+		SubArea::create($request->only('operationName'));
 
 		return redirect()->route('gestionOperacion.index')->with('success', 'Operación creada correctamente');
 	}
@@ -30,8 +36,8 @@ class gestionOperacionController extends Controller
 	/** Mostrar el formulario de edición */
 	public function edit($id)
 	{
-		$editOperation = Operation::findOrFail($id);
-		$operations = Operation::orderBy('id', 'desc')->get();
+		$editOperation = SubArea::findOrFail($id);
+		$operations = SubArea::orderBy('id', 'desc')->get();
 		return view('gestiones.gestionOperacion', compact('operations', 'editOperation'));
 	}
 
@@ -42,7 +48,7 @@ class gestionOperacionController extends Controller
 			'operationName' => 'required|string|max:255',
 		]);
 
-		$op = Operation::findOrFail($id);
+		$op = SubArea::findOrFail($id);
 		$op->update($request->only('operationName'));
 
 		return redirect()->route('gestionOperacion.index')->with('success', 'Operación actualizada');
@@ -51,7 +57,7 @@ class gestionOperacionController extends Controller
 	/** Eliminar operación */
 	public function destroy($id)
 	{
-		$op = Operation::findOrFail($id);
+		$op = SubArea::findOrFail($id);
 		$op->delete();
 		return redirect()->route('gestionOperacion.index')->with('success', 'Operación eliminada');
 	}

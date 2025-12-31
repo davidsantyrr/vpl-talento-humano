@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Operation extends Model
+class SubArea extends Model
 {
     use HasFactory;
 
-    protected $table = 'operation';
+    protected $table = 'sub_areas';
 
     protected $fillable = [
         'operationName',

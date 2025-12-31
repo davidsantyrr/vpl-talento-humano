@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\SubArea;
+class Usuarios extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'usuarios_entregas';
+
+    protected $fillable = [
+        'nombres',
+        'apellidos',
+        'tipo_documento',
+        'numero_documento',
+        'email',
+        'fecha_ingreso',
+        'operacion_id',
+        'area_id',
+    ];
+    protected $dates = ['fecha_ingreso'];
+
+
+
+    public function operacion()
+    {
+        return $this->belongsTo(SubArea::class, 'operacion_id');
+    }
+
+    public function area()
+    {
+        return $this->belongsTo(Area::class, 'area_id');
+    }
+
+}

@@ -17,9 +17,12 @@ return new class extends Migration
             $table->string('apellidos')->nullable();
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento');
-            $table->foreignId('operacion_id')->constrained('operation')->onDelete('cascade')->nullable();
+            $table->string('email');
+            $table->date('fecha_ingreso');
+            $table->foreignId('operacion_id')->constrained('sub_areas')->onDelete('cascade')->nullable();
             $table->foreignId('area_id')->constrained('area')->onDelete('cascade')->nullable();
             $table->timestamps();
+            $table->softdeletes();
         });
     }
     /**

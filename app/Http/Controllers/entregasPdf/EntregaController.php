@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\entregasPdf;
 
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use App\Models\Operation;
 
 
 class EntregaController extends Controller
@@ -14,7 +16,9 @@ class EntregaController extends Controller
     /** Mostrar el formulario de entregas */
     public function create()
     {
-        return view('formularioEntregas');
+        $operations = Operation::orderBy('operationName')->get();
+
+        return view('formularioEntregas.formularioEntregas', compact('operations'));
     }
 
     /** Procesar el envío del formulario, generar PDF y devolver descarga */
