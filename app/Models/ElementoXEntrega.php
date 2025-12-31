@@ -12,6 +12,7 @@ class ElementoXEntrega extends Model
     protected $table = 'elemento_x_entrega';
 
     protected $fillable = [
+        'entrega_id',
         'sku',
         'cantidad',
     ];

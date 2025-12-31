@@ -5,38 +5,47 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\SubArea;
+use App\Models\Usuarios;
+use App\Models\ElementoXEntrega;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Entrega extends Model
 {
     use HasFactory;
+    use SoftDeletes;
+
+    /**
+     * Tabla asociada
+     */
+    protected $table = 'entregas';
 
     /*
-     * Campos que se pueden asignar masivamente
+     * Campos que se pueden asignar masivamente (según migración)
      */
     protected $fillable = [
-        'nombre',
-        'apellidos',
-        'tipo',
+        'rol_entrega',
+        'entrega_user',
+        'tipo_entrega',
+        'usuarios_id',
         'operacion_id',
-        'tipo_documento',
-        'numberDocumento',
-        'elementos',
-        'firma',
     ];
 
     /**
-     * Casts automáticos
+     * Relaciones
      */
-    protected $casts = [
-        'elementos' => 'array', // JSON → array automáticamente
-    ];
-
-    /**
-     * Relación: una entrega pertenece a una operación
-     */
-    public function operacion()
+    public function usuario()
     {
         return $this->belongsTo(Usuarios::class, 'usuarios_id');
+    }
+
+    public function operacion()
+    {
+        return $this->belongsTo(SubArea::class, 'operacion_id');
+    }
+
+    public function elementos()
+    {
+        return $this->hasMany(ElementoXEntrega::class, 'entrega_id');
     }
 
 }

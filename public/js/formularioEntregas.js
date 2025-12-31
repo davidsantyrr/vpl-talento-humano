@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return String(val || '').trim().toLowerCase();
     }
 
+    // recordar última operación seleccionada y operación asociada al usuario
+    let lastOperacionValue = operacionSelect.value || '';
+    let usuarioOperacionId = null;
+
     function updateOperacionState() {
         const tipo = normalize(tipoSelect.value);
         // permitir operacion solo si tipo es 'prestamo'
@@ -17,8 +21,16 @@ document.addEventListener('DOMContentLoaded', function () {
             operacionSelect.classList.remove('disabled');
         } else {
             // para 'primera vez' o 'periodica' (o cualquier otro) deshabilitar
+            // recordar la selección actual antes de deshabilitar
+            lastOperacionValue = operacionSelect.value || lastOperacionValue;
             operacionSelect.disabled = true;
             operacionSelect.required = false;
+            // al deshabilitar, restaurar la operación asociada al usuario si existe, sino limpiar
+            if (usuarioOperacionId) {
+                operacionSelect.value = usuarioOperacionId;
+            } else {
+                operacionSelect.value = '';
+            }
             // mantener selección (si existe) pero no permitir cambios
             operacionSelect.classList.add('disabled');
         }
@@ -56,6 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function buscarUsuario(numero) {
         if (!numero) {
             showLookupMessage('');
+            usuarioOperacionId = null;
             return;
         }
 
@@ -77,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (nombreInput) nombreInput.value = '';
                     if (apellidosInput) apellidosInput.value = '';
                     if (tipoDocumentoSelect) tipoDocumentoSelect.value = '';
+                    usuarioOperacionId = null;
                     updateOperacionState();
                     return;
                 }
@@ -89,7 +103,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (operacionSelect && data.operacion_id) {
                     // asignar la operación encontrada; si el tipo no es 'prestamo' seguirá deshabilitada
+                    usuarioOperacionId = data.operacion_id;
                     operacionSelect.value = data.operacion_id;
+                    lastOperacionValue = data.operacion_id;
                 }
                 // actualizar el estado (habilita solo si tipo === 'prestamo')
                 updateOperacionState();
@@ -115,4 +131,55 @@ document.addEventListener('DOMContentLoaded', function () {
             if (val) buscarUsuario(val);
         });
     }
+
+    // cuando el usuario cambia manualmente la operación, actualizar el valor recordado
+    operacionSelect.addEventListener('change', function () {
+        lastOperacionValue = operacionSelect.value || lastOperacionValue;
+    });
+
+    // ------------------ Selector de productos para modal de elementos ------------------
+    const productos = (window.FormularioPageConfig && Array.isArray(window.FormularioPageConfig.allProducts) ? window.FormularioPageConfig.allProducts : (window.RecepcionPageConfig && Array.isArray(window.RecepcionPageConfig.allProducts) ? window.RecepcionPageConfig.allProducts : []));
+
+    const modal = document.getElementById('modalElementos');
+    const elementoSelect = document.getElementById('elementoSelect');
+    const cantidadInput = document.getElementById('cantidadInput');
+    const elementosTbody = document.getElementById('elementosTbody');
+    const elementosFormTbody = document.getElementById('elementosFormTbody');
+    const elementosJson = document.getElementById('elementosJson');
+
+    let elementoSeleccionado = null;
+    let elementos = [];
+
+    function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function filterProductos(term){ const t = String(term||'').trim().toLowerCase(); if (!t) return productos.slice(); return productos.filter(p => (p.sku||'').toLowerCase().includes(t) || (p.name||'').toLowerCase().includes(t)); }
+
+    function renderModalTable(){ if (!elementosTbody) return; elementosTbody.innerHTML = elementos.map(it => `<tr><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td></tr>`).join(''); }
+    function renderFormTable(){ if (!elementosFormTbody) return; elementosFormTbody.innerHTML = elementos.map((it, idx) => `<tr data-idx="${idx}"><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td><td><button type="button" class="btn btn-sm btn-danger" data-idx="${idx}">Quitar</button></td></tr>`).join(''); Array.from(elementosFormTbody.querySelectorAll('button[data-idx]')).forEach(btn=>btn.addEventListener('click', (e)=>{ const i = Number(btn.dataset.idx); elementos.splice(i,1); syncAndRender(); })); }
+
+    function syncAndRender(){ if (elementosJson) elementosJson.value = JSON.stringify(elementos); renderModalTable(); renderFormTable(); }
+
+    // abrir/cerrar modal y eventos
+    window.abrirModal = function(){ if (!modal) return; modal.classList.add('active'); elementoSeleccionado = null; if (elementoSelect) { elementoSelect.value = ''; elementoSelect.focus(); } }
+    window.cerrarModal = function(){ if (!modal) return; modal.classList.remove('active'); }
+
+    window.agregarElementoModal = function(){
+        let sel = null;
+        if (elementoSelect && elementoSelect.value) {
+            const sku = elementoSelect.value;
+            const opt = elementoSelect.querySelector(`option[value="${sku}"]`);
+            const name = opt ? opt.dataset.name || opt.textContent : '';
+            sel = { sku, name };
+        }
+        if (!sel) { alert('Seleccione un elemento válido'); return; }
+        const qty = parseInt(cantidadInput && cantidadInput.value ? cantidadInput.value : '0',10);
+        if (!qty || qty < 1) { alert('Ingrese una cantidad válida'); return; }
+        elementos.push({ sku: sel.sku, name: sel.name, cantidad: qty });
+        syncAndRender();
+    }
+
+    if (elementoSelect){ elementoSelect.addEventListener('change', ()=>{ const sku = elementoSelect.value; const opt = elementoSelect.querySelector(`option[value="${sku}"]`); elementoSeleccionado = opt ? { sku, name: opt.dataset.name || opt.textContent } : null; } ); }
+
+    // al cargar la página si hay elementos en el hidden, restaurarlos
+    try{ const existing = elementosJson && elementosJson.value ? JSON.parse(elementosJson.value) : null; if (Array.isArray(existing)) { elementos = existing; syncAndRender(); } } catch(e){ /* ignore */ }
 });

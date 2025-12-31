@@ -39,12 +39,6 @@ Route::middleware([VplAuth::class])->group(function () {
 
 
 
-Route::resource('gestionOperacion', gestionOperacionController::class);
-
-Route::resource('gestionArea', gestionAreaController::class);
-
-Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
-
 
     // Gestión de Cargos (CRUD)
     Route::get('/elementoxcargo/cargos', [CargoController::class, 'index'])->name('cargos.index');
@@ -71,3 +65,12 @@ Route::get('/formularioEntregas', [EntregaController::class, 'create'])
 
 Route::post('/formularioEntregas', [EntregaController::class, 'store'])
     ->name('entregas.store');
+
+// Historial de entregas - ruta pública (fuera de middleware)
+Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('entregas.index');
+Route::resource('gestionOperacion', gestionOperacionController::class);
+
+Route::resource('gestionArea', gestionAreaController::class);
+
+Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
+

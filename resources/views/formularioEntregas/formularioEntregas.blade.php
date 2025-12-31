@@ -96,10 +96,11 @@
     <div>
         <h1>Elementos a entregar</h1>
         <label for="elemento">seleccione elemento</label>
-        <select id="elementoSelect">
-            <option value="item1">Item 1</option>
-            <option value="item2">Item 2</option>
-            <option value="item3">Item 3</option>
+        <select id="elementoSelect" class="form-control">
+            <option value="">Seleccione un producto</option>
+            @foreach($allProducts ?? collect() as $p)
+                <option value="{{ $p->sku }}" data-name="{{ $p->name_produc }}">{{ $p->sku }} — {{ $p->name_produc }}</option>
+            @endforeach
         </select>
         <label for="cantidad">Cantidad</label>
         <input type="number" class="form-control" id="cantidadInput" name="cantidad" min="1" required>
@@ -122,5 +123,10 @@
 </div>
 
 <script src="{{ asset('js/firma.js') }}"></script>
+<script>
+    window.FormularioPageConfig = {
+        allProducts: @json(($allProducts ?? collect())->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))
+    };
+</script>
 <script src="{{ asset('js/formularioEntregas.js') }}"></script>
 @endsection
