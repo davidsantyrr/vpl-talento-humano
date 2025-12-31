@@ -83,64 +83,11 @@
     </form>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-(function(){
-  const items = [];
-  const tableBody = document.querySelector('#itemsTable tbody');
-  const itemsField = document.getElementById('itemsField');
-  function render(){
-    tableBody.innerHTML = items.map(it => `<tr><td>${escapeHtml(it.nombre)}</td><td style="text-align:center;">${it.cantidad}</td></tr>`).join('');
-    itemsField.value = JSON.stringify(items);
-  }
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  document.getElementById('addItemBtn').addEventListener('click', function(){
-    const nombre = prompt('Nombre del elemento');
-    if (!nombre) return;
-    const cantStr = prompt('Cantidad');
-    const cant = parseInt(cantStr || '0', 10);
-    if (!cant || cant < 1) return;
-    items.push({ nombre, cantidad: cant });
-    render();
-  });
-
-  // Canvas firma: ajustar tamaño al contenedor y escalar por DPR
-  const canvas = document.getElementById('firmaCanvas');
-  const pad = document.getElementById('firmaPad');
-  const ctx = canvas.getContext('2d');
-  function resizeCanvas(){
-    const dpr = window.devicePixelRatio || 1;
-    const cssWidth = Math.min(pad.clientWidth - 32, 600); // padding visual y límite
-    const cssHeight = Math.max(160, Math.floor(cssWidth * 0.4));
-    canvas.style.width = cssWidth + 'px';
-    canvas.style.height = cssHeight + 'px';
-    canvas.width = Math.floor(cssWidth * dpr);
-    canvas.height = Math.floor(cssHeight * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.lineCap = 'round';
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
-
-  let drawing = false;
-  function getPos(e){
-    const rect = canvas.getBoundingClientRect();
-    const clientX = (e.touches ? e.touches[0].clientX : e.clientX);
-    const clientY = (e.touches ? e.touches[0].clientY : e.clientY);
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  }
-  function start(e){ e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-  function move(e){ if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }
-  function end(){ drawing = false; }
-  canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); canvas.addEventListener('mouseup', end); canvas.addEventListener('mouseleave', end);
-  canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', end);
-  document.getElementById('clearFirma').addEventListener('click', function(){ ctx.clearRect(0,0,canvas.width,canvas.height); });
-
-  document.getElementById('recepcionForm').addEventListener('submit', function(){
-    document.getElementById('firmaField').value = canvas.toDataURL('image/png');
-    itemsField.value = JSON.stringify(items);
-  });
-})();
+  window.RecepcionPageConfig = {
+    allProducts: @json($allProducts->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))
+  };
 </script>
+<script src="{{ asset('js/recepcion/recepcion.js') }}"></script>
 @endsection

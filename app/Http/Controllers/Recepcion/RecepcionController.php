@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Recepcion;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Operation;
+use App\Models\Producto;
 
 class RecepcionController extends Controller
 {
     public function create()
     {
         $operations = Operation::orderBy('operationName')->get();
-        return view('recepcion.recepcion', compact('operations'));
+        $allProducts = Producto::select('sku','name_produc')->orderBy('name_produc')->get();
+        return view('recepcion.recepcion', compact('operations','allProducts'));
     }
 
     public function store(Request $request)
