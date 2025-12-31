@@ -4,14 +4,15 @@ namespace App\Http\Controllers\Recepcion;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\Operation;
+use App\Models\SubArea;
 use App\Models\Producto;
 
 class RecepcionController extends Controller
 {
     public function create()
     {
-        $operations = Operation::orderBy('operationName')->get();
+        // cargar sub_areas como "operations" para no cambiar la vista
+        $operations = SubArea::orderBy('operationName')->get();
         $allProducts = Producto::select('sku','name_produc')->orderBy('name_produc')->get();
         return view('recepcion.recepcion', compact('operations','allProducts'));
     }
@@ -23,11 +24,10 @@ class RecepcionController extends Controller
             'num_doc' => ['required','string','max:50'],
             'nombres' => ['required','string','max:120'],
             'apellidos' => ['required','string','max:120'],
-            'operation_id' => ['required','integer','exists:operation,id'],
-            'items' => ['required','string'], // JSON de elementos
-            'firma' => ['nullable','string'], // base64 de firma
+            'operation_id' => ['required','integer','exists:sub_areas,id'],
+            'items' => ['required','string'],
+            'firma' => ['nullable','string'],
         ]);
-        // TODO: Persistir recepción (modelo/tabla). Por ahora, solo confirma.
         return redirect()->back()->with('status', 'Recepción registrada');
     }
 }

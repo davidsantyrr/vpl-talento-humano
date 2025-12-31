@@ -28,11 +28,11 @@
 
             <div class="right actions" style="gap:10px;">
                 <div class="form-field">
-                    <label for="operation_id">Operación</label>
-                    <select id="operation_id" name="operation_id" class="product-input" required>
-                        <option value="">Seleccione operación</option>
-                        @foreach($operations as $op)
-                            <option value="{{ $op->id }}" {{ (int)$operationId === (int)$op->id ? 'selected' : '' }}>{{ $op->operationName }}</option>
+                    <label for="sub_area_id">Subárea</label>
+                    <select id="sub_area_id" name="sub_area_id" class="product-input" required>
+                        <option value="">Seleccione subárea</option>
+                        @foreach($subAreas as $op)
+                            <option value="{{ $op->id }}" {{ (int)$subAreaId === (int)$op->id ? 'selected' : '' }}>{{ $op->operationName }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -48,7 +48,7 @@
                     <th>SKU</th>
                     <th>Nombre</th>
                     <th>Cargo</th>
-                    <th>Operación</th>
+                    <th>Subárea</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -58,7 +58,7 @@
                     <td>{{ $a->sku }}</td>
                     <td>{{ $a->name_produc }}</td>
                     <td>{{ $a->cargo->nombre }}</td>
-                    <td>{{ $a->operation->operationName ?? '-' }}</td>
+                    <td>{{ $a->subArea->operationName ?? '-' }}</td>
                     <td>
                         <form method="POST" action="{{ route('elementoxcargo.productos.destroy', $a) }}"
                             class="form-delete">
@@ -82,7 +82,7 @@
             style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px">
             <form method="GET" action="{{ route('elementoxcargo.productos') }}" class="form-inline">
                 <input type="hidden" name="cargo_id" value="{{ $cargoId }}">
-                <input type="hidden" name="operation_id" value="{{ $operationId }}">
+                <input type="hidden" name="sub_area_id" value="{{ $subAreaId }}">
                 <label for="per_page">Ver</label>
                 <select id="per_page" name="per_page" onchange="this.form.submit()">
                     @foreach([5,10,20,50] as $size)

@@ -10,7 +10,7 @@ return new class extends Migration {
             $table->foreignId('cargo_id')->constrained('cargos')->cascadeOnDelete();
             $table->foreignId('sub_area_id')->constrained('sub_areas')->cascadeOnDelete();
             $table->string('sku')->index();
-            $table->string('name_producto');
+            $table->string('name_produc');
             $table->timestamps();
             $table->unique(['cargo_id','sub_area_id','sku']);
         });
