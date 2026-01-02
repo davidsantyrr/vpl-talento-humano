@@ -10,6 +10,8 @@
     const tableBody = document.querySelector('#itemsTable tbody');
     const itemsField = document.getElementById('itemsField');
     const addBtnTrigger = document.getElementById('addItemBtn');
+    const btnSeleccionarEntrega = document.getElementById('btnSeleccionarEntrega');
+    const tipoRecepcionSelect = document.getElementById('tipoRecepcionSelect');
 
     let items = [];
     let tempItems = [];
@@ -26,6 +28,28 @@
             toast.addEventListener('mouseleave', Swal.resumeTimer)
         }
     });
+
+    // Función para actualizar botones según el tipo
+    function updateTipoRecepcionState() {
+        if (!tipoRecepcionSelect) return;
+        const tipo = tipoRecepcionSelect.value;
+        const isPrestamo = (tipo === 'prestamo');
+
+        if (addBtnTrigger) {
+            addBtnTrigger.style.display = isPrestamo ? 'none' : '';
+        }
+        if (btnSeleccionarEntrega) {
+            btnSeleccionarEntrega.style.display = isPrestamo ? '' : 'none';
+        }
+    }
+
+    // Evento para cambio de tipo
+    if (tipoRecepcionSelect) {
+        tipoRecepcionSelect.addEventListener('change', updateTipoRecepcionState);
+    }
+
+    // Inicializar estado
+    updateTipoRecepcionState();
 
     function escapeHtml(s){ 
         return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); 

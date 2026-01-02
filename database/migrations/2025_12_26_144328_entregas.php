@@ -23,6 +23,7 @@ return new class extends Migration
             $table->foreignId('usuarios_id')->nullable()->constrained('usuarios_entregas')->onDelete('restrict');
             $table->foreignId('operacion_id')->nullable()->constrained('sub_areas')->onDelete('restrict');
             $table->foreignId('recepciones_id')->nullable()->constrained('recepciones')->onDelete('restrict');
+            $table->boolean('recibido')->default(false)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

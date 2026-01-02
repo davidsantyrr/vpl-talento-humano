@@ -33,6 +33,14 @@ class Entrega extends Model
         'usuarios_id',
         'operacion_id',
         'recepciones_id',
+        'recibido',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        'recibido' => 'boolean',
     ];
 
     /**

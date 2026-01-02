@@ -169,6 +169,21 @@ class EntregaController extends Controller
                 ]);
             }
 
+            // Si es tipo "cambio" y tiene recepcion_id, marcar la recepción como entregada
+            if ($data['tipo'] === 'cambio' && !empty($data['recepcion_id'])) {
+                DB::table('recepciones')
+                    ->where('id', $data['recepcion_id'])
+                    ->update([
+                        'entregado' => true,
+                        'updated_at' => now()
+                    ]);
+                
+                Log::info('Recepción marcada como entregada', [
+                    'recepcion_id' => $data['recepcion_id'],
+                    'entrega_id' => $entrega->id
+                ]);
+            }
+
             // TODO: Generar PDF más adelante
             // Por ahora solo guardamos los datos
             
@@ -246,21 +261,22 @@ class EntregaController extends Controller
         $numero = $request->query('numero');
         try {
             $query = DB::table('recepciones')
-                ->join('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
                 ->join('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
                 ->select([
                     'recepciones.id',
                     'recepciones.created_at',
-                    'usuarios_entregas.nombres',
-                    'usuarios_entregas.apellidos',
-                    'usuarios_entregas.numero_documento',
-                    'usuarios_entregas.tipo_documento',
+                    'recepciones.nombres',
+                    'recepciones.apellidos',
+                    'recepciones.numero_documento',
+                    'recepciones.tipo_documento',
                     'sub_areas.operationName as operacion'
                 ])
+                ->where('recepciones.entregado', false) // Solo recepciones no entregadas
+                ->whereNull('recepciones.deleted_at')
                 ->orderBy('recepciones.created_at', 'desc');
 
             if ($numero) {
-                $query->where('usuarios_entregas.numero_documento', 'like', "%{$numero}%");
+                $query->where('recepciones.numero_documento', 'like', "%{$numero}%");
             }
 
             $recepciones = $query->limit(50)->get();

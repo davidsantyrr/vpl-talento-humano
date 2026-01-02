@@ -15,12 +15,22 @@ class Recepcion extends Model
     protected $fillable = [
         'rol_recepcion',
         'recepcion_user',
+        'tipo_recepcion',
         'tipo_documento',
         'numero_documento',
         'nombres',
         'apellidos',
         'usuarios_id',
         'operacion_id',
+        'entregas_id',
+        'entregado',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     */
+    protected $casts = [
+        'entregado' => 'boolean',
     ];
 
     // Relaciones

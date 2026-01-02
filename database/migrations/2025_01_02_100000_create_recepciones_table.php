@@ -15,12 +15,16 @@ return new class extends Migration
             $table->id();
             $table->string('rol_recepcion');
             $table->string('recepcion_user');
+            $table->string('tipo_recepcion')->default('cambio'); // 'cambio' o 'prestamo'
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable();
             $table->string('nombres')->nullable();
             $table->string('apellidos')->nullable();
             $table->foreignId('usuarios_id')->nullable()->constrained('usuarios_entregas')->onDelete('restrict');
             $table->foreignId('operacion_id')->constrained('sub_areas')->onDelete('restrict');
+            // NO creamos la FK a entregas aquí, se hará después en otra migración
+            $table->unsignedBigInteger('entregas_id')->nullable();
+            $table->boolean('entregado')->default(false)->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

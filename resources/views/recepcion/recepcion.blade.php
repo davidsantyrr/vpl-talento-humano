@@ -34,7 +34,14 @@
             <label>Apellidos</label>
             <input type="text" name="apellidos" id="apellidosRecepcion">
           </div>
-          <div class="field span-2">
+          <div class="field">
+            <label>Tipo</label>
+            <select id="tipoRecepcionSelect" name="tipo">
+              <option value="cambio">Recepción de cambio</option>
+              <option value="prestamo">Recepción de préstamo</option>
+            </select>
+          </div>
+          <div class="field" id="field-operacion-recepcion">
             <label>Operación</label>
             <select name="operation_id" id="operacionRecepcion">
               <option value="">Seleccione una operación</option>
@@ -46,6 +53,7 @@
         </div>
         <div class="actions">
           <button type="button" class="btn add" id="addItemBtn">Añadir elemento</button>
+          <button type="button" class="btn primary" id="btnSeleccionarEntrega" style="display:none;">Seleccionar entrega</button>
         </div>
       </div>
 
@@ -79,11 +87,50 @@
       <input type="hidden" name="usuarios_id" id="usuariosIdHidden" value="">
       <input type="hidden" name="items" id="itemsField">
       <input type="hidden" name="firma" id="firmaField">
+      <input type="hidden" name="entrega_id" id="entregaIdHidden" value="">
 
       <div class="actions">
         <button type="submit" class="btn primary">Recibir devolución</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div class="modal" id="modalEntregas">
+  <div>
+    <h1>Seleccionar Entrega (Préstamo)</h1>
+    <div class="modal-grid" style="grid-template-columns: 1fr;">
+      <div class="modal-field">
+        <label>Buscar por número de documento</label>
+        <input type="text" id="buscarEntregaInput" placeholder="Ingrese número de documento">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn primary" onclick="buscarEntregasPrestamo()">Buscar</button>
+    </div>
+    <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Nombre</th>
+            <th>Documento</th>
+            <th>Elementos Entregados</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+        <tbody id="entregasTbody">
+          <tr>
+            <td colspan="5" style="text-align: center; padding: 20px;">
+              Ingrese un número de documento para buscar entregas
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button type="button" class="btn secondary" onclick="cerrarModalEntregas()">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -155,4 +202,5 @@
 <script src="{{ asset('js/recepcion/recepcion.js') }}"></script>
 <script src="{{ asset('js/recepcion/recepcionLookup.js') }}"></script>
 <script src="{{ asset('js/recepcion/recepcionModal.js') }}"></script>
+<script src="{{ asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
 @endsection

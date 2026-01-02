@@ -603,17 +603,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (respUsuario.ok) {
                     const dataUsuario = await respUsuario.json();
                     if (dataUsuario) {
-                        // Cargar operación del usuario
+                        // Cargar operación y cargo del usuario
                         if (operacionSelect && dataUsuario.operacion_id) {
                             operacionSelect.value = dataUsuario.operacion_id;
                             usuarioOperacionId = dataUsuario.operacion_id;
-                            lastOperacionValue = dataUsuario.operacion_id;
                         }
-                        
-                        // Exponer cargo_id para otros scripts
-                        if (lookupBox) lookupBox.dataset.cargoId = dataUsuario.cargo_id ? String(dataUsuario.cargo_id) : '';
-                        if (cargoHidden) cargoHidden.value = dataUsuario.cargo_id ? String(dataUsuario.cargo_id) : '';
-                        
+                        if (lookupBox && dataUsuario.cargo_id) {
+                            lookupBox.dataset.cargoId = String(dataUsuario.cargo_id);
+                        }
+                        if (cargoHidden && dataUsuario.cargo_id) {
+                            cargoHidden.value = String(dataUsuario.cargo_id);
+                        }
+                        if (cargoSelect && dataUsuario.cargo_id) {
+                            cargoSelect.value = dataUsuario.cargo_id;
+                        }
                         // Actualizar estado y productos
                         updateOperacionState();
                         await updateElementoOptions();
@@ -674,9 +677,18 @@ document.addEventListener('DOMContentLoaded', function () {
         syncFormTable();
         cerrarModalRecepcion();
         
+        // Habilitar botón "Añadir elemento" para edición
+        if (btnAnadirElemento) {
+            btnAnadirElemento.style.display = '';
+        }
+        // Ocultar botón "Seleccionar recepción"
+        if (btnSeleccionarRecepcion) {
+            btnSeleccionarRecepcion.style.display = 'none';
+        }
+        
         Toast.fire({
             icon: 'success',
-            title: 'Recepción seleccionada correctamente'
+            title: 'Recepción cargada. Puede editar los elementos'
         });
     }
 
