@@ -12,7 +12,7 @@
 
   <div class="panel">
     
-  {{-- <h1 class="title">Recepción de devoluciones</h1> --}}
+  <h1 class="title">Recepción de devoluciones</h1>
     <form method="POST" action="{{ route('recepcion.store') }}" id="recepcionForm">
       @csrf
       <div class="section">

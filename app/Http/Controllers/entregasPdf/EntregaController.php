@@ -154,4 +154,30 @@ class EntregaController extends Controller
             return redirect()->back()->with('error', 'Ocurrió un error al procesar la entrega.');
         }
     }
+
+    /**
+     * API: Lista de productos permitidos según cargo y subárea.
+     * Retorna [{sku, name_produc}] usando la tabla local cargo_productos.
+     */
+    public function cargoProductos(Request $request)
+    {
+        $cargoId = (int) $request->query('cargo_id');
+        $subAreaId = (int) $request->query('sub_area_id');
+        try {
+            $query = DB::table('cargo_productos')->select(['sku', 'name_produc']);
+            if ($cargoId) { $query->where('cargo_id', $cargoId); }
+            if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
+            $rows = $query->orderBy('name_produc')->get();
+            $data = $rows->map(function ($r) {
+                return [
+                    'sku' => (string) ($r->sku ?? ''),
+                    'name_produc' => (string) ($r->name_produc ?? ''),
+                ];
+            })->filter(fn($x) => !empty($x['sku']))->values();
+            return response()->json($data, 200);
+        } catch (\Throwable $e) {
+            Log::warning('cargo_productos query failed', ['error' => $e->getMessage()]);
+            return response()->json([], 200);
+        }
+    }
 }

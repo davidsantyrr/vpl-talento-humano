@@ -85,3 +85,6 @@ Route::resource('gestionArea', gestionAreaController::class);
 
 Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 
+// Ruta para obtener productos de cargo_productos (sin filtros o con filtros opcionales)
+Route::get('/cargo-productos', [App\Http\Controllers\entregasPdf\EntregaController::class, 'cargoProductos'])->name('cargo.productos');
+

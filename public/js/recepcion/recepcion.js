@@ -27,15 +27,15 @@
         <div class="sw-grid">
           <div class="sw-field">
             <label>Producto</label>
-            <input id="sw-prod-input" class="swal2-input" placeholder="Escribe para buscar SKU o nombre" style="width:100%;" />
+            <input id="sw-prod-input" class="swal2-input" placeholder="Escribe para buscar SKU o nombre" />
           </div>
-          <div class="sw-actions"> 
-            <div class="sw-field" style="width:120px;">
-              <label>Cantidad</label>
-              <input id="sw-qty" type="number" min="1" value="1" class="swal2-input" style="width:100%;" />
-            </div>
-            <button type="button" id="sw-add-btn" class="swal2-confirm swal2-styled" style="height:42px;align-self:end;">Agregar a lista</button>
+          <div class="sw-field">
+            <label>Cantidad</label>
+            <input id="sw-qty" type="number" min="1" value="1" class="swal2-input" />
           </div>
+        </div>
+        <div class="sw-actions">
+          <button type="button" id="sw-add-btn" class="swal2-confirm swal2-styled">Agregar a lista</button>
         </div>
         <table class="sw-table" id="sw-items-table">
           <thead><tr><th>Elemento</th><th style="width:120px;">Cantidad</th></tr></thead>

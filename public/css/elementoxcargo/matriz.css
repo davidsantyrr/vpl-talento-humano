@@ -1,18 +1,117 @@
-.matrix-container{max-width:1200px;margin:18px auto;padding:0 16px}
-.matrix-actions{display:flex;justify-content:flex-end;margin-bottom:10px}
-.matrix-filters{display:flex;gap:12px;align-items:flex-end;margin-bottom:12px;flex-wrap:wrap}
-.matrix-filters .filter{display:flex;flex-direction:column;gap:6px}
-.matrix-filters select{padding:10px 12px;border-radius:10px;border:1px solid rgba(2,6,23,0.1);background:#fff}
-.matrix-filters .filters-actions{margin-left:auto;display:flex;align-items:flex-end}
-.btn.back{background:#0b1b2b;color:#fff;padding:10px 14px;border-radius:10px;text-decoration:none;box-shadow:0 8px 20px rgba(11,27,43,0.18)}
-.matrix-wrapper{background:#fff;border-radius:12px;box-shadow:0 10px 24px rgba(2,6,23,0.08);overflow:auto}
-.matrix-table{width:100%;border-collapse:collapse;min-width:720px}
-.matrix-table thead th{background:#0b1b2b;color:#fff;padding:10px;border:1px solid #e5e7eb;text-align:left}
-.matrix-table tbody th{background:#f3f6fb;font-weight:700;color:#0b1b2b}
-.matrix-table tbody td,.matrix-table tbody th{padding:10px;border:1px solid #e5e7eb;vertical-align:top}
-.matrix-cell{display:flex;flex-direction:column;gap:6px}
-.product-pill{background:#f3f6fb;border:1px solid #e5e7eb;border-radius:8px;padding:6px 8px;font-size:13px}
-.empty{color:#94a3b8}
-.sticky.left{position:sticky;left:0;z-index:2}
-.sticky.top{position:sticky;top:0;z-index:1}
-@media (max-width:900px){.matrix-table{min-width:100%}}
+.matrix-container {
+    max-width: 1200px;
+    margin: 18px auto;
+    padding: 0 16px
+}
+
+.matrix-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px
+}
+
+.matrix-filters {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+    margin-bottom: 12px;
+    flex-wrap: wrap
+}
+
+.matrix-filters .filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px
+}
+
+.matrix-filters select {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(2, 6, 23, 0.1);
+    background: #fff
+}
+
+.matrix-filters .filters-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: flex-end
+}
+
+.btn.back {
+    background: #0b1b2b;
+    color: #fff;
+    padding: 10px 14px;
+    border-radius: 10px;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(11, 27, 43, 0.18)
+}
+
+.matrix-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.08);
+    overflow: auto
+}
+
+.matrix-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px
+}
+
+.matrix-table thead th {
+    background: #0b1b2b;
+    color: #fff;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    text-align: left
+}
+
+.matrix-table tbody th {
+    background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
+    font-weight: 700;
+    color: #0b1b2b
+}
+
+.matrix-table tbody td,
+.matrix-table tbody th {
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    vertical-align: top
+}
+
+.matrix-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px
+}
+
+.product-pill {
+    background: #f3f6fb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 13px
+}
+
+.empty {
+    color: #94a3b8
+}
+
+.sticky.left {
+    position: sticky;
+    left: 0;
+    z-index: 2
+}
+
+.sticky.top {
+    position: sticky;
+    top: 0;
+    z-index: 1
+}
+
+@media (max-width:900px) {
+    .matrix-table {
+        min-width: 100%
+    }
+}
