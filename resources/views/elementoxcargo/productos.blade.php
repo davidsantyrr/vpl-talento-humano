@@ -7,6 +7,10 @@
 <div class="container">
     <h1>Asignar elementos a cargo</h1>
 
+    <div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
+        <a href="{{ route('elementoxcargo.productos.matriz') }}" class="btn primary" style="text-decoration:none;">Ver matriz</a>
+    </div>
+
     <form method="POST" action="{{ route('elementoxcargo.productos.store') }}">
         @csrf
         <input type="hidden" name="cargo_id" id="cargoHidden" value="{{ $cargoId }}">

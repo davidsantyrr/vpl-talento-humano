@@ -58,4 +58,17 @@ class CargoProductosController extends Controller
         $cargoProducto->delete();
         return back()->with('status', 'Asignación eliminada');
     }
+
+    public function matrix()
+    {
+        $cargos = Cargo::orderBy('nombre')->get();
+        $subAreas = SubArea::orderBy('operationName')->get();
+        $asignaciones = CargoProducto::select('cargo_id','sub_area_id','sku','name_produc')->get();
+        // Construir mapa [sub_area_id][cargo_id] => array de productos
+        $map = [];
+        foreach ($asignaciones as $a) {
+            $map[$a->sub_area_id][$a->cargo_id][] = ['sku' => $a->sku, 'name' => $a->name_produc];
+        }
+        return view('elementoxcargo.matriz', compact('cargos','subAreas','map'));
+    }
 }

@@ -64,6 +64,9 @@ Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
     // Recepción de devoluciones
     Route::get('/recepcion', [RecepcionController::class, 'create'])->name('recepcion.create');
     Route::post('/recepcion', [RecepcionController::class, 'store'])->name('recepcion.store');
+
+    // Vista matriz cargo x subárea
+    Route::get('/elementoxcargo/matriz', [CargoProductosController::class, 'matrix'])->name('elementoxcargo.productos.matriz');
 });
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
