@@ -21,7 +21,11 @@ class RecepcionController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'usuarios_id' => ['required','integer'],
+            'tipo_doc' => ['required','string'],
+            'num_doc' => ['required','string'],
+            'nombres' => ['required','string'],
+            'apellidos' => ['nullable','string'],
+            'usuarios_id' => ['nullable','integer'],
             'operation_id' => ['required','integer','exists:sub_areas,id'],
             'items' => ['required','string'],
             'firma' => ['nullable','string'],
@@ -60,16 +64,39 @@ class RecepcionController extends Controller
 
         DB::beginTransaction();
         try {
-            $recepcionId = DB::table('recepciones')->insertGetId([
+            // Preparar datos para la recepción
+            $recepcionData = [
                 'rol_recepcion' => $primerRol,
                 'recepcion_user' => $nombreUsuario,
-                'usuarios_id' => (int) $data['usuarios_id'],
+                'tipo_documento' => $data['tipo_doc'],
+                'numero_documento' => $data['num_doc'],
+                'nombres' => $data['nombres'],
+                'apellidos' => $data['apellidos'] ?? null,
                 'operacion_id' => (int) $data['operation_id'],
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            
+            // Si se proporciona usuarios_id (usuario encontrado en BD), agregarlo
+            if (!empty($data['usuarios_id'])) {
+                $recepcionData['usuarios_id'] = (int) $data['usuarios_id'];
+                Log::info('Usuario encontrado en BD', ['usuario_id' => $data['usuarios_id']]);
+            } else {
+                // Usuario no existe, se guardarán solo los datos manuales
+                $recepcionData['usuarios_id'] = null;
+                Log::info('Usuario no encontrado, guardando datos manuales', [
+                    'numero_documento' => $data['num_doc']
+                ]);
+            }
+
+            $recepcionId = DB::table('recepciones')->insertGetId($recepcionData);
 
             $items = json_decode($data['items'] ?? '[]', true) ?: [];
+            
+            if (empty($items)) {
+                throw new \Exception('Debe agregar al menos un elemento a la recepción');
+            }
+            
             foreach ($items as $it) {
                 if (empty($it['sku'])) continue;
                 DB::table('elemento_x_recepcion')->insert([
@@ -82,11 +109,22 @@ class RecepcionController extends Controller
             }
 
             DB::commit();
-            return redirect()->back()->with('status', 'Se ha registrado la recepción');
+            
+            Log::info('Recepción creada exitosamente', [
+                'recepcion_id' => $recepcionId,
+                'usuario_id' => !empty($data['usuarios_id']) ? $data['usuarios_id'] : null,
+                'datos_manuales' => empty($data['usuarios_id']),
+                'elementos_count' => count($items)
+            ]);
+            
+            return redirect()->back()->with('status', 'Recepción registrada correctamente');
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('Error guardando recepción', ['error' => $e->getMessage()]);
-            return redirect()->back()->with('error', 'Ocurrió un error al registrar la recepción.');
+            Log::error('Error guardando recepción', [
+                'error' => $e->getMessage(),
+                'request' => $request->except(['firma'])
+            ]);
+            return redirect()->back()->with('error', 'Ocurrió un error al registrar la recepción: ' . $e->getMessage());
         }
     }
 }

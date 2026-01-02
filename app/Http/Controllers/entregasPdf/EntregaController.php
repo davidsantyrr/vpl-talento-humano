@@ -122,25 +122,36 @@ class EntregaController extends Controller
                 Storage::makeDirectory('public/entregas');
             }
 
-            // Find or create usuario
-            $usuario = Usuarios::firstOrCreate([
-                'numero_documento' => $data['numberDocumento'],
-            ], [
-                'nombres' => $data['nombre'] ?? null,
-                'apellidos' => $data['apellidos'] ?? null,
-                'tipo_documento' => $data['tipo_documento'] ?? null,
-                'operacion_id' => $data['operacion_id'] ?? null,
-            ]);
-
-            // create entrega con recepcion_id si existe
-            $entrega = Entrega::create([
+            // Intentar encontrar al usuario en la base de datos
+            $usuario = Usuarios::where('numero_documento', $data['numberDocumento'])->first();
+            
+            // Preparar datos para la entrega
+            $entregaData = [
                 'rol_entrega' => $primerRol,
                 'entrega_user' => $nombreUsuario,
                 'tipo_entrega' => $data['tipo'] ?? null,
-                'usuarios_id' => $usuario->id,
+                'tipo_documento' => $data['tipo_documento'],
+                'numero_documento' => $data['numberDocumento'],
+                'nombres' => $data['nombre'],
+                'apellidos' => $data['apellidos'] ?? null,
                 'operacion_id' => $data['operacion_id'] ?? null,
                 'recepciones_id' => !empty($data['recepcion_id']) ? $data['recepcion_id'] : null,
-            ]);
+            ];
+            
+            // Si el usuario existe en BD, agregar su ID
+            if ($usuario) {
+                $entregaData['usuarios_id'] = $usuario->id;
+                Log::info('Usuario encontrado en BD', ['usuario_id' => $usuario->id]);
+            } else {
+                // Usuario no existe, se guardarán solo los datos manuales
+                $entregaData['usuarios_id'] = null;
+                Log::info('Usuario no encontrado, guardando datos manuales', [
+                    'numero_documento' => $data['numberDocumento']
+                ]);
+            }
+
+            // Crear entrega con datos completos
+            $entrega = Entrega::create($entregaData);
 
             // save elementos if present
             $items = json_decode($data['elementos'] ?? '[]', true) ?: [];
@@ -165,7 +176,8 @@ class EntregaController extends Controller
 
             Log::info('Entrega creada exitosamente', [
                 'entrega_id' => $entrega->id,
-                'usuario_id' => $usuario->id,
+                'usuario_id' => $usuario ? $usuario->id : null,
+                'datos_manuales' => !$usuario,
                 'elementos_count' => count($items)
             ]);
 

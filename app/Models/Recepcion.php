@@ -15,6 +15,10 @@ class Recepcion extends Model
     protected $fillable = [
         'rol_recepcion',
         'recepcion_user',
+        'tipo_documento',
+        'numero_documento',
+        'nombres',
+        'apellidos',
         'usuarios_id',
         'operacion_id',
     ];
