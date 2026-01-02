@@ -73,3 +73,15 @@ Route::resource('gestionUsuario', GestionUsuarioController::class);
 
 // AJAX: buscar usuario por número de documento
 Route::get('/usuarios/buscar', [GestionUsuarioController::class, 'findByDocumento'])->name('usuarios.find');
+
+Route::post('/formularioEntregas', [EntregaController::class, 'store'])
+    ->name('entregas.store');
+
+// Historial de entregas - ruta pública (fuera de middleware)
+Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('entregas.index');
+Route::resource('gestionOperacion', gestionOperacionController::class);
+
+Route::resource('gestionArea', gestionAreaController::class);
+
+Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
+

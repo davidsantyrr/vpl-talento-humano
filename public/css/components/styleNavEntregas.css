@@ -1,173 +1,46 @@
 /* Navbar modern styles */
-.header {
-    background-color: #F78008;
-    border-radius: 12px;
-    margin: 12px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-}
+.vigia-navbar { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; font-size: 16px; line-height: 1.2; }
+.vigia-navbar.header { background-color: #F78008; border-radius: 12px; margin: 12px; box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12); }
 
-.navegacion {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 16px;
-    color: #fff;
-}
-
-.nav-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.nav-left .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: #fff;
-    text-decoration: none;
-    font-weight: 800;
-}
-
-.brand-text {
-    letter-spacing: .4px
-}
-
-.logoVigia {
-    height: 44px;
-    width: auto;
-    margin: 0;
-    border-radius: 8px;
-}
+.vigia-navbar .navegacion { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; color: #fff; }
+.vigia-navbar .nav-left { display: flex; align-items: center; gap: 10px; }
+.vigia-navbar .nav-left .brand { display: inline-flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; font-weight: 800; }
+.vigia-navbar .brand-text { letter-spacing: .4px }
+.vigia-navbar .logoVigia { height: 44px; width: auto; margin: 0; border-radius: 8px; }
 
 /* toggle button */
-.nav-toggle {
-    display: none;
-    background: rgba(255, 255, 255, 0.22);
-    color: #fff;
-    border: none;
-    padding: 8px 10px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-.nav-toggle:focus {
-    outline: 2px solid rgba(255, 255, 255, 0.4);
-}
+.vigia-navbar .nav-toggle { display: none; background: rgba(255, 255, 255, 0.22); color: #fff; border: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+.vigia-navbar .nav-toggle:focus { outline: 2px solid rgba(255, 255, 255, 0.4); }
 
 /* menu options */
-.opciones {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
+.vigia-navbar .opciones { display: flex; gap: 20px; align-items: center; }
+.vigia-navbar .opciones .nav-link { color: #fff; text-decoration: none; font-weight: 600; padding: 8px 12px; border-radius: 8px; transition: background .18s ease, color .18s ease, transform .18s ease; }
+.vigia-navbar .opciones .nav-link:hover { background: rgba(255, 255, 255, 0.18); transform: translateY(-1px); }
+.vigia-navbar .opciones .nav-link.active { background: rgba(255, 255, 255, 0.28); color: #08111f; }
 
-.opciones .nav-link {
-    color: #fff;
-    text-decoration: none;
-    font-weight: 600;
-    padding: 8px 12px;
-    border-radius: 8px;
-    transition: background .18s ease, color .18s ease, transform .18s ease;
-}
+.vigia-navbar .nav-actions { display: flex; align-items: center; }
+.vigia-navbar .nav-actions .cerrarSesion { background-color: #0929b8; border: none; color: white; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14); }
 
-.opciones .nav-link:hover {
-    background: rgba(255, 255, 255, 0.18);
-    transform: translateY(-1px);
-}
-
-.opciones .nav-link.active {
-    background: rgba(255, 255, 255, 0.28);
-    color: #08111f;
-}
-
-.nav-actions {
-    display: flex;
-    align-items: center;
-}
-
-.nav-actions .cerrarSesion {
-    background-color: #0929b8;
-    border: none;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 700;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
-}
-
-a {
-    text-decoration: none;
-}
-
-.nav-actions .cerrarSesion:hover {
-    filter: brightness(1.06)
-}
+.vigia-navbar a { text-decoration: none; }
+.vigia-navbar .nav-actions .cerrarSesion:hover { filter: brightness(1.06) }
 
 /* responsive behavior */
 @media (max-width: 860px) {
-    .navegacion {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        grid-auto-rows: auto;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 12px;
-    }
-
-    .nav-toggle {
-        display: inline-flex;
-        justify-self: start;
-        margin: 0
-    }
-
-    .nav-left {
-        justify-self: center
-    }
-
-    .nav-left .brand {
-        justify-content: center
-    }
-
-    .logoVigia {
-        height: 36px
-    }
+    .vigia-navbar .navegacion { display: grid; grid-template-columns: auto 1fr auto; grid-auto-rows: auto; align-items: center; gap: 10px; padding: 8px 12px; }
+    .vigia-navbar .nav-toggle { display: inline-flex; justify-self: start; margin: 0 }
+    .vigia-navbar .nav-left { justify-self: center }
+    .vigia-navbar .nav-left .brand { justify-content: center }
+    .vigia-navbar .logoVigia { height: 36px }
 
     /* keep logout fixed on the top row, right side */
-    .nav-actions {
-        justify-self: end;
-        margin: 0;
-        grid-row: 1;
-        grid-column: 3
-    }
+    .vigia-navbar .nav-actions { justify-self: end; margin: 0; grid-row: 1; grid-column: 3 }
 
     /* collapsible menu spans full width on the second row */
-    .opciones {
-        grid-row: 2;
-        grid-column: 1 / -1;
-        width: 100%;
-        display: none;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
-        padding: 8px 0;
-        margin-top: 6px;
-    }
-
-    .opciones.open {
-        display: flex
-    }
+    .vigia-navbar .opciones { grid-row: 2; grid-column: 1 / -1; width: 100%; display: none; flex-direction: column; align-items: flex-start; gap: 8px; padding: 8px 0; margin-top: 6px; }
+    .vigia-navbar .opciones.open { display: flex }
 }
 
 @media (max-width: 480px) {
-    .nav-actions .cerrarSesion {
-        padding: 6px 10px;
-        font-size: 14px;
-    }
-
-    .opciones .nav-link {
-        padding: 8px 10px;
-    }
+    .vigia-navbar .nav-actions .cerrarSesion { padding: 6px 10px; font-size: 14px; }
+    .vigia-navbar .opciones .nav-link { padding: 8px 10px; }
 }

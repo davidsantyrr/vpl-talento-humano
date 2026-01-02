@@ -13,7 +13,11 @@
 
 body {
     background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
-    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial
+}
+
+.ecargo-page {
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+    line-height: 1.4;
 }
 
 .container {
@@ -23,21 +27,25 @@ body {
 }
 
 /* Header */
-.page-header {
+.ecargo-page .page-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    margin-bottom: 14px
+    margin-bottom: 14px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0));
+    padding: 12px 16px;
+    border-radius: 12px
 }
 
-.page-title {
-    font-size: 22px;
+.ecargo-page .page-title {
+    font-size: 28px;
     margin: 0;
-    font-weight: 700
+    font-weight: 800;
+    color: #0b1b2b
 }
 
-.muted-text {
+.ecargo-page .muted-text {
     color: var(--muted);
     font-size: 13px
 }
@@ -66,7 +74,7 @@ body {
 /* Controls */
 .header-actions {
     display: flex;
-    gap: 18px;
+    gap: 12px;
     align-items: center;
     flex-wrap: wrap
 }
@@ -102,28 +110,28 @@ select,
 /* Controls row extracted from view */
 .controls-row {
     display: flex;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: nowrap;
-    margin: 10px;
+    gap: 16px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin: 0 0 12px;
 }
 
 .controls-row .left {
     min-width: 280px;
-    flex: 0 0 280px
+    flex: 1 1 280px
 }
 
-.controls-row .center {
-    flex: 1 1 auto;
-    min-width: 420px
+.controls-row .middle {
+    min-width: 240px;
+    flex: 1 1 240px
 }
 
 .controls-row .right {
-    flex: 0 0 auto;
-    min-width: 140px;
+    flex: 2 1 420px;
+    min-width: 360px;
     display: flex;
-    justify-content: flex-end;
-    align-items: center
+    gap: 10px;
+    align-items: flex-end
 }
 
 .form-field label {
@@ -186,12 +194,11 @@ select,
 }
 
 .product-search.form-field {
-    margin-left: 2%
+    margin-left: 0
 }
 
 .right.actions {
-    margin-right: 22%;
-    margin-top: 2%
+    margin: 0
 }
 
 /* Product searchable dropdown */
@@ -279,7 +286,8 @@ select,
 .btn.primary {
     background: var(--primary);
     color: #fff;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12)
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
+    text-decoration: none
 }
 
 .btn.danger {
@@ -456,28 +464,62 @@ select,
     }
 }
 
-@media (max-width:520px) {
-    .tabla-articulos thead {
-        display: none
-    }
+/* Responsive improvements */
+@media (max-width: 1024px) {
+  .ecargo-page .controls-row { gap: 12px; }
+  .controls-row .left { flex: 1 1 45%; min-width: 260px; }
+  .controls-row .middle { flex: 1 1 45%; min-width: 220px; }
+  .controls-row .right { flex: 1 1 100%; min-width: unset; }
+}
 
-    .tabla-articulos tbody td {
-        display: block;
-        width: 100%
-    }
+@media (max-width: 860px) {
+  .ecargo-page .page-header { padding: 10px 12px; }
+  .ecargo-page .page-title { font-size: 24px; }
+  .ecargo-page .muted-text { font-size: 12px; }
+  .ecargo-page .controls-row { flex-wrap: wrap; }
+  .controls-row .left,
+  .controls-row .middle,
+  .controls-row .right { flex: 1 1 100%; min-width: unset; }
+  .product-search .product-input, .form-inline select { min-width: unset; width: 100%; }
+  .ecargo-page .btn.primary { width: 100%; }
+  .controls-row .right { flex-direction: column; align-items: stretch; }
+  .controls-row .right .product-search { width: 100%; }
+  .controls-row .right #submitAssign { width: 100%; margin-top: 8px; }
+}
 
-    .tabla-articulos tbody tr {
-        display: block;
-        margin-bottom: 10px;
-        padding: 10px;
-        border-radius: 8px
-    }
+@media (max-width: 600px) {
+  .ecargo-page .page-title { font-size: 20px; }
+  .cargo-dropdown, .product-dropdown { max-height: calc(4 * 48px); }
+  .tabla-articulos thead th { font-size: 13px; }
+  .tabla-articulos tbody td { padding: 12px 12px; }
+  .controls-row .right #submitAssign { font-size: 14px; padding: 10px 12px; }
+}
 
-    .tabla-articulos tbody td::before {
-        content: attr(data-label);
-        display: block;
-        font-weight: 600;
-        color: var(--muted);
-        margin-bottom: 6px
-    }
+@media (max-width: 480px) {
+  .ecargo-page .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .ecargo-page .page-header .btn.primary { align-self: stretch; }
+  .form-field label { font-size: 12px; }
+  .product-item { padding: 8px 10px; }
+}
+
+/* Scope para evitar afectar la navbar */
+.ecargo-page { font-size: 16px; }
+.ecargo-page .page-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0)); padding: 12px 16px; border-radius: 12px }
+.ecargo-page .page-title { font-size: 28px; margin: 0; font-weight: 800; color: #0b1b2b }
+.ecargo-page .muted-text { font-size: 13px; }
+.ecargo-page .controls-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; margin: 0 0 12px; }
+
+/* limitar select e inputs dentro del contenedor */
+.ecargo-page select,
+.ecargo-page .product-input,
+.ecargo-page .cargo-input { font-size: 14px; }
+
+/* no tocar estilos globales del navbar */
+.header, .navegacion, .nav-left, .nav-actions, .opciones, .nav-toggle { font-size: initial; }
+
+/* Scroll horizontal para tabla en móviles */
+.table-wrapper { overflow: hidden; }
+@media (max-width: 860px) {
+  .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .tabla-articulos { min-width: 720px; width: 100%; }
 }

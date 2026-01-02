@@ -13,11 +13,13 @@ return new class extends Migration
     {
         Schema::create('entregas', function (Blueprint $table) {
             $table->id();
-            $table->string('nombres');
-            $table->string('apellidos');
-            $table->string('documento');
+            $table->string('rol_entrega');
+            $table->string('entrega_user');
+            $table->string('tipo_entrega');
+            $table->foreignId('usuarios_id')->constrained('usuarios_entregas')->onDelete('restrict');
             $table->foreignId('operacion_id')->constrained('sub_areas')->onDelete('restrict');
             $table->timestamps();
+            $table->softdeletes();
         });
     }
 

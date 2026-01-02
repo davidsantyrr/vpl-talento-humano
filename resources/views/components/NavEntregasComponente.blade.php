@@ -11,7 +11,7 @@
 
 <body>
   {{-- Nav Entregas Component --}}
-  <div class="header" role="banner">
+  <div class="header vigia-navbar" role="banner">
     <nav class="navegacion" aria-label="Navegación principal">
       <div class="nav-left">
         <a href="{{ url('/') }}" class="brand">

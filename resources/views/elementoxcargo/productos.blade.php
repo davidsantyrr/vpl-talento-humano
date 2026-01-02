@@ -4,11 +4,13 @@
 @endpush
 @section('content')
 <x-NavEntregasComponente />
-<div class="container">
-    <h1>Asignar elementos a cargo</h1>
-
-    <div style="margin-bottom:10px;display:flex;justify-content:flex-end;">
-        <a href="{{ route('elementoxcargo.productos.matriz') }}" class="btn primary" style="text-decoration:none;">Ver matriz</a>
+<div class="ecargo-page container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Asignar elementos a cargo</h1>
+            <div class="muted-text">Selecciona cargo, Operación y producto para asignar</div>
+        </div>
+        <a href="{{ route('elementoxcargo.productos.matriz') }}" class="btn primary">Ver matriz</a>
     </div>
 
     <form method="POST" action="{{ route('elementoxcargo.productos.store') }}">
@@ -17,30 +19,25 @@
         <div class="controls-row">
             <div class="left form-field cargo-search">
                 <label for="cargoInput">Cargo</label>
-                <input id="cargoInput" class="cargo-input" placeholder="Escribe para buscar cargo" autocomplete="off"
-                    value="">
+                <input id="cargoInput" class="cargo-input" placeholder="Escribe para buscar cargo" autocomplete="off" value="">
                 <ul id="cargoDropdown" class="cargo-dropdown" role="listbox" aria-hidden="true"></ul>
             </div>
 
-            <div class="center product-search form-field">
-                <label for="skuInput">Producto (SKU)</label>
-                <input id="skuInput" class="product-input" placeholder="Escribe para buscar por SKU o nombre"
-                    autocomplete="off">
-                <input type="hidden" id="skuHidden" name="sku">
-                <ul id="productDropdown" class="product-dropdown" role="listbox" aria-hidden="true"></ul>
+            <div class="middle form-field cargo-search">
+                <label for="subAreaInput">Operación</label>
+                <input id="subAreaInput" class="cargo-input" placeholder="Escribe para buscar subárea" autocomplete="off" value="">
+                <input type="hidden" id="subAreaHidden" name="sub_area_id" value="{{ $subAreaId }}">
+                <ul id="subAreaDropdown" class="cargo-dropdown" role="listbox" aria-hidden="true"></ul>
             </div>
 
             <div class="right actions" style="gap:10px;">
-                <div class="form-field">
-                    <label for="sub_area_id">Subárea</label>
-                    <select id="sub_area_id" name="sub_area_id" class="product-input" required>
-                        <option value="">Seleccione subárea</option>
-                        @foreach($subAreas as $op)
-                            <option value="{{ $op->id }}" {{ (int)$subAreaId === (int)$op->id ? 'selected' : '' }}>{{ $op->operationName }}</option>
-                        @endforeach
-                    </select>
+                <div class="form-field product-search">
+                    <label for="skuInput">Elemento (SKU)</label>
+                    <input id="skuInput" class="product-input" placeholder="Escribe para buscar por SKU o nombre" autocomplete="off">
+                    <input type="hidden" id="skuHidden" name="sku">
+                    <ul id="productDropdown" class="product-dropdown" role="listbox" aria-hidden="true"></ul>
                 </div>
-                <button class="btn primary" type="submit" {{ $cargoId ? '' : 'disabled' }}>Añadir</button>
+                <button id="submitAssign" class="btn primary" type="submit" {{ $cargoId ? '' : 'disabled' }}>Añadir</button>
             </div>
         </div>
     </form>
@@ -50,9 +47,9 @@
             <thead>
                 <tr>
                     <th>SKU</th>
-                    <th>Nombre</th>
+                    <th>Elemento</th>
                     <th>Cargo</th>
-                    <th>Subárea</th>
+                    <th>Operación</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
@@ -144,6 +141,9 @@
         });
       });
 
+      // al seleccionar cargo, habilitar el envío (apuntar al botón correcto)
+      function enableSubmit(){ const btn = document.getElementById('submitAssign'); if (btn) btn.disabled = false; }
+
       // cargos dropdown
       const cargos = @json($cargos->map(fn($c)=>['id'=>$c->id,'nombre'=>$c->nombre]));
       const cargoInput = document.getElementById('cargoInput');
@@ -160,8 +160,7 @@
             cargoInput.value = it.nombre;
             cargoHidden.value = it.id;
             cargoDropdown.setAttribute('aria-hidden','true');
-            // al seleccionar cargo, habilitar el envío
-            document.querySelector('.btn.primary').disabled = false;
+            enableSubmit();
           });
           cargoDropdown.appendChild(li);
         });
@@ -176,6 +175,25 @@
       cargoInput?.addEventListener('input', function(){ renderCargos(filterCargos(this.value)); });
       document.addEventListener('click', function(e){ if(!cargoDropdown.contains(e.target) && e.target!==cargoInput){ cargoDropdown.setAttribute('aria-hidden','true'); } });
 
+      // subAreas dropdown (igual a cargo)
+      const subAreas = @json($subAreas->map(fn($s)=>['id'=>$s->id,'nombre'=>$s->operationName]));
+      const subInput = document.getElementById('subAreaInput');
+      const subHidden = document.getElementById('subAreaHidden');
+      const subDropdown = document.getElementById('subAreaDropdown');
+      function renderSubAreas(list){
+        subDropdown.innerHTML = '';
+        list.forEach(it => {
+          const li = document.createElement('li'); li.className = 'cargo-item'; li.textContent = it.nombre;
+          li.addEventListener('click', () => { subInput.value = it.nombre; subHidden.value = it.id; subDropdown.setAttribute('aria-hidden','true'); enableSubmit(); });
+          subDropdown.appendChild(li);
+        });
+        subDropdown.setAttribute('aria-hidden', list.length ? 'false' : 'true');
+      }
+      function filterSub(term){ const t = term.trim().toLowerCase(); if(!t) return subAreas.slice(); return subAreas.filter(s => s.nombre.toLowerCase().includes(t)); }
+      subInput?.addEventListener('focus', function(){ renderSubAreas(filterSub(this.value)); });
+      subInput?.addEventListener('input', function(){ renderSubAreas(filterSub(this.value)); });
+      document.addEventListener('click', function(e){ if(!subDropdown.contains(e.target) && e.target!==subInput){ subDropdown.setAttribute('aria-hidden','true'); } });
+
       // productos dropdown
       const all = @json($allProducts->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]));
       const input = document.getElementById('skuInput');
@@ -184,11 +202,9 @@
       function renderList(list){
         dropdown.innerHTML = '';
         list.forEach((it)=>{
-          const li = document.createElement('li');
-          li.setAttribute('role','option');
-          li.className = 'product-item';
+          const li = document.createElement('li'); li.setAttribute('role','option'); li.className = 'product-item';
           li.innerHTML = '<div>' + escapeHtml(it.sku) + '</div><span>' + escapeHtml(it.name) + '</span>';
-          li.addEventListener('click', ()=> { hidden.value = it.sku; input.value = it.sku + ' — ' + it.name; dropdown.setAttribute('aria-hidden','true'); });
+          li.addEventListener('click', ()=> { hidden.value = it.sku; input.value = it.sku + ' — ' + it.name; dropdown.setAttribute('aria-hidden','true'); enableSubmit(); });
           dropdown.appendChild(li);
         });
         dropdown.setAttribute('aria-hidden', list.length ? 'false' : 'true');
