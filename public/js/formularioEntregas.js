@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const cargoHidden = document.getElementById('cargoIdHidden');
     const lookupBox = document.getElementById('usuarioLookup');
     const elementoSelect = document.getElementById('elementoSelect');
+    const btnAnadirElemento = document.getElementById('btnAnadirElemento');
+    const btnSeleccionarRecepcion = document.getElementById('btnSeleccionarRecepcion');
 
     // El select de elementos se poblará desde cargo_productos SIN filtros
     if (elementoSelect) {
@@ -33,9 +35,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function updateOperacionState() {
         const tipo = normalize(tipoSelect.value);
-        const showCargo = (tipo === 'primera vez' || tipo === 'periodica' || tipo === 'cambio');
+        const showCargo = (tipo === 'primera vez' || tipo === 'periodica');
+        const isCambio = (tipo === 'cambio');
 
-        // Mostrar ambos campos para esos tipos
+        // Mostrar/ocultar botones según el tipo
+        if (btnAnadirElemento) {
+            btnAnadirElemento.style.display = isCambio ? 'none' : '';
+        }
+        if (btnSeleccionarRecepcion) {
+            btnSeleccionarRecepcion.style.display = isCambio ? '' : 'none';
+        }
+
+        // Mostrar campo cargo solo para primera vez y periódica (no para cambio)
         if (fieldCargo && fieldOperacion) {
             fieldCargo.style.display = showCargo ? '' : 'none';
             fieldOperacion.style.display = '';
@@ -235,20 +246,36 @@ document.addEventListener('DOMContentLoaded', function () {
         tempElementos = elementos.slice();
         modal.classList.add('active');
         elementoSeleccionado = null;
+        
+        // Limpiar dropdown previo si existe
+        const prevDD = document.getElementById('modal-prod-dd');
+        if (prevDD) prevDD.remove();
+        
         if (elementoSelect) {
             elementoSelect.value = '';
-            elementoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
         }
         if (cantidadInput) cantidadInput.value = '1';
-        updateElementoOptions();
-        renderModalTable();
-        if (elementoSelect) elementoSelect.focus();
+        
+        // Cargar productos y configurar dropdown
+        updateElementoOptions().then(() => {
+            setupDropdown();
+            renderModalTable();
+        });
     }
     
     window.cerrarModal = function(){ 
         if (!modal) return; 
         tempElementos = [];
-        modal.classList.remove('active'); 
+        modal.classList.remove('active');
+        
+        // Limpiar dropdown al cerrar
+        const dd = document.getElementById('modal-prod-dd');
+        if (dd) dd.remove();
+        
+        // Limpiar input de búsqueda y restaurar select
+        const searchInput = document.getElementById('modal-search-input');
+        if (searchInput) searchInput.remove();
+        if (elementoSelect) elementoSelect.style.display = '';
     }
 
     window.guardarModal = function(){
@@ -275,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (elementoSelect && elementoSelect.value) {
             const sku = elementoSelect.value;
             const opt = elementoSelect.querySelector(`option[value="${sku}"]`);
-            const name = opt ? (opt.dataset.name_produc || opt.textContent) : '';
+            const name = opt ? (opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent) : '';
             sel = { sku, name };
         }
         if (!sel) { 
@@ -296,11 +323,125 @@ document.addEventListener('DOMContentLoaded', function () {
         tempElementos.push({ sku: sel.sku, name: sel.name, cantidad: qty });
         elementoSelect.value = '';
         cantidadInput.value = '1';
+        
+        // Limpiar el input de búsqueda si existe
+        const searchInput = document.getElementById('modal-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        
         renderModalTable();
         Toast.fire({
             icon: 'success',
             title: 'Producto agregado a la lista'
         });
+    }
+
+    // Setup del dropdown de búsqueda para el modal
+    function setupDropdown() {
+        if (!elementoSelect) return;
+        
+        // Verificar si ya existe un input de búsqueda
+        let searchInput = document.getElementById('modal-search-input');
+        if (searchInput) {
+            // Si ya existe, solo actualizar opciones y focus
+            searchInput.value = '';
+            searchInput.focus();
+            return;
+        }
+        
+        // Convertir select en input de búsqueda
+        const wrapper = elementoSelect.parentElement;
+        searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = elementoSelect.className;
+        searchInput.placeholder = 'Escribe para buscar SKU o nombre';
+        searchInput.id = 'modal-search-input';
+        
+        elementoSelect.style.display = 'none';
+        wrapper.insertBefore(searchInput, elementoSelect);
+        
+        const dd = document.createElement('ul');
+        dd.id = 'modal-prod-dd';
+        dd.className = 'modal-list';
+        dd.hidden = true;
+        document.body.appendChild(dd);
+        
+        let allOptions = Array.from(elementoSelect.options)
+            .filter(opt => opt.value)
+            .map(opt => ({
+                sku: opt.value,
+                name: opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent
+            }));
+        
+        function updateDDPos(){
+            const r = searchInput.getBoundingClientRect();
+            const w = Math.min(r.width, 420);
+            dd.style.left = r.left + 'px';
+            dd.style.top = (r.bottom + 6) + 'px';
+            dd.style.width = w + 'px';
+        }
+        
+        function renderDD(list){
+            dd.innerHTML = '';
+            list.slice(0, 200).forEach(p => {
+                const li = document.createElement('li');
+                li.className = 'modal-list-item';
+                li.textContent = `${p.sku} — ${p.name}`;
+                li.addEventListener('click', () => {
+                    elementoSelect.value = p.sku;
+                    searchInput.value = `${p.sku} — ${p.name}`;
+                    dd.hidden = true;
+                });
+                dd.appendChild(li);
+            });
+            dd.hidden = list.length === 0;
+            if (!dd.hidden) updateDDPos();
+        }
+        
+        function filter(term){
+            const t = term.trim().toLowerCase();
+            if (!t) return allOptions.slice();
+            return allOptions.filter(p => 
+                p.sku.toLowerCase().includes(t) || 
+                p.name.toLowerCase().includes(t)
+            );
+        }
+        
+        searchInput.addEventListener('input', () => {
+            elementoSelect.value = '';
+            renderDD(filter(searchInput.value));
+        });
+        
+        searchInput.addEventListener('focus', () => {
+            elementoSelect.value = '';
+            renderDD(allOptions.slice());
+        });
+        
+        searchInput.addEventListener('click', () => {
+            renderDD(filter(searchInput.value));
+        });
+        
+        window.addEventListener('resize', updateDDPos);
+        document.addEventListener('scroll', updateDDPos, true);
+        document.addEventListener('click', (e) => {
+            if (!dd.contains(e.target) && e.target !== searchInput) {
+                dd.hidden = true;
+            }
+        });
+        
+        // Actualizar lista cuando cambia el select
+        const observer = new MutationObserver(() => {
+            allOptions = Array.from(elementoSelect.options)
+                .filter(opt => opt.value)
+                .map(opt => ({
+                    sku: opt.value,
+                    name: opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent
+                }));
+        });
+        observer.observe(elementoSelect, { childList: true });
+        
+        searchInput.focus();
     }
 
     if (elementoSelect){ elementoSelect.addEventListener('change', ()=>{ const sku = elementoSelect.value; const opt = elementoSelect.querySelector(`option[value="${sku}"]`); elementoSeleccionado = opt ? { sku, name: (opt.dataset.name_produc || opt.textContent) } : null; } ); }
@@ -357,6 +498,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // inicial: cargar lista completa
     updateElementoOptions();
+
+    // ------------------ Modal de recepciones para tipo "cambio" ------------------
+    window.abrirModalRecepcion = function(){
+        Toast.fire({
+            icon: 'info',
+            title: 'Función en desarrollo'
+        });
+        // TODO: Implementar modal para seleccionar una recepción existente
+        // y cargar sus elementos en la entrega actual
+    }
 
     // ------------------ Firma en canvas (copiado de recepcion.js) ------------------
     function setupCanvas(){

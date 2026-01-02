@@ -2,124 +2,8 @@
   const cfg = window.RecepcionPageConfig || {};
   const all = Array.isArray(cfg.allProducts) ? cfg.allProducts : [];
 
-  const tableBody = document.querySelector('#itemsTable tbody');
-  const itemsField = document.getElementById('itemsField');
   const form = document.getElementById('recepcionForm');
-  const addBtnTrigger = document.getElementById('addItemBtn');
-  const items = [];
-
-  function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-  function render(){
-    if (!tableBody) return;
-    tableBody.innerHTML = items.map(it => `<tr><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td></tr>`).join('');
-    if (itemsField) itemsField.value = JSON.stringify(items);
-  }
-
-  function openAddModal(){
-    let temp = items.slice();
-    const prev = document.getElementById('sw-prod-dd');
-    if (prev) prev.remove();
-    Swal.fire({
-      title: 'Añadir elementos',
-      width: 1000,
-      customClass: { popup: 'sw-tall' },
-      html: `
-        <div class="sw-grid">
-          <div class="sw-field">
-            <label>Producto</label>
-            <input id="sw-prod-input" class="swal2-input" placeholder="Escribe para buscar SKU o nombre" />
-          </div>
-          <div class="sw-field">
-            <label>Cantidad</label>
-            <input id="sw-qty" type="number" min="1" value="1" class="swal2-input" />
-          </div>
-        </div>
-        <div class="sw-actions">
-          <button type="button" id="sw-add-btn" class="swal2-confirm swal2-styled">Agregar a lista</button>
-        </div>
-        <table class="sw-table" id="sw-items-table">
-          <thead><tr><th>Elemento</th><th style="width:120px;">Cantidad</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      `,
-      focusConfirm: false,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      didOpen: () => {
-        const input = document.getElementById('sw-prod-input');
-        const qtyEl = document.getElementById('sw-qty');
-        const addBtn = document.getElementById('sw-add-btn');
-        const tbody = document.querySelector('#sw-items-table tbody');
-        let selected = null;
-
-        const dd = document.createElement('ul');
-        dd.id = 'sw-prod-dd';
-        dd.className = 'sw-list';
-        dd.hidden = true;
-        document.body.appendChild(dd);
-
-        function updateDDPos(){
-          const r = input.getBoundingClientRect();
-          const w = Math.min(r.width, 420);
-          dd.style.left = r.left + 'px';
-          dd.style.top = (r.bottom + 6) + 'px';
-          dd.style.width = w + 'px';
-        }
-        function renderDD(list){
-          dd.innerHTML = '';
-          list.slice(0, 200).forEach(p => {
-            const li = document.createElement('li');
-            li.className = 'sw-item';
-            li.textContent = `${p.sku} — ${p.name}`;
-            li.addEventListener('click', () => { selected = p; input.value = `${p.sku} — ${p.name}`; dd.hidden = true; });
-            dd.appendChild(li);
-          });
-          dd.hidden = list.length === 0;
-          if (!dd.hidden) updateDDPos();
-        }
-        function filter(term){
-          const t = term.trim().toLowerCase();
-          if (!t) return all.slice();
-          return all.filter(p => p.sku.toLowerCase().includes(t) || p.name.toLowerCase().includes(t));
-        }
-        function renderTable(){
-          tbody.innerHTML = temp.map(it => `<tr><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td></tr>`).join('');
-        }
-        renderTable();
-
-        input.addEventListener('input', () => { selected = null; renderDD(filter(input.value)); });
-        input.addEventListener('focus', () => { selected = null; renderDD(all.slice()); });
-        input.addEventListener('click', () => { selected = null; renderDD(all.slice()); });
-        window.addEventListener('resize', updateDDPos);
-        document.addEventListener('scroll', updateDDPos, true);
-        document.addEventListener('click', (e) => { if (!dd.contains(e.target) && e.target !== input) dd.hidden = true; });
-
-        addBtn.addEventListener('click', () => {
-          const qty = parseInt(qtyEl.value || '0', 10);
-          if (!selected) { Swal.showValidationMessage('Seleccione un producto de la lista'); return; }
-          if (!qty || qty < 1) { Swal.showValidationMessage('Ingrese una cantidad válida'); return; }
-          temp.push({ sku: selected.sku, name: selected.name, cantidad: qty });
-          selected = null; input.value = ''; qtyEl.value = '1'; dd.hidden = true; renderTable();
-          Swal.resetValidationMessage();
-        });
-
-        updateDDPos();
-      },
-      willClose: () => {
-        const dd = document.getElementById('sw-prod-dd');
-        if (dd) dd.remove();
-        document.removeEventListener('scroll', ()=>{}, true);
-      },
-      preConfirm: () => {
-        if (!temp.length) { Swal.showValidationMessage('Agregue al menos un producto a la lista'); return false; }
-        return JSON.stringify(temp);
-      }
-    }).then(res => {
-      if (!res.isConfirmed || !res.value) return;
-      try { items.splice(0, items.length, ...JSON.parse(res.value)); } catch (e) {}
-      render();
-    });
-  }
+  const itemsField = document.getElementById('itemsField');
 
   // Firma en canvas
   function setupCanvas(){
@@ -155,10 +39,9 @@
     form && form.addEventListener('submit', function(){
       const firmaField = document.getElementById('firmaField');
       if (firmaField) firmaField.value = canvas.toDataURL('image/png');
-      if (itemsField) itemsField.value = JSON.stringify(items);
+      // El itemsField se maneja en recepcionModal.js
     });
   }
 
-  addBtnTrigger && addBtnTrigger.addEventListener('click', openAddModal);
   setupCanvas();
 })();

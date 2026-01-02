@@ -67,7 +67,8 @@
                     </div>
                 </div>
                 <div class="actions">
-                    <button type="button" class="btn add" onclick="abrirModal()">Añadir elemento</button>
+                    <button type="button" class="btn add" id="btnAnadirElemento" onclick="abrirModal()">Añadir elemento</button>
+                    <button type="button" class="btn primary" id="btnSeleccionarRecepcion" onclick="abrirModalRecepcion()" style="display:none;">Seleccionar recepción</button>
                 </div>
             </div>
 

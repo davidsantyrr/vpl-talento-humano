@@ -272,6 +272,34 @@ table tbody td {
     font-weight: 600;
 }
 
+.modal-list {
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-width: 260px;
+    max-width: 420px;
+    max-height: 40vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+    padding: 6px;
+    z-index: 2147483647;
+}
+
+.modal-list-item {
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.modal-list-item:hover {
+    background: #f3f4ff;
+}
+
 .modal-table {
     width: 100%;
     border-collapse: collapse;
@@ -398,5 +426,12 @@ table tbody td {
         width: 100%;
         display: block;
         overflow-x: auto;
+    }
+
+    .modal-list {
+        left: 1rem !important;
+        right: 1rem !important;
+        width: calc(100vw - 4rem) !important;
+        max-width: calc(100vw - 4rem) !important;
     }
 }
