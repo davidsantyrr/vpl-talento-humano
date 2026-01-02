@@ -171,6 +171,10 @@ body {
 }
 
 /* Colores por tarjeta (icono) */
+.c-indigo .icon {
+    color: #1e3a8a
+}
+
 .c-blue .icon {
     color: #0a2840
 }
@@ -269,6 +273,15 @@ body {
 }
 
 /* Botones pastel (coinciden con header) */
+.btn-indigo {
+    background: #c7d2fe;
+    color: #1e3a8a
+}
+
+.btn-indigo:hover {
+    background: #a5b4fc
+}
+
 .btn-blue {
     background: #9ec5ff;
     color: #0b1b33
@@ -333,6 +346,19 @@ body {
 }
 
 /* Headers pastel por tarjeta */
+.c-indigo .card__top {
+    background: #c7d2fe
+}
+
+.c-indigo .card__top h3,
+.c-indigo .card__top .desc {
+    color: #1e3a8a
+}
+
+.c-indigo .icon {
+    background: rgba(238, 242, 255, 0.9)
+}
+
 .c-blue .card__top {
     background: #9ec5ff
 }

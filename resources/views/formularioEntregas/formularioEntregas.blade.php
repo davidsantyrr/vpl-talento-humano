@@ -9,7 +9,7 @@
 <div class="container">
     <div class="panel">
     <h1 class="title">Formulario de Entregas</h1>
-        <form action="{{ route('entregas.store') }}" method="POST" onsubmit="guardarFirma()">
+        <form action="{{ route('entregas.store') }}" method="POST" id="entregasForm">
             @csrf
             
             <div class="section">
@@ -24,12 +24,12 @@
                     </div>
                     <div class="field">
                         <label>Número de documento</label>
-                        <input type="text" id="numberDocumento" name="numberDocumento" required>
+                        <input type="text" id="numberDocumento" name="numberDocumento">
                         <div id="usuarioLookup" data-crear-url="{{ route('gestionUsuario.index') }}" class="small text-muted mt-1"></div>
                     </div>
                     <div class="field">
                         <label>Nombres</label>
-                        <input type="text" id="nombre" name="nombre" required>
+                        <input type="text" id="nombre" name="nombre">
                     </div>
                     <div class="field">
                         <label>Apellidos</label>
@@ -37,7 +37,7 @@
                     </div>
                     <div class="field">
                         <label>Tipo</label>
-                        <select id="tipoSelect" name="tipo" required>
+                        <select id="tipoSelect" name="tipo">
                             <option value="prestamo">Préstamo</option>
                             <option value="primera vez">Primera vez</option>
                             <option value="periodica">Periódica</option>
@@ -46,7 +46,7 @@
                     </div>
                     <div class="field" id="field-operacion">
                         <label>Operación</label>
-                        <select id="operacionSelect" name="operacion_id" required>
+                        <select id="operacionSelect" name="operacion_id">
                             <option value="">Seleccione una operación</option>
                             @foreach($operations as $op)
                             <option value="{{ $op->id }}">{{ $op->operationName }}</option>
@@ -88,6 +88,7 @@
             </div>
 
             <input type="hidden" name="elementos" id="elementosJson" value="[]">
+            <input type="hidden" name="recepcion_id" id="recepcionIdHidden" value="">
 
             <div class="section">
                 <div class="firma">
@@ -144,7 +145,70 @@
     </div>
 </div>
 
+<div class="modal" id="modalRecepciones">
+    <div>
+        <h1>Seleccionar Recepción</h1>
+        <div class="modal-grid" style="grid-template-columns: 1fr;">
+            <div class="modal-field">
+                <label>Buscar por número de documento</label>
+                <input type="text" id="buscarRecepcionInput" placeholder="Ingrese número de documento">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn primary" onclick="buscarRecepciones()">Buscar</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+            <table class="modal-table">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Nombre</th>
+                        <th>Documento</th>
+                        <th>Elementos Recibidos</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="recepcionesTbody">
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 20px;">
+                            Ingrese un número de documento para buscar recepciones
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="modal-actions" style="margin-top:16px;">
+            <button type="button" class="btn secondary" onclick="cerrarModalRecepcion()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Toast global
+    const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer)
+            toast.addEventListener('mouseleave', Swal.resumeTimer)
+        }
+    });
+
+    // Mostrar toast por mensajes de sesión
+    (function(){
+        const status = @json(session('status'));
+        const error = @json(session('error'));
+        if (status) {
+            Toast.fire({ icon: 'success', title: status });
+        } else if (error) {
+            Toast.fire({ icon: 'error', title: error });
+        }
+    })();
+</script>
 <script>
     window.FormularioPageConfig = {
         allProducts: @json(($allProducts ?? collect())->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))

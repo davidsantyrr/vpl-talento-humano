@@ -20,12 +20,12 @@
       </div>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
       <div class="opciones" id="navOpciones">
-        <a href="{{ url('/menus/menu') }}" class="nav-link">Home</a>
         <a href="{{ url('/menus/menuentrega') }}" class="nav-link">Menú</a>
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
         <a href="{{ route('formularioEntregas') }}" class="nav-link">Entrega</a>
         <a href="{{ url('/recepcion') }}" class="nav-link">Recepción</a>
         <a href="#" class="nav-link">Consulta</a>
+        <a href="#" class="nav-link">Historico</a>
         <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
         <a href="" class="nav-link">Configuración</a>
         {{ $slot ?? '' }}

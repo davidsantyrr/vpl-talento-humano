@@ -18,6 +18,19 @@
   </header>
   <main class="container" role="main">
     <section class="cards" aria-label="Accesos rápidos">
+      <!-- Home -->
+      <article class="card c-indigo" role="article">
+        <div class="card__top">
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-home"></i>
+          </div>
+          <h3>Home</h3>
+          <p class="desc">Volver al menú principal del sistema</p>
+        </div>
+        <div class="card__footer"><a href="{{ url('/menus/menu') }}" class="btn btn-indigo"
+            aria-label="Ir a Home">Ingresar</a></div>
+      </article>
+
       <!-- Inventario -->
       <article class="card c-blue" role="article">
         <div class="card__top">

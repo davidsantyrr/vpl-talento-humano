@@ -6,10 +6,6 @@
 <x-NavEntregasComponente />
 <div class="recepcion container">
 
-  @if(session('status'))
-    <div class="alert success">{{ session('status') }}</div>
-  @endif
-
   <div class="panel">
     
   <h1 class="title">Recepción de devoluciones</h1>
@@ -19,7 +15,7 @@
         <div class="grid">
           <div class="field">
             <label>Tipo de documento</label>
-            <select name="tipo_doc" id="tipoDocumento" required>
+            <select name="tipo_doc" id="tipoDocumento">
               <option value="CC">C.C</option>
               <option value="TI">T.I</option>
               <option value="EXTRANJERA">EXTRANJERA</option>
@@ -27,20 +23,20 @@
           </div>
           <div class="field">
             <label>Número de documento</label>
-            <input type="text" name="num_doc" id="numDocumento" required>
+            <input type="text" name="num_doc" id="numDocumento">
             <div id="usuarioLookupRecepcion" data-crear-url="{{ route('gestionUsuario.index') }}" class="small text-muted mt-1"></div>
           </div>
           <div class="field">
             <label>Nombres</label>
-            <input type="text" name="nombres" id="nombresRecepcion" required>
+            <input type="text" name="nombres" id="nombresRecepcion">
           </div>
           <div class="field">
             <label>Apellidos</label>
-            <input type="text" name="apellidos" id="apellidosRecepcion" required>
+            <input type="text" name="apellidos" id="apellidosRecepcion">
           </div>
           <div class="field span-2">
             <label>Operación</label>
-            <select name="operation_id" id="operacionRecepcion" required>
+            <select name="operation_id" id="operacionRecepcion">
               <option value="">Seleccione una operación</option>
               @foreach($operations as $op)
                 <option value="{{ $op->id }}">{{ $op->operationName }}</option>

@@ -500,20 +500,201 @@ document.addEventListener('DOMContentLoaded', function () {
     updateElementoOptions();
 
     // ------------------ Modal de recepciones para tipo "cambio" ------------------
+    const modalRecepciones = document.getElementById('modalRecepciones');
+    const buscarRecepcionInput = document.getElementById('buscarRecepcionInput');
+    const recepcionesTbody = document.getElementById('recepcionesTbody');
+
     window.abrirModalRecepcion = function(){
+        if (!modalRecepciones) return;
+        modalRecepciones.classList.add('active');
+        if (buscarRecepcionInput) buscarRecepcionInput.value = '';
+        if (recepcionesTbody) {
+            recepcionesTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Ingrese un número de documento para buscar recepciones</td></tr>';
+        }
+    }
+
+    window.cerrarModalRecepcion = function(){
+        if (!modalRecepciones) return;
+        modalRecepciones.classList.remove('active');
+    }
+
+    window.buscarRecepciones = async function(){
+        const numero = buscarRecepcionInput ? buscarRecepcionInput.value.trim() : '';
+        if (!numero) {
+            Toast.fire({
+                icon: 'warning',
+                title: 'Ingrese un número de documento'
+            });
+            return;
+        }
+
+        try {
+            Toast.fire({
+                icon: 'info',
+                title: 'Buscando recepciones...'
+            });
+
+            const url = `${window.location.origin}/recepciones/buscar?numero=${encodeURIComponent(numero)}`;
+            const resp = await fetch(url);
+            
+            if (!resp.ok) throw new Error('Error en la búsqueda');
+            
+            const recepciones = await resp.json();
+            
+            if (!Array.isArray(recepciones) || recepciones.length === 0) {
+                recepcionesTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron recepciones para este documento</td></tr>';
+                Toast.fire({
+                    icon: 'info',
+                    title: 'No se encontraron recepciones'
+                });
+                return;
+            }
+
+            // Renderizar recepciones encontradas
+            recepcionesTbody.innerHTML = recepciones.map(r => {
+                // Formatear elementos recibidos
+                const elementosTexto = r.elementos && r.elementos.length > 0
+                    ? r.elementos.map(e => `${e.sku} (${e.cantidad})`).join(', ')
+                    : 'Sin elementos';
+                
+                return `
+                <tr>
+                    <td>${escapeHtml(new Date(r.fecha).toLocaleDateString())}</td>
+                    <td>${escapeHtml(r.nombres)} ${escapeHtml(r.apellidos)}</td>
+                    <td>${escapeHtml(r.numero_documento)}</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(elementosTexto)}">${escapeHtml(elementosTexto)}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm primary" onclick='seleccionarRecepcion(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+                            Seleccionar
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+
+            Toast.fire({
+                icon: 'success',
+                title: `${recepciones.length} recepción(es) encontrada(s)`
+            });
+        } catch (e) {
+            console.error('Error buscando recepciones:', e);
+            Toast.fire({
+                icon: 'error',
+                title: 'Error al buscar recepciones'
+            });
+        }
+    }
+
+    window.seleccionarRecepcion = async function(recepcion){
+        if (!recepcion || !recepcion.elementos) return;
+
+        // Rellenar datos del usuario
+        if (nombreInput) nombreInput.value = recepcion.nombres || '';
+        if (apellidosInput) apellidosInput.value = recepcion.apellidos || '';
+        if (numeroInput) numeroInput.value = recepcion.numero_documento || '';
+        if (tipoDocumentoSelect) tipoDocumentoSelect.value = recepcion.tipo_documento || 'CC';
+
+        // Buscar y cargar datos completos del usuario desde la base de datos
+        if (recepcion.numero_documento) {
+            try {
+                const fetchUrl = `${window.location.origin}/usuarios/buscar?numero=${encodeURIComponent(recepcion.numero_documento)}`;
+                const respUsuario = await fetch(fetchUrl);
+                
+                if (respUsuario.ok) {
+                    const dataUsuario = await respUsuario.json();
+                    if (dataUsuario) {
+                        // Cargar operación del usuario
+                        if (operacionSelect && dataUsuario.operacion_id) {
+                            operacionSelect.value = dataUsuario.operacion_id;
+                            usuarioOperacionId = dataUsuario.operacion_id;
+                            lastOperacionValue = dataUsuario.operacion_id;
+                        }
+                        
+                        // Exponer cargo_id para otros scripts
+                        if (lookupBox) lookupBox.dataset.cargoId = dataUsuario.cargo_id ? String(dataUsuario.cargo_id) : '';
+                        if (cargoHidden) cargoHidden.value = dataUsuario.cargo_id ? String(dataUsuario.cargo_id) : '';
+                        
+                        // Actualizar estado y productos
+                        updateOperacionState();
+                        await updateElementoOptions();
+                    }
+                }
+            } catch (err) {
+                console.error('Error cargando datos del usuario:', err);
+            }
+        }
+
+        // Guardar ID de recepción en campo hidden
+        const recepcionIdHidden = document.getElementById('recepcionIdHidden');
+        if (recepcionIdHidden) {
+            recepcionIdHidden.value = recepcion.id || '';
+        }
+
+        // Obtener nombres de productos desde cargo_productos
+        try {
+            const skus = recepcion.elementos.map(e => e.sku);
+            const url = `${window.location.origin}/productos/nombres`;
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
+                             document.querySelector('input[name="_token"]')?.value || '';
+            
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ skus })
+            });
+
+            let productosMap = {};
+            if (resp.ok) {
+                const data = await resp.json();
+                // Crear mapa de SKU => nombre
+                data.forEach(p => {
+                    productosMap[p.sku] = p.name_produc;
+                });
+            }
+
+            // Cargar elementos de la recepción con sus nombres
+            elementos = recepcion.elementos.map(e => ({
+                sku: e.sku,
+                name: productosMap[e.sku] || e.sku,
+                cantidad: parseInt(e.cantidad) || 1
+            }));
+        } catch (err) {
+            console.error('Error obteniendo nombres de productos:', err);
+            // Si falla, cargar solo con SKU
+            elementos = recepcion.elementos.map(e => ({
+                sku: e.sku,
+                name: e.sku,
+                cantidad: parseInt(e.cantidad) || 1
+            }));
+        }
+        
+        syncFormTable();
+        cerrarModalRecepcion();
+        
         Toast.fire({
-            icon: 'info',
-            title: 'Función en desarrollo'
+            icon: 'success',
+            title: 'Recepción seleccionada correctamente'
         });
-        // TODO: Implementar modal para seleccionar una recepción existente
-        // y cargar sus elementos en la entrega actual
+    }
+
+    // Búsqueda al presionar Enter en el input
+    if (buscarRecepcionInput) {
+        buscarRecepcionInput.addEventListener('keypress', function(e){
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                buscarRecepciones();
+            }
+        });
     }
 
     // ------------------ Firma en canvas (copiado de recepcion.js) ------------------
     function setupCanvas(){
         const canvas = document.getElementById('firmaCanvas');
         const pad = document.getElementById('firmaPad');
-        const form = document.querySelector('form');
+        const form = document.getElementById('entregasForm');
         if (!canvas || !pad) return;
         const ctx = canvas.getContext('2d');
         
@@ -572,11 +753,75 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
+        // Solo validar el formulario de entregas, no otros formularios (como logout)
         if (form) {
-            form.addEventListener('submit', function(){
+            form.addEventListener('submit', function(e){
+                e.preventDefault();
+                
+                // Validaciones de campos requeridos
+                const tipoDocumento = document.querySelector('select[name="tipo_documento"]');
+                const numeroDocumento = document.getElementById('numberDocumento');
+                const nombre = document.getElementById('nombre');
+                const tipo = document.getElementById('tipoSelect');
+                const operacion = document.getElementById('operacionSelect');
+                
+                // Array para acumular errores
+                let errores = [];
+                
+                // Validar tipo de documento
+                if (!tipoDocumento || !tipoDocumento.value) {
+                    errores.push('Tipo de documento');
+                }
+                
+                // Validar número de documento
+                if (!numeroDocumento || !numeroDocumento.value.trim()) {
+                    errores.push('Número de documento');
+                }
+                
+                // Validar nombres
+                if (!nombre || !nombre.value.trim()) {
+                    errores.push('Nombres');
+                }
+                
+                // Validar tipo de entrega
+                if (!tipo || !tipo.value) {
+                    errores.push('Tipo de entrega');
+                }
+                
+                // Validar operación
+                if (!operacion || !operacion.value) {
+                    errores.push('Operación');
+                }
+                
+                // Si hay errores de campos, mostrarlos
+                if (errores.length > 0) {
+                    Toast.fire({
+                        icon: 'error',
+                        title: 'Campos faltantes',
+                        html: `Por favor complete: <br><strong>${errores.join(', ')}</strong>`,
+                        timer: 5000
+                    });
+                    return false;
+                }
+                
+                // Validar que haya al menos un elemento
+                if (elementos.length === 0) {
+                    Toast.fire({
+                        icon: 'warning',
+                        title: 'Sin elementos',
+                        html: 'Debe agregar al menos <strong>1 elemento</strong> a la entrega.<br>Use el botón "Añadir elemento"',
+                        timer: 4000
+                    });
+                    return false;
+                }
+
+                // Guardar firma y elementos
                 const firmaField = document.getElementById('firmaField');
                 if (firmaField) firmaField.value = canvas.toDataURL('image/png');
                 if (elementosJson) elementosJson.value = JSON.stringify(elementos);
+                
+                // Si todo está bien, enviar el formulario
+                form.submit();
             });
         }
     }
@@ -587,6 +832,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const firmaField = document.getElementById('firmaField');
         if (canvas && firmaField) {
             firmaField.value = canvas.toDataURL('image/png');
+        }
+        if (elementosJson) {
+            elementosJson.value = JSON.stringify(elementos);
         }
     };
 

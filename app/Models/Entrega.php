@@ -28,6 +28,7 @@ class Entrega extends Model
         'tipo_entrega',
         'usuarios_id',
         'operacion_id',
+        'recepciones_id',
     ];
 
     /**
@@ -41,6 +42,11 @@ class Entrega extends Model
     public function operacion()
     {
         return $this->belongsTo(SubArea::class, 'operacion_id');
+    }
+
+    public function recepcion()
+    {
+        return $this->belongsTo(\App\Models\Recepcion::class, 'recepciones_id');
     }
 
     public function elementos()

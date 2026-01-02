@@ -88,3 +88,9 @@ Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 // Ruta para obtener productos de cargo_productos (sin filtros o con filtros opcionales)
 Route::get('/cargo-productos', [App\Http\Controllers\entregasPdf\EntregaController::class, 'cargoProductos'])->name('cargo.productos');
 
+// Ruta para buscar recepciones (API para modal de entregas)
+Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'])->name('recepciones.buscar');
+
+// Ruta para obtener nombres de productos por SKUs
+Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
+
