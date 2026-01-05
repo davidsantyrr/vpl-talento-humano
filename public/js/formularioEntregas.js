@@ -451,22 +451,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     async function fetchProductosCargo(cargoId, operacionId){
         try{
-          let url = `${window.location.origin}/cargo-productos`;
-          const params = new URLSearchParams();
-          if(cargoId) params.append('cargo_id', cargoId);
-          if(operacionId) params.append('sub_area_id', operacionId);
-          if(params.toString()) url += '?' + params.toString();
-          console.log('Fetching from:', url);
-          const resp = await fetch(url);
-          console.log('Response status:', resp.status);
-          if(resp.status === 204) return [];
-          if(!resp.ok) throw new Error('fetch_error');
-          const data = await resp.json();
-          console.log('Data received:', data);
-          return Array.isArray(data) ? data.filter(p=>p && p.sku && p.name_produc) : [];
+        let url = `${window.location.origin}/cargo-productos`;
+        const params = new URLSearchParams();
+        if(cargoId) params.append('cargo_id', cargoId);
+        if(operacionId) params.append('sub_area_id', operacionId);
+        if(params.toString()) url += '?' + params.toString();
+        console.log('Fetching from:', url);
+        const resp = await fetch(url);
+        console.log('Response status:', resp.status);
+        if(resp.status === 204) return [];
+        if(!resp.ok) throw new Error('fetch_error');
+        const data = await resp.json();
+        console.log('Data received:', data);
+        return Array.isArray(data) ? data.filter(p=>p && p.sku && p.name_produc) : [];
         }catch(e){
-          console.error('Error fetching productos:', e);
-          return [];
+        console.error('Error fetching productos:', e);
+        return [];
         }
     }
 
@@ -483,12 +483,12 @@ document.addEventListener('DOMContentLoaded', function () {
         const current = elementoSelect.value;
         elementoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
         lista.forEach(p=>{
-          const opt = document.createElement('option');
-          opt.value = String(p.sku);
-          opt.dataset.name_produc = String(p.name_produc);
-          opt.textContent = `${p.sku} — ${p.name_produc}`;
-          elementoSelect.appendChild(opt);
-          console.log('Added option:', p.sku, p.name_produc);
+        const opt = document.createElement('option');
+        opt.value = String(p.sku);
+        opt.dataset.name_produc = String(p.name_produc);
+        opt.textContent = `${p.sku} — ${p.name_produc}`;
+        elementoSelect.appendChild(opt);
+        console.log('Added option:', p.sku, p.name_produc);
         });
         // Habilitar si hay productos o si no hay filtros (mostrar todos)
         elementoSelect.disabled = (lista.length === 0 && (cargoId || operacionId));
@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const skus = recepcion.elementos.map(e => e.sku);
             const url = `${window.location.origin}/productos/nombres`;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
-                             document.querySelector('input[name="_token"]')?.value || '';
+                            document.querySelector('input[name="_token"]')?.value || '';
             
             const resp = await fetch(url, {
                 method: 'POST',

@@ -1,0 +1,71 @@
+/* Estilos para gestión de periodicidad */
+.gestion-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.gestion-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:18px;
+}
+.gestion-header h1{font-size:22px;margin:0}
+.gestion-header p{margin:0;color:#6b7280}
+.header-actions{display:flex;gap:10px}
+.btn-save{background:#2563eb;border-color:#2563eb}
+
+.periodicidad-card{
+    border:3px solid #1e90ff22;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.periodicidad-table-wrapper{padding:12px}
+
+.periodicidad-table{
+    width:100%;
+    border-collapse:separate;
+    border-spacing:0 10px;
+}
+.periodicidad-table thead th{
+    background: linear-gradient(180deg,#2b7be4,#1e66d6);
+    color:#fff;
+    font-weight:600;
+    padding:12px 10px;
+    border-radius:6px;
+    text-align:left;
+}
+.periodicidad-table thead th:not(:first-child){text-align:center}
+
+.periodicidad-table tbody tr{
+    background:#fff;
+    box-shadow:0 1px 0 rgba(0,0,0,0.03);
+}
+.periodicidad-table tbody td{
+    padding:12px 10px;
+    vertical-align:middle;
+}
+.elemento-cell{font-weight:600}
+
+.form-select.form-select-sm{
+    min-width:140px;
+    max-width:220px;
+}
+
+.periodicidad-footer{padding:10px 16px;border-top:1px solid #eef2ff;background:transparent}
+.pagination-wrapper{display:flex;justify-content:flex-end}
+
+/* Small responsive adjustments */
+@media(max-width:900px){
+    .form-select.form-select-sm{min-width:100px}
+}
+
+/* Make selects look like in the mock: light, rounded */
+.periodicidad-table select{background:#f8fafc;border:1px solid #e6eefc;padding:6px;border-radius:6px}
+
+/* Table header row styling to mimic card-looking header */
+.periodicidad-table thead th:first-child{border-top-left-radius:8px}
+.periodicidad-table thead th:last-child{border-top-right-radius:8px}

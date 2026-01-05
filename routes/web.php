@@ -9,7 +9,8 @@ use App\Http\Controllers\gestiones\gestionOperacionController;
 use App\Http\Controllers\gestiones\gestionAreaController;
 use App\Http\Controllers\gestiones\gestionCentroCostoController;
 use App\Http\Controllers\gestiones\GestionUsuarioController;
-
+use App\Http\Controllers\gestiones\gestionPeriodicidad;
+use App\Http\Controllers\consultaEementosUsuario\controllerConsulta;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
@@ -50,6 +51,14 @@ Route::resource('gestionArea', gestionAreaController::class);
 Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 
 
+
+});
+    // Gestión de periodicidades (CRUD)
+    Route::resource('gestionPeriodicidad', App\Http\Controllers\gestiones\gestionPeriodicidad::class);
+    // Ruta personalizada para guardado masivo
+    Route::post('/gestionPeriodicidad/save', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'saveAll'])
+        ->name('gestionPeriodicidad.saveAll');
+
     // Gestión de Cargos (CRUD)
     Route::get('/elementoxcargo/cargos', [CargoController::class, 'index'])->name('cargos.index');
     Route::post('/elementoxcargo/cargos', [CargoController::class, 'store'])->name('cargos.store');
@@ -68,7 +77,8 @@ Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 
     // Vista matriz cargo x subárea
     Route::get('/elementoxcargo/matriz', [CargoProductosController::class, 'matrix'])->name('elementoxcargo.productos.matriz');
-});
+    
+    
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
 
@@ -99,3 +109,8 @@ Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'
 // Ruta para obtener nombres de productos por SKUs
 Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
 
+
+Route::resource('gestionUsuario', GestionUsuarioController::class);
+// Route para consulta de elementos por usuario (vista: consultaElementoUsuario.consulta)
+Route::get('/consulta-elementos', [controllerConsulta::class, 'index'])->name('consultaElementoUsuario.consulta');
+Route::resource('consultaElementos', controllerConsulta::class);
