@@ -25,7 +25,7 @@
         <a href="{{ route('formularioEntregas') }}" class="nav-link">Entrega</a>
         <a href="{{ url('/recepcion') }}" class="nav-link">Recepción</a>
         <a href="#" class="nav-link">Consulta</a>
-        <a href="#" class="nav-link">Historico</a>
+        <a href="{{ route('historial.unificado') }}" class="nav-link">Histórico</a>
         <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
         <a href="" class="nav-link">Configuración</a>
         {{ $slot ?? '' }}

@@ -80,6 +80,10 @@ Route::post('/formularioEntregas', [EntregaController::class, 'store'])
 
 // Historial de entregas - ruta pública (fuera de middleware)
 Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('entregas.index');
+
+// Historial unificado de entregas y recepciones
+Route::get('/historial/unificado', [EntregaController::class, 'historialUnificado'])->name('historial.unificado');
+
 Route::resource('gestionOperacion', gestionOperacionController::class);
 
 Route::resource('gestionArea', gestionAreaController::class);
