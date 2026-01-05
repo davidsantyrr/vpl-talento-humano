@@ -8,6 +8,7 @@ use App\Models\SubArea;
 use App\Models\Producto;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\EnviarCorreoRecepcion;
 
 class RecepcionController extends Controller
 {
@@ -31,6 +32,7 @@ class RecepcionController extends Controller
             'entrega_id' => ['nullable','integer','exists:entregas,id'],
             'items' => ['required','string'],
             'firma' => ['nullable','string'],
+            'comprobante_path' => ['nullable','string'],
         ]);
 
         // Usuario en sesión desde API
@@ -46,6 +48,14 @@ class RecepcionController extends Controller
             $nombreUsuario = $authUser->name;
         }
 
+        // Email del usuario - EXTRAER SOLO EL CAMPO email
+        $emailUsuario = 'sin-email@example.com';
+        if (is_array($authUser) && isset($authUser['email'])) {
+            $emailUsuario = $authUser['email'];
+        } elseif (is_object($authUser) && isset($authUser->email)) {
+            $emailUsuario = $authUser->email;
+        }
+
         // Primer rol del usuario (roles[0].roles) - EXTRAER SOLO EL CAMPO roles
         $primerRol = 'web';
         if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
@@ -59,6 +69,7 @@ class RecepcionController extends Controller
         
         Log::info('Valores a guardar:', [
             'nombreUsuario' => $nombreUsuario,
+            'emailUsuario' => $emailUsuario,
             'primerRol' => $primerRol,
             'tipo_recepcion' => $data['tipo']
         ]);
@@ -69,6 +80,7 @@ class RecepcionController extends Controller
             $recepcionData = [
                 'rol_recepcion' => $primerRol,
                 'recepcion_user' => $nombreUsuario,
+                'recepcion_email' => $emailUsuario,
                 'tipo_recepcion' => $data['tipo'],
                 'tipo_documento' => $data['tipo_doc'],
                 'numero_documento' => $data['num_doc'],
@@ -152,6 +164,41 @@ class RecepcionController extends Controller
                 'datos_manuales' => empty($data['usuarios_id']),
                 'elementos_count' => count($items)
             ]);
+            
+            // Obtener recepción creada para enviar correo
+            $recepcion = DB::table('recepciones')->where('id', $recepcionId)->first();
+            
+            // Disparar Job para enviar correo
+            if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
+                try {
+                    // Enviar correo de forma síncrona (inmediata)
+                    EnviarCorreoRecepcion::dispatchSync(
+                        $recepcion,
+                        $items,
+                        $emailUsuario,
+                        $data['comprobante_path'] ?? null
+                    );
+
+                    Log::info('Correo de recepción enviado exitosamente', [
+                        'recepcion_id' => $recepcionId,
+                        'email' => $emailUsuario
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error al enviar correo de recepción', [
+                        'recepcion_id' => $recepcionId,
+                        'email' => $emailUsuario,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Recepción registrada correctamente',
+                    'recepcion_id' => $recepcionId
+                ], 200);
+            }
             
             return redirect()->back()->with('status', 'Recepción registrada correctamente');
         } catch (\Throwable $e) {

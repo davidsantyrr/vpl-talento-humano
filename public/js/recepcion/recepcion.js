@@ -36,7 +36,12 @@
     const clearBtn = document.getElementById('clearFirma');
     clearBtn && clearBtn.addEventListener('click', function(){ ctx.clearRect(0,0,canvas.width,canvas.height); });
 
-    // Validación del formulario
+    if (window.__TH_AJAX_SUBMIT__ === true) {
+      // No registrar el listener de submit aquí
+      return;
+    }
+
+    // Validación del formulario (solo modo no-AJAX)
     form && form.addEventListener('submit', function(e){
       e.preventDefault();
       

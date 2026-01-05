@@ -138,17 +138,20 @@
             width: 45%;
             text-align: center;
             padding: 20px;
+            vertical-align: top;
         }
         
         .firma-line {
             border-top: 2px solid #333;
-            margin-top: 80px;
+            margin-top: 40px;
             padding-top: 10px;
+            min-height: 120px;
         }
         
         .firma-label {
             font-weight: bold;
             color: #111f2e;
+            margin-bottom: 8px;
         }
         
         .status-badge {
@@ -166,6 +169,13 @@
         .status-warning {
             background: #fef3c7;
             color: #b45309;
+        }
+
+        img.firma-img {
+            max-width: 100%;
+            height: 100px;
+            object-fit: contain;
+            margin-top: 6px;
         }
     </style>
 </head>
@@ -246,8 +256,8 @@
                 @forelse($elementos as $index => $elemento)
                     <tr>
                         <td>{{ $index + 1 }}</td>
-                        <td>{{ $elemento->sku }}</td>
-                        <td style="text-align: center;">{{ $elemento->cantidad }}</td>
+                        <td>{{ $elemento->sku ?? $elemento['sku'] ?? ($elemento->codigo ?? 'N/A') }}</td>
+                        <td style="text-align: center;">{{ $elemento->cantidad ?? $elemento['cantidad'] ?? 'N/A' }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -259,18 +269,35 @@
     </div>
 
     <div class="firma-section">
-        <div class="firma-box">
-            <div class="firma-line">
-                <p class="firma-label">Firma del que Entrega</p>
-                <p>{{ $tipo === 'entrega' ? ($registro->entrega_user ?? 'N/A') : ($registro->nombres ?? 'N/A') }}</p>
+        @if($tipo === 'entrega')
+            {{-- En entrega: solo firma del que RECIBE --}}
+            <div class="firma-box" style="width: 100%; text-align: center;">
+                <div class="firma-line">
+                    <p class="firma-label">Firma del que Recibe</p>
+                    <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
+                    @php($firmaImg = $firma['entrega'] ?? $firma['recepcion'] ?? null)
+                    @if(!empty($firmaImg))
+                        <img class="firma-img" src="{{ $firmaImg }}" alt="Firma">
+                    @else
+                        <p style="color: #999; margin-top: 40px;">Sin firma</p>
+                    @endif
+                </div>
             </div>
-        </div>
-        <div class="firma-box">
-            <div class="firma-line">
-                <p class="firma-label">Firma del que Recibe</p>
-                <p>{{ $tipo === 'entrega' ? ($registro->nombres ?? 'N/A') : 'Sistema' }}</p>
+        @else
+            {{-- En recepción: solo firma del que ENTREGA (devuelve) --}}
+            <div class="firma-box" style="width: 100%; text-align: center;">
+                <div class="firma-line">
+                    <p class="firma-label">Firma del que Entrega (Devolución)</p>
+                    <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
+                    @php($firmaImg = $firma['recepcion'] ?? $firma['entrega'] ?? null)
+                    @if(!empty($firmaImg))
+                        <img class="firma-img" src="{{ $firmaImg }}" alt="Firma">
+                    @else
+                        <p style="color: #999; margin-top: 40px;">Sin firma</p>
+                    @endif
+                </div>
             </div>
-        </div>
+        @endif
     </div>
 
     <div class="footer">

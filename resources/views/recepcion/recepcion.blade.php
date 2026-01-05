@@ -198,9 +198,120 @@
   window.RecepcionPageConfig = {
     allProducts: @json($allProducts->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))
   };
+  // Flag global: evitar listeners externos de submit
+  window.__TH_AJAX_SUBMIT__ = true;
 </script>
 <script src="{{ asset('js/recepcion/recepcion.js') }}"></script>
 <script src="{{ asset('js/recepcion/recepcionLookup.js') }}"></script>
 <script src="{{ asset('js/recepcion/recepcionModal.js') }}"></script>
 <script src="{{ asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const form = document.getElementById('recepcionForm');
+  if (!form) return;
+
+  let isProcessing = false;
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+    
+    if (isProcessing) {
+      console.log('Ya se está procesando la recepción');
+      return false;
+    }
+    
+    isProcessing = true;
+
+    // Recolectar datos
+    const registro = {
+      id: null,
+      tipo_documento: form.tipo_doc?.value || null,
+      numero_documento: form.num_doc?.value || null,
+      nombres: form.nombres?.value || null,
+      apellidos: form.apellidos?.value || null,
+      operacion: form.operation_id?.options[form.operation_id?.selectedIndex]?.text || null,
+      tipo: form.tipo?.value || null,
+      recibido: false,
+      created_at: new Date().toISOString()
+    };
+
+    // Elementos desde campo hidden items
+    const elementos = JSON.parse(document.getElementById('itemsField')?.value || '[]');
+
+    // Firma
+    const firmaField = document.getElementById('firmaField');
+    const firmaData = {};
+    if (firmaField && firmaField.value) {
+      firmaData['recepcion'] = firmaField.value;
+    }
+
+    try {
+      // 1. Generar comprobante PDF
+      const payloadPDF = {
+        tipo: 'recepcion',
+        registro: registro,
+        elementos: elementos,
+        firma: firmaData
+      };
+
+      const respPDF = await fetch('{{ route('comprobantes.generar') }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(payloadPDF)
+      });
+
+      const jsonPDF = await respPDF.json();
+      if (!jsonPDF.success) {
+        isProcessing = false;
+        Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
+        return false;
+      }
+
+      // 2. Enviar formulario via AJAX (sin disparar evento submit)
+      const formData = new FormData(form);
+      formData.append('comprobante_path', jsonPDF.path);
+
+      const respForm = await fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: formData
+      });
+
+      const jsonForm = await respForm.json();
+      
+      if (jsonForm.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Éxito',
+          text: jsonForm.message || 'Recepción registrada correctamente'
+        }).then(() => {
+          window.location.reload();
+        });
+      } else {
+        isProcessing = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: jsonForm.message || 'Error al registrar la recepción'
+        });
+      }
+
+    } catch (err) {
+      isProcessing = false;
+      console.error('Error:', err);
+      Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la recepción'});
+      return false;
+    }
+  }, true); // fase captura para preceder a otros listeners
+});
+</script>
 @endsection

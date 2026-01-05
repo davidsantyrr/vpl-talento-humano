@@ -215,4 +215,98 @@
     };
 </script>
 <script src="{{ asset('js/formularioEntregas.js') }}"></script>
+<script>
+  // Flag global para evitar listeners de submit externos
+  window.__TH_AJAX_SUBMIT__ = true;
+</script>
+<script>
+// Interceptar submit para generar comprobante con la plantilla y firma
+document.addEventListener('DOMContentLoaded', function(){
+  const form = document.getElementById('entregasForm');
+  if (!form) return;
+
+  let isProcessing = false;
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    e.stopPropagation();
+    
+    if (isProcessing) {
+      console.log('Ya se está procesando la entrega');
+      return false;
+    }
+    
+    isProcessing = true;
+
+    // Recolectar datos necesarios
+    const registro = {
+      id: null,
+      tipo_documento: form.tipo_documento?.value || null,
+      numero_documento: form.numberDocumento?.value || null,
+      nombres: form.nombre?.value || null,
+      apellidos: form.apellidos?.value || null,
+      operacion: form.operacion_id?.options[form.operacion_id?.selectedIndex]?.text || null,
+      tipo: form.tipo?.value || null,
+      recibido: false,
+      created_at: new Date().toISOString()
+    };
+
+    const elementos = JSON.parse(document.getElementById('elementosJson').value || '[]');
+
+    const firmaField = document.getElementById('firmaField');
+    const firmaData = {};
+    if (firmaField && firmaField.value) {
+      firmaData['entrega'] = firmaField.value;
+    }
+
+    try {
+      const payloadPDF = { tipo: 'entrega', registro, elementos, firma: firmaData };
+      const respPDF = await fetch('{{ route('comprobantes.generar') }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify(payloadPDF)
+      });
+      const jsonPDF = await respPDF.json();
+      if (!jsonPDF.success) {
+        isProcessing = false;
+        Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
+        return false;
+      }
+
+      const formData = new FormData(form);
+      formData.append('comprobante_path', jsonPDF.path);
+
+      const respForm = await fetch(form.action, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: formData
+      });
+      const jsonForm = await respForm.json();
+      if (jsonForm.success) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Éxito',
+          text: jsonForm.message || 'Entrega registrada correctamente'
+        }).then(() => {
+          // Redirigir recargando la misma página para evitar rutas inexistentes
+          window.location.reload();
+        });
+      } else {
+        isProcessing = false;
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: jsonForm.message || 'Error al registrar la entrega'
+        });
+      }
+    } catch (err) {
+      isProcessing = false;
+      console.error('Error:', err);
+      Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la entrega'});
+      return false;
+    }
+  }, true); // usar captura para ejecutar antes que otros listeners
+});
+</script>
 @endsection

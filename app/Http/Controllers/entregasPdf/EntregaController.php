@@ -15,6 +15,7 @@ use App\Models\Usuarios;
 use App\Models\ElementoXEntrega;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Jobs\EnviarCorreoEntrega;
 
 
 class EntregaController extends Controller
@@ -208,6 +209,7 @@ class EntregaController extends Controller
             'operacion_id' => 'required|integer|exists:sub_areas,id',
             'tipo_documento' => 'required|string',
             'recepcion_id' => 'nullable|integer|exists:recepciones,id',
+            'comprobante_path' => 'nullable|string',
         ]);
 
         // Usuario en sesión desde API
@@ -223,6 +225,14 @@ class EntregaController extends Controller
             $nombreUsuario = $authUser->name;
         }
 
+        // Email del usuario que hace la entrega
+        $emailUsuario = 'sin-email@example.com';
+        if (is_array($authUser) && isset($authUser['email'])) {
+            $emailUsuario = $authUser['email'];
+        } elseif (is_object($authUser) && isset($authUser->email)) {
+            $emailUsuario = $authUser->email;
+        }
+
         // Primer rol del usuario
         $primerRol = 'web';
         if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
@@ -236,6 +246,7 @@ class EntregaController extends Controller
         
         Log::info('Valores a guardar:', [
             'nombreUsuario' => $nombreUsuario,
+            'emailUsuario' => $emailUsuario,
             'primerRol' => $primerRol
         ]);
 
@@ -256,6 +267,7 @@ class EntregaController extends Controller
             $entregaData = [
                 'rol_entrega' => $primerRol,
                 'entrega_user' => $nombreUsuario,
+                'entrega_email' => $emailUsuario,
                 'tipo_entrega' => $data['tipo'] ?? null,
                 'tipo_documento' => $data['tipo_documento'],
                 'numero_documento' => $data['numberDocumento'],
@@ -277,6 +289,8 @@ class EntregaController extends Controller
                     'numero_documento' => $data['numberDocumento']
                 ]);
             }
+
+            Log::info('Datos completos a insertar en entregas:', $entregaData);
 
             // Crear entrega con datos completos
             $entrega = Entrega::create($entregaData);
@@ -336,10 +350,35 @@ class EntregaController extends Controller
                 'elementos_count' => count($items)
             ]);
 
+            // Disparar Job para enviar correo
+            if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
+                try {
+                    // Enviar correo de forma síncrona (inmediata)
+                    EnviarCorreoEntrega::dispatchSync(
+                        $entrega,
+                        $items,
+                        $emailUsuario,
+                        $data['comprobante_path'] ?? null
+                    );
+
+                    Log::info('Correo de entrega enviado exitosamente', [
+                        'entrega_id' => $entrega->id,
+                        'email' => $emailUsuario
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error al enviar correo de entrega', [
+                        'entrega_id' => $entrega->id,
+                        'email' => $emailUsuario,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Entrega registrada correctamente'
+                    'message' => 'Entrega registrada correctamente',
+                    'entrega_id' => $entrega->id
                 ], 200);
             }
 

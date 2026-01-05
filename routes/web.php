@@ -13,6 +13,7 @@ use App\Http\Controllers\gestiones\GestionUsuarioController;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
+use App\Http\Controllers\ComprobanteController;
 
 Route::get('/', function () {
     return view('index');
@@ -102,4 +103,13 @@ Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'
 
 // Ruta para obtener nombres de productos por SKUs
 Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
+
+Route::post('/comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
+
+// Ruta para descargar comprobante (archivo en storage/app/{dir}/{file})
+Route::get('/comprobantes/{dir}/{file}', function($dir, $file) {
+    $path = storage_path('app/' . $dir . '/' . $file);
+    if (!file_exists($path)) abort(404);
+    return response()->download($path);
+})->where('dir', 'comprobantes_entregas|comprobantes_recepciones')->name('comprobantes.download');
 

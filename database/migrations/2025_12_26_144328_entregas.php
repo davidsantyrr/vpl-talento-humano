@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('rol_entrega');
             $table->string('entrega_user');
+            $table->string('entrega_email');
             $table->string('tipo_entrega');
             $table->string('tipo_documento')->nullable();
             $table->string('numero_documento')->nullable();
