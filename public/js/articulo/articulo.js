@@ -249,6 +249,161 @@
     });
   }
 
+// Función para abrir modal de destrucción
+window.abrirModalDestruccion = function(sku, nombreProducto, bodega, ubicacion, estatus, stock) {
+  console.log('Abriendo modal de destrucción', {sku, nombreProducto, bodega, ubicacion, estatus, stock});
+  
+  const modal = document.getElementById('modalDestruccion');
+  if (!modal) {
+    console.error('Modal de destrucción no encontrado');
+    return;
+  }
+  
+  // Llenar datos del modal
+  const skuHidden = document.getElementById('destruccionSkuHidden');
+  if (skuHidden) {
+    skuHidden.value = sku;
+  } else {
+    console.error('Campo destruccionSkuHidden no encontrado');
+  }    const nombreSpan = document.getElementById('destruccionNombreProducto');
+    if (nombreSpan) nombreSpan.textContent = nombreProducto;
+    
+    const skuSpan = document.getElementById('destruccionSku');
+    if (skuSpan) skuSpan.textContent = sku;
+    
+    const bodegaSpan = document.getElementById('destruccionBodega');
+    if (bodegaSpan) bodegaSpan.textContent = bodega || '(sin asignar)';
+    
+    const ubicacionSpan = document.getElementById('destruccionUbicacion');
+    if (ubicacionSpan) ubicacionSpan.textContent = ubicacion || '(sin asignar)';
+    
+    const estatusSpan = document.getElementById('destruccionEstatusActual');
+    if (estatusSpan) estatusSpan.textContent = estatus;
+    
+    const stockSpan = document.getElementById('destruccionStockActual');
+    if (stockSpan) stockSpan.textContent = stock;
+    
+    const cantidadInput = document.getElementById('destruccionCantidad');
+    if (cantidadInput) {
+      cantidadInput.max = stock;
+      cantidadInput.value = stock;
+    }
+    
+    const bodegaHidden = document.getElementById('destruccionBodegaHidden');
+    if (bodegaHidden) bodegaHidden.value = bodega;
+    
+    const ubicacionHidden = document.getElementById('destruccionUbicacionHidden');
+    if (ubicacionHidden) ubicacionHidden.value = ubicacion;
+    
+    const estatusHidden = document.getElementById('destruccionEstatusHidden');
+    if (estatusHidden) estatusHidden.value = estatus;
+    
+    const archivoInput = document.getElementById('destruccionArchivo');
+    if (archivoInput) archivoInput.value = '';
+    
+    // Mostrar modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  };
+
+  // Función para cerrar modal de destrucción
+  window.cerrarModalDestruccion = function() {
+    const modal = document.getElementById('modalDestruccion');
+    if (modal) {
+      modal.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  };
+
+  // Función para procesar destrucción
+  window.procesarDestruccion = function(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const archivo = formData.get('constancia');
+    
+    if (!archivo || archivo.size === 0) {
+      Toast.fire({
+        icon: 'error',
+        title: 'Debe cargar la constancia de destrucción (PDF)'
+      });
+      return;
+    }
+    
+    if (archivo.type !== 'application/pdf') {
+      Toast.fire({
+        icon: 'error',
+        title: 'El archivo debe ser un PDF'
+      });
+      return;
+    }
+    
+    Swal.fire({
+      title: 'Procesando destrucción...',
+      html: 'Por favor espere',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+    
+    fetch(form.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRF-TOKEN': window.ArticulosPageConfig.csrfToken
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      Swal.close();
+      if (data.success) {
+        Toast.fire({
+          icon: 'success',
+          title: data.message || 'Artículo destruido correctamente'
+        });
+        cerrarModalDestruccion();
+        setTimeout(() => location.reload(), 1500);
+      } else {
+        Toast.fire({
+          icon: 'error',
+          title: data.message || 'Error al procesar la destrucción'
+        });
+      }
+    })
+    .catch(error => {
+      Swal.close();
+      console.error('Error:', error);
+      Toast.fire({
+        icon: 'error',
+        title: 'Error al procesar la solicitud'
+      });
+    });
+  };
+
+  // Event listener para cerrar modal al hacer clic en el backdrop
+  document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalDestruccion');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal && modal.classList.contains('active')) {
+          cerrarModalDestruccion();
+        }
+      });
+    }
+    
+    // Event listener para cerrar con tecla Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('modalDestruccion');
+        if (modal && modal.classList.contains('active')) {
+          cerrarModalDestruccion();
+        }
+      }
+    });
+  });
+
   function bindButtons(){
     document.querySelectorAll('.btn-icon.location').forEach(function(btn){
       const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ openLocation(row); });
@@ -257,7 +412,16 @@
       const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ openEditor(row); });
     });
     document.querySelectorAll('.btn-icon.delete').forEach(function(btn){
-      const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ openDestroy(row); });
+      const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ 
+        const sku = row.dataset.sku;
+        const bodega = row.dataset.bodega || '';
+        const ubicacion = row.dataset.ubicacion || '';
+        const estatus = row.dataset.estatus || 'disponible';
+        const stock = parseInt(row.dataset.stock) || 0;
+        const nombreProducto = row.querySelector('td:nth-child(2)').textContent;
+        
+        abrirModalDestruccion(sku, nombreProducto, bodega, ubicacion, estatus, stock);
+      });
     });
   }
 

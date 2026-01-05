@@ -115,19 +115,33 @@ class RecepcionController extends Controller
             }
 
             // Si es tipo "prestamo" y tiene entrega_id, marcar la entrega como recibida
+            // y vincular la recepción con la entrega
             if ($data['tipo'] === 'prestamo' && !empty($data['entrega_id'])) {
+                // Marcar entrega como recibida y vincularla con esta recepción
                 DB::table('entregas')
                     ->where('id', $data['entrega_id'])
                     ->update([
                         'recibido' => true,
+                        'recepciones_id' => $recepcionId,
                         'updated_at' => now()
                     ]);
                 
-                Log::info('Entrega marcada como recibida', [
+                // Marcar esta recepción como entregada (completada)
+                DB::table('recepciones')
+                    ->where('id', $recepcionId)
+                    ->update([
+                        'entregado' => true,
+                        'updated_at' => now()
+                    ]);
+                
+                Log::info('Entrega marcada como recibida y vinculada con recepción', [
                     'entrega_id' => $data['entrega_id'],
                     'recepcion_id' => $recepcionId
                 ]);
             }
+
+            // Actualizar inventario según tipo de recepción
+            $this->actualizarInventarioRecepcion($data['tipo'], $items, $recepcionId);
 
             DB::commit();
             
@@ -206,5 +220,164 @@ class RecepcionController extends Controller
             Log::error('Error buscando entregas', ['error' => $e->getMessage()]);
             return response()->json([], 200);
         }
+    }
+
+    /**
+     * Actualizar inventario según tipo de recepción
+     */
+    private function actualizarInventarioRecepcion($tipoRecepcion, $items, $recepcionId)
+    {
+        try {
+            foreach ($items as $item) {
+                if (empty($item['sku'])) continue;
+
+                $sku = $item['sku'];
+                $cantidad = (int) ($item['cantidad'] ?? 1);
+
+                // Obtener ubicación por defecto
+                $ubicacionId = $this->getOrCreateDefaultUbicacion();
+
+                switch ($tipoRecepcion) {
+                    case 'prestamo':
+                        // Restar de prestado y sumar a disponible (devolución de préstamo)
+                        $this->transferirInventario($sku, $cantidad, 'prestado', 'disponible', $ubicacionId);
+                        Log::info('Inventario actualizado: devolución de préstamo', [
+                            'recepcion_id' => $recepcionId,
+                            'sku' => $sku,
+                            'cantidad' => $cantidad,
+                            'de' => 'prestado',
+                            'a' => 'disponible'
+                        ]);
+                        break;
+
+                    case 'cambio':
+                        // Sumar a disponible (artículo devuelto para cambio)
+                        $this->sumarInventario($sku, $cantidad, 'disponible', $ubicacionId);
+                        Log::info('Inventario actualizado: recepción para cambio', [
+                            'recepcion_id' => $recepcionId,
+                            'sku' => $sku,
+                            'cantidad' => $cantidad
+                        ]);
+                        break;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error actualizando inventario en recepción', [
+                'error' => $e->getMessage(),
+                'recepcion_id' => $recepcionId,
+                'tipo' => $tipoRecepcion
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Transferir inventario entre estados
+     */
+    private function transferirInventario($sku, $cantidad, $estatusOrigen, $estatusDestino, $ubicacionId)
+    {
+        // Buscar inventario origen
+        $inventarioOrigen = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatusOrigen)
+            ->first();
+
+        if (!$inventarioOrigen || (int)$inventarioOrigen->stock < $cantidad) {
+            throw new \Exception("No hay suficiente stock {$estatusOrigen} para SKU: {$sku}");
+        }
+
+        // Restar del origen
+        $nuevoStockOrigen = (int)$inventarioOrigen->stock - $cantidad;
+        if ($nuevoStockOrigen > 0) {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioOrigen->id)
+                ->update(['stock' => $nuevoStockOrigen]);
+        } else {
+            // Si llega a 0, eliminar la fila
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioOrigen->id)
+                ->delete();
+        }
+
+        // Buscar o crear inventario destino
+        $inventarioDestino = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatusDestino)
+            ->first();
+
+        if ($inventarioDestino) {
+            // Sumar al destino existente
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioDestino->id)
+                ->update(['stock' => (int)$inventarioDestino->stock + $cantidad]);
+        } else {
+            // Crear nuevo registro de destino
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->insert([
+                    'sku' => $sku,
+                    'stock' => $cantidad,
+                    'estatus' => $estatusDestino,
+                    'ubicaciones_id' => $ubicacionId
+                ]);
+        }
+    }
+
+    /**
+     * Sumar inventario a un estado específico
+     */
+    private function sumarInventario($sku, $cantidad, $estatus, $ubicacionId)
+    {
+        $inventario = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatus)
+            ->first();
+
+        if ($inventario) {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventario->id)
+                ->update(['stock' => (int)$inventario->stock + $cantidad]);
+        } else {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->insert([
+                    'sku' => $sku,
+                    'stock' => $cantidad,
+                    'estatus' => $estatus,
+                    'ubicaciones_id' => $ubicacionId
+                ]);
+        }
+    }
+
+    /**
+     * Obtener o crear ubicación por defecto
+     */
+    private function getOrCreateDefaultUbicacion()
+    {
+        $ubicacion = DB::connection('mysql_third')
+            ->table('ubicaciones')
+            ->where('bodega', 'General')
+            ->where('ubicacion', 'Almacén Principal')
+            ->first();
+
+        if ($ubicacion) {
+            return (int)$ubicacion->id;
+        }
+
+        return (int) DB::connection('mysql_third')
+            ->table('ubicaciones')
+            ->insertGetId([
+                'bodega' => 'General',
+                'ubicacion' => 'Almacén Principal',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
     }
 }

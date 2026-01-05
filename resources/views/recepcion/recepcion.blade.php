@@ -37,7 +37,7 @@
           <div class="field">
             <label>Tipo</label>
             <select id="tipoRecepcionSelect" name="tipo">
-              <option value="cambio">Recepción de cambio</option>
+              <option value="cambio">Recepción para cambio</option>
               <option value="prestamo">Recepción de préstamo</option>
             </select>
           </div>

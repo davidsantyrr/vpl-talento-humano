@@ -41,7 +41,7 @@
                             <option value="prestamo">Préstamo</option>
                             <option value="primera vez">Primera vez</option>
                             <option value="periodica">Periódica</option>
-                            <option value="cambio">Cambio</option>
+                            <option value="cambio">Entrega de cambio</option>
                         </select>
                     </div>
                     <div class="field" id="field-operacion">

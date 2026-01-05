@@ -34,10 +34,12 @@ Route::middleware([VplAuth::class])->group(function () {
         return view('menus.menuEntrega');
     });
 
-    Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
-    Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
-
-Route::get('/formularioEntregas', [EntregaController::class, 'create'])
+Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
+Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
+Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
+Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
+Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
+Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');Route::get('/formularioEntregas', [EntregaController::class, 'create'])
     ->name('formularioEntregas');
 
 Route::post('/formularioEntregas', [EntregaController::class, 'store'])
@@ -83,6 +85,8 @@ Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('en
 
 // Historial unificado de entregas y recepciones
 Route::get('/historial/unificado', [EntregaController::class, 'historialUnificado'])->name('historial.unificado');
+Route::get('/historial/pdf', [EntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
+Route::get('/historial/pdf-masivo', [EntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
 
 Route::resource('gestionOperacion', gestionOperacionController::class);
 
