@@ -19,8 +19,14 @@
                     @csrf
                     <div class="col-md-4">
                         <label class="form-label">Rol</label>
-                        <input type="text" name="rol" class="form-control" value="{{ old('rol') }}" required maxlength="191">
+                        <select name="rol" class="form-select" required>
+                            <option value="">-- Seleccione un rol --</option>
+                            @foreach($rolesDisponibles as $rol)
+                                <option value="{{ $rol }}" {{ old('rol') == $rol ? 'selected' : '' }}>{{ $rol }}</option>
+                            @endforeach
+                        </select>
                         @error('rol') <div class="text-danger small">{{ $message }}</div> @enderror
+                        <small class="text-muted">Los roles provienen de las periodicidades configuradas</small>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Correo</label>

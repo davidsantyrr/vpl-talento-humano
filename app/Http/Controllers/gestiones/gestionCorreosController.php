@@ -12,7 +12,14 @@ class gestionCorreosController extends Controller
         // Cargar correos (paginado para la vista)
         $correos = \App\Models\Correos::paginate(10);
 
-        return view('gestiones.gestionCorreos', compact('correos'));
+        // Obtener roles disponibles desde periodicidad (columna rol_periodicidad)
+        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+            ->where('rol_periodicidad', '!=', '')
+            ->distinct()
+            ->pluck('rol_periodicidad')
+            ->toArray();
+
+        return view('gestiones.gestionCorreos', compact('correos', 'rolesDisponibles'));
     }
 
     public function create()
@@ -35,7 +42,15 @@ class gestionCorreosController extends Controller
     public function edit($id)
     {
         $correo = \App\Models\Correos::findOrFail($id);
-        return view('gestiones.editGestionCorreos', compact('correo'));
+        
+        // Obtener roles disponibles para el select
+        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+            ->where('rol_periodicidad', '!=', '')
+            ->distinct()
+            ->pluck('rol_periodicidad')
+            ->toArray();
+            
+        return view('gestiones.editGestionCorreos', compact('correo', 'rolesDisponibles'));
     }
 
     public function update(Request $request, $id)

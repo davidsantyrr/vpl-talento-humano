@@ -147,6 +147,16 @@
                     timer: 3000,
                 });
             @endif
+            @if(session('error'))
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: @json(session('error')),
+                    showConfirmButton: false,
+                    timer: 5000,
+                });
+            @endif
         })();
     </script>
     <div class="modal fade" id="modalAddElemento" tabindex="-1" aria-labelledby="modalAddElementoLabel" aria-hidden="true">
@@ -168,6 +178,7 @@
                                     <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
                                 @endforeach
                             </select>
+                            <input type="hidden" name="sku" id="skuHiddenAdd" value="">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Periodicidad</label>
@@ -207,7 +218,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarAdd">Guardar</button>
                     </div>
                 </form>
             </div>
@@ -238,6 +249,7 @@
                                     <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
                                 @endforeach
                             </select>
+                            <input type="hidden" name="sku" id="skuHiddenEdit" value="">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Periodicidad</label>

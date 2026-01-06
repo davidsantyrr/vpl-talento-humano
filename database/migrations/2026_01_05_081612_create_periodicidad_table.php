@@ -11,16 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('periodicidad', function (Blueprint $table) {
-            $table->id();
-            $table->string('sku' )->index();
-            $table->string('nombre');
-            $table->string('periodicidad');
-            $table->string('aviso_rojo')->nullable();
-            $table->string('aviso_amarillo')->nullable();
-            $table->string('aviso_verde')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('periodicidad')) {
+            Schema::create('periodicidad', function (Blueprint $table) {
+                $table->id();
+                $table->string('sku')->nullable()->index();
+                $table->string('nombre');
+                $table->string('rol_periodicidad');
+                $table->string('periodicidad');
+                $table->string('aviso_rojo')->nullable();
+                $table->string('aviso_amarillo')->nullable();
+                $table->string('aviso_verde')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

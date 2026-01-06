@@ -1,124 +1,191 @@
-    document.addEventListener('DOMContentLoaded', function(){
-            const btnSaveAll = document.getElementById('btnSaveAll');
-            if(btnSaveAll){
-                btnSaveAll.addEventListener('click', function(e){
-                    e.preventDefault();
-                    const form = document.getElementById('formSaveAll');
-                    if(form) form.submit();
-                });
-            }
-            // Edit button: populate edit modal
-            document.querySelectorAll('.btn-edit').forEach(function(btn){
-                btn.addEventListener('click', function(){
-                    const id = this.dataset.id;
-                    const nombre = this.dataset.nombre || '';
-                    const periodicidad = this.dataset.periodicidad || '';
-                    const aviso_rojo = this.dataset.aviso_rojo || '';
-                    const aviso_amarillo = this.dataset.aviso_amarillo || '';
-                    const aviso_verde = this.dataset.aviso_verde || '';
+// =========================================
+// GESTIÓN DE PERIODICIDADES - JavaScript
+// =========================================
 
-                    const form = document.getElementById('formEditElemento');
-                    if(!form) return;
-                    form.action = '/gestionPeriodicidad/' + id;
-                    // mark which id is being edited
-                    form.dataset.editingId = id;
-                    // Enable selects in the table row so user can edit inline if desired
-                    const row = document.querySelector('tr[data-id="' + id + '"]');
-                    if(row){
-                        row.querySelectorAll('select').forEach(function(s){ s.removeAttribute('disabled'); });
-                    }
-                    form.querySelector('[name="nombre"]').value = nombre;
-                    // Si existe search input en edit modal, sincronizar su texto
-                    var selEdit = document.getElementById('selectProductoEdit');
-                    var searchEdit = document.getElementById('searchProductoEdit');
-                    if(selEdit && searchEdit){
-                        // intentar encontrar opción que tenga el texto o value igual
-                        var found = Array.from(selEdit.options).find(function(o){ return o.value === nombre || o.text.includes(nombre); });
-                        if(found){
-                            selEdit.value = found.value;
-                            searchEdit.value = found.text;
-                        } else {
-                            searchEdit.value = nombre;
-                        }
-                    }
-                    form.querySelector('[name="periodicidad"]').value = periodicidad;
-                    form.querySelector('[name="aviso_rojo"]').value = aviso_rojo;
-                    form.querySelector('[name="aviso_amarillo"]').value = aviso_amarillo;
-                    form.querySelector('[name="aviso_verde"]').value = aviso_verde;
-                });
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 periodicidad.js cargado');
+
+    // =========================================
+    // 1. MODAL AGREGAR - Sincronizar SKU
+    // =========================================
+    const selectProductoAdd = document.getElementById('selectProductoAdd');
+    const skuHiddenAdd = document.getElementById('skuHiddenAdd');
+    const searchProductoAdd = document.getElementById('searchProductoAdd');
+    const formAdd = document.querySelector('#modalAddElemento form');
+
+    console.log('🔍 Elementos encontrados (Add):', {
+        selectProductoAdd: !!selectProductoAdd,
+        skuHiddenAdd: !!skuHiddenAdd,
+        searchProductoAdd: !!searchProductoAdd,
+        formAdd: !!formAdd
+    });
+
+    if (selectProductoAdd && skuHiddenAdd) {
+        selectProductoAdd.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const sku = selectedOption.getAttribute('data-sku');
+            const nombre = selectedOption.value;
+            
+            skuHiddenAdd.value = sku || '';
+            
+            console.log('✅ Producto seleccionado (Add):', {
+                nombre: nombre,
+                sku: sku,
+                campoOculto: skuHiddenAdd.value
             });
-            // Delete button: use hidden form to avoid nested forms
-            document.querySelectorAll('.btn-delete').forEach(function(btn){
-                btn.addEventListener('click', function(){
-                    const id = this.dataset.id;
-                    const delForm = document.getElementById('formDeleteElemento');
-                    if(!delForm) return;
-                    delForm.action = '/gestionPeriodicidad/' + id;
-                    delForm.submit();
-                });
-            });
-            // When the edit modal is closed, re-disable the selects of the edited row
-            var editModalEl = document.getElementById('modalEditElemento');
-            if(editModalEl){
-                editModalEl.addEventListener('hidden.bs.modal', function(){
-                    var form = document.getElementById('formEditElemento');
-                    if(!form) return;
-                    var id = form.dataset.editingId;
-                    if(id){
-                        var row = document.querySelector('tr[data-id="' + id + '"]');
-                        if(row){
-                            row.querySelectorAll('select').forEach(function(s){ s.setAttribute('disabled',''); });
-                        }
-                        form.dataset.editingId = '';
-                    }
-                });
-            }
+        });
+        
+        console.log('✅ Listener SKU (Add) registrado');
+    } else {
+        console.error('❌ Error: No se encontraron elementos select o hidden (Add)');
+    }
 
-            // Filtrado de productos en modal Add
-            var searchAdd = document.getElementById('searchProductoAdd');
-            var selectAdd = document.getElementById('selectProductoAdd');
-            if(searchAdd && selectAdd){
-                searchAdd.addEventListener('input', function(){
-                    var q = this.value.trim().toLowerCase();
-                    var anyVisible = 0;
-                    Array.from(selectAdd.options).forEach(function(opt){
-                        if(!opt.value) { opt.hidden = false; return; }
-                        var txt = (opt.text || '').toLowerCase();
-                        if(q === '' || txt.indexOf(q) !== -1){ opt.hidden = false; anyVisible++; } else { opt.hidden = true; }
-                    });
-                    // si queda una sola opción visible, selecciónala
-                    if(anyVisible === 1){
-                        var one = Array.from(selectAdd.options).find(function(o){ return !o.hidden && o.value; });
-                        if(one) selectAdd.value = one.value;
-                    }
-                });
-                // cuando seleccionan en el select, actualizar el input de búsqueda
-                selectAdd.addEventListener('change', function(){
-                    var o = selectAdd.selectedOptions[0];
-                    if(o) searchAdd.value = o.text;
-                });
-            }
+    // Búsqueda en tiempo real para modal de agregar
+    if (searchProductoAdd && selectProductoAdd) {
+        searchProductoAdd.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const options = selectProductoAdd.options;
 
-            // Filtrado de productos en modal Edit
-            var searchEdit = document.getElementById('searchProductoEdit');
-            var selectEdit = document.getElementById('selectProductoEdit');
-            if(searchEdit && selectEdit){
-                searchEdit.addEventListener('input', function(){
-                    var q = this.value.trim().toLowerCase();
-                    var anyVisible = 0;
-                    Array.from(selectEdit.options).forEach(function(opt){
-                        if(!opt.value) { opt.hidden = false; return; }
-                        var txt = (opt.text || '').toLowerCase();
-                        if(q === '' || txt.indexOf(q) !== -1){ opt.hidden = false; anyVisible++; } else { opt.hidden = true; }
-                    });
-                    if(anyVisible === 1){
-                        var one = Array.from(selectEdit.options).find(function(o){ return !o.hidden && o.value; });
-                        if(one) selectEdit.value = one.value;
-                    }
-                });
-                selectEdit.addEventListener('change', function(){
-                    var o = selectEdit.selectedOptions[0];
-                    if(o) searchEdit.value = o.text;
-                });
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                const text = option.textContent.toLowerCase();
+                
+                if (text.includes(searchTerm) || searchTerm === '') {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
             }
         });
+    }
+
+    // Debug al enviar formulario de agregar
+    if (formAdd) {
+        formAdd.addEventListener('submit', function(e) {
+            const formData = new FormData(formAdd);
+            const dataObj = {};
+            formData.forEach((value, key) => {
+                dataObj[key] = value;
+            });
+            
+            console.log('📤 Enviando formulario (Add):', dataObj);
+            
+            if (!dataObj.sku || dataObj.sku === '') {
+                console.error('❌ ¡ADVERTENCIA! SKU está vacío:', {
+                    nombre: dataObj.nombre,
+                    sku: dataObj.sku,
+                    campoOcultoValue: skuHiddenAdd ? skuHiddenAdd.value : 'N/A'
+                });
+            } else {
+                console.log('✅ SKU presente en formulario:', dataObj.sku);
+            }
+        });
+    }
+
+    // =========================================
+    // 2. MODAL EDITAR - Sincronizar SKU
+    // =========================================
+    const selectProductoEdit = document.getElementById('selectProductoEdit');
+    const skuHiddenEdit = document.getElementById('skuHiddenEdit');
+    const searchProductoEdit = document.getElementById('searchProductoEdit');
+
+    if (selectProductoEdit && skuHiddenEdit) {
+        selectProductoEdit.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const sku = selectedOption.getAttribute('data-sku');
+            skuHiddenEdit.value = sku || '';
+            console.log('✅ SKU actualizado (Edit):', sku);
+        });
+        
+        console.log('✅ Listener SKU (Edit) registrado');
+    }
+
+    // Búsqueda en tiempo real para modal de editar
+    if (searchProductoEdit && selectProductoEdit) {
+        searchProductoEdit.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const options = selectProductoEdit.options;
+
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                const text = option.textContent.toLowerCase();
+                
+                if (text.includes(searchTerm) || searchTerm === '') {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // =========================================
+    // 3. MANEJAR EDICIÓN
+    // =========================================
+    const btnEdits = document.querySelectorAll('.btn-edit');
+    btnEdits.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            const nombre = this.getAttribute('data-nombre');
+            const periodicidad = this.getAttribute('data-periodicidad');
+            const avisoRojo = this.getAttribute('data-aviso_rojo');
+            const avisoAmarillo = this.getAttribute('data-aviso_amarillo');
+            const avisoVerde = this.getAttribute('data-aviso_verde');
+
+            // Actualizar action del formulario
+            const formEdit = document.getElementById('formEditElemento');
+            formEdit.action = `/gestiones/gestionPeriodicidad/${id}`;
+
+            // Seleccionar producto y actualizar SKU
+            for (let i = 0; i < selectProductoEdit.options.length; i++) {
+                if (selectProductoEdit.options[i].value === nombre) {
+                    selectProductoEdit.selectedIndex = i;
+                    
+                    // Actualizar SKU oculto
+                    const sku = selectProductoEdit.options[i].getAttribute('data-sku');
+                    skuHiddenEdit.value = sku || '';
+                    console.log('✅ Cargando edición:', { nombre, sku });
+                    break;
+                }
+            }
+
+            // Seleccionar periodicidad
+            const periodicidadSelect = formEdit.querySelector('[name="periodicidad"]');
+            periodicidadSelect.value = periodicidad;
+
+            // Seleccionar avisos
+            formEdit.querySelector('[name="aviso_rojo"]').value = avisoRojo;
+            formEdit.querySelector('[name="aviso_amarillo"]').value = avisoAmarillo;
+            formEdit.querySelector('[name="aviso_verde"]').value = avisoVerde;
+        });
+    });
+
+    // =========================================
+    // 4. MANEJAR ELIMINACIÓN
+    // =========================================
+    const btnDeletes = document.querySelectorAll('.btn-delete');
+    btnDeletes.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.getAttribute('data-id');
+            
+            Swal.fire({
+                title: '¿Estás seguro?',
+                text: "Esta acción no se puede deshacer",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const formDelete = document.getElementById('formDeleteElemento');
+                    formDelete.action = `/gestiones/gestionPeriodicidad/${id}`;
+                    formDelete.submit();
+                }
+            });
+        });
+    });
+
+    console.log('✅ periodicidad.js inicializado completamente');
+});
