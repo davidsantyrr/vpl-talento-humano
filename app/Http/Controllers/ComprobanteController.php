@@ -77,8 +77,49 @@ class ComprobanteController extends Controller
 
             // Intentar generar PDF con Dompdf si está disponible
             try {
-                // Usar facade de Laravel Dompdf
-                $pdf = Pdf::loadHTML($html);
+                Log::info('Generando comprobante PDF - Input completo', [
+                    'tipo' => $tipo,
+                    'registro_id' => isset($registro['id']) ? $registro['id'] : 'temporal',
+                    'elementos_count' => count($elementos),
+                    'firma_recibida' => !empty($firma),
+                    'firma_keys' => is_array($firma) ? array_keys($firma) : 'not_array',
+                    'firma_entrega_exists' => isset($firma['entrega']),
+                    'firma_entrega_length' => isset($firma['entrega']) ? strlen($firma['entrega']) : 0,
+                    'firma_starts_with' => isset($firma['entrega']) ? substr($firma['entrega'], 0, 30) : 'NONE'
+                ]);
+
+                // Validar que haya firma según el tipo
+                $firmaRequerida = null;
+                if ($tipo === 'entrega' && isset($firma['entrega'])) {
+                    $firmaRequerida = $firma['entrega'];
+                } elseif ($tipo === 'recepcion' && isset($firma['recepcion'])) {
+                    $firmaRequerida = $firma['recepcion'];
+                }
+
+                if (empty($firmaRequerida) || strlen($firmaRequerida) < 100) {
+                    Log::error('❌ Firma inválida o vacía', [
+                        'tipo' => $tipo,
+                        'firma_length' => strlen($firmaRequerida ?? ''),
+                        'firma' => $firma
+                    ]);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'La firma es obligatoria para generar el comprobante'
+                    ], 400);
+                }
+
+                Log::info('✅ Firma VÁLIDA, pasando al template', [
+                    'firma_length' => strlen($firmaRequerida),
+                    'firma_array_keys' => array_keys($firma)
+                ]);
+
+                // Generar PDF con la plantilla - PASAR LA FIRMA PROCESADA
+                $pdf = Pdf::loadView('pdf.comprobante', [
+                    'tipo' => $tipo,
+                    'registro' => (object) $registro,
+                    'elementos' => $elementos,
+                    'firma' => $firma // <-- USAR $firma, NO $firmaData
+                ]);
                 $pdf->setPaper('A4', 'portrait');
                 
                 // Guardar PDF al disco

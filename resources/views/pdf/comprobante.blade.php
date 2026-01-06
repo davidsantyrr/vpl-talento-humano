@@ -269,17 +269,70 @@
     </div>
 
     <div class="firma-section">
+        @php
+            // Procesar firma de forma directa y simple
+            $firmaSrc = null;
+            $debugMsg = [];
+            
+            if (isset($firma)) {
+                $debugMsg[] = 'Variable firma existe';
+                $debugMsg[] = 'Tipo: ' . gettype($firma);
+                
+                if (is_array($firma)) {
+                    $debugMsg[] = 'Keys: ' . implode(', ', array_keys($firma));
+                    
+                    // Buscar la firma correcta según el tipo de documento
+                    $firmaKey = ($tipo === 'entrega') ? 'entrega' : 'recepcion';
+                    $debugMsg[] = "Buscando clave: {$firmaKey}";
+                    
+                    if (isset($firma[$firmaKey])) {
+                        $rawFirma = $firma[$firmaKey];
+                        $debugMsg[] = 'Firma encontrada, longitud: ' . strlen($rawFirma);
+                        
+                        // Limpiar la firma
+                        $cleanFirma = trim($rawFirma);
+                        $cleanFirma = preg_replace('/\s+/', '', $cleanFirma);
+                        $debugMsg[] = 'Firma limpia, longitud: ' . strlen($cleanFirma);
+                        
+                        // Convertir a data URL si es necesario
+                        if (str_starts_with($cleanFirma, 'data:image')) {
+                            $firmaSrc = $cleanFirma;
+                            $debugMsg[] = '✓ Ya es data URL';
+                        } else {
+                            // Quitar prefijo base64, si existe
+                            $cleanFirma = preg_replace('/^base64,/', '', $cleanFirma);
+                            if (strlen($cleanFirma) > 100) {
+                                $firmaSrc = 'data:image/png;base64,' . $cleanFirma;
+                                $debugMsg[] = '✓ Convertida a data URL';
+                            } else {
+                                $debugMsg[] = '✗ Firma muy corta';
+                            }
+                        }
+                    } else {
+                        $debugMsg[] = "✗ Clave '{$firmaKey}' no encontrada";
+                    }
+                } else {
+                    $debugMsg[] = '✗ Firma no es array';
+                }
+            } else {
+                $debugMsg[] = '✗ Variable firma NO existe';
+            }
+        @endphp
         @if($tipo === 'entrega')
             {{-- En entrega: solo firma del que RECIBE --}}
             <div class="firma-box" style="width: 100%; text-align: center;">
                 <div class="firma-line">
                     <p class="firma-label">Firma del que Recibe</p>
                     <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
-                    @php($firmaImg = $firma['entrega'] ?? $firma['recepcion'] ?? null)
-                    @if(!empty($firmaImg))
-                        <img class="firma-img" src="{{ $firmaImg }}" alt="Firma">
+                    @if(!empty($firmaSrc))
+                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:10px auto; display:block;">
                     @else
-                        <p style="color: #999; margin-top: 40px;">Sin firma</p>
+                        <p style="color: #ff0000; margin-top: 20px; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
+                        <p style="color: #666; font-size: 8px; margin-top: 5px; line-height: 1.3;">
+                            @foreach($debugMsg as $msg)
+                                {{ $msg }}<br>
+                            @endforeach
+                        </p>
                     @endif
                 </div>
             </div>
@@ -289,11 +342,15 @@
                 <div class="firma-line">
                     <p class="firma-label">Firma del que Entrega (Devolución)</p>
                     <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
-                    @php($firmaImg = $firma['recepcion'] ?? $firma['entrega'] ?? null)
-                    @if(!empty($firmaImg))
-                        <img class="firma-img" src="{{ $firmaImg }}" alt="Firma">
+                    @if(!empty($firmaSrc))
+                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:10px auto; display:block;">
                     @else
-                        <p style="color: #999; margin-top: 40px;">Sin firma</p>
+                        <p style="color: #ff0000; margin-top: 20px; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
+                        <p style="color: #666; font-size: 8px; margin-top: 5px; line-height: 1.3;">
+                            @foreach($debugMsg as $msg)
+                                {{ $msg }}<br>
+                            @endforeach
+                        </p>
                     @endif
                 </div>
             </div>

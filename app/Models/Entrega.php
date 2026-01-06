@@ -31,10 +31,7 @@ class Entrega extends Model
         'numero_documento',
         'nombres',
         'apellidos',
-        'usuarios_id',
-        'operacion_id',
-        'recepciones_id',
-        'recibido',
+        'usuarios_id'
     ];
 
     /**

@@ -102,10 +102,10 @@
                 </div>
             </div>
 
-            <input type="hidden" name="firma" id="firmaField">
+            <input type="hidden" name="firma" id="firmaField" value="">
 
             <div class="actions">
-                <button type="submit" class="btn primary">Realizar entrega</button>
+                <button type="submit" class="btn primary" id="btnSubmitEntrega" disabled>Realizar entrega</button>
             </div>
         </form>
     </div>
@@ -256,6 +256,18 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const firmaField = document.getElementById('firmaField');
     const firmaData = {};
+    if (firmaField && !firmaField.value) {
+      // Intentar capturar firma del canvas si está disponible
+      const canvas = document.getElementById('firmaCanvas');
+      if (canvas) {
+        try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
+      }
+    }
+    if (!firmaField || !firmaField.value) {
+      isProcessing = false;
+      Swal.fire({ icon:'error', title:'Firma requerida', text:'Por favor, dibuje su firma antes de continuar.' });
+      return false;
+    }
     if (firmaField && firmaField.value) {
       firmaData['entrega'] = firmaField.value;
     }
@@ -307,6 +319,38 @@ document.addEventListener('DOMContentLoaded', function(){
       return false;
     }
   }, true); // usar captura para ejecutar antes que otros listeners
+});
+</script>
+<script>
+// Activar el botón de envío solo si hay firma dibujada
+document.addEventListener('DOMContentLoaded', function(){
+  const canvas = document.getElementById('firmaCanvas');
+  const firmaField = document.getElementById('firmaField');
+  const btnSubmit = document.getElementById('btnSubmitEntrega');
+  if (!canvas || !firmaField || !btnSubmit) return;
+
+  let drawing = false;
+  function markSigned(){
+    try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
+    if (firmaField.value && firmaField.value.length > 50) {
+      btnSubmit.disabled = false;
+    }
+  }
+  function clearSigned(){ firmaField.value = ''; btnSubmit.disabled = true; }
+
+  canvas.addEventListener('mousedown', function(e){ drawing = true; markSigned(); });
+  canvas.addEventListener('mousemove', function(e){ if(drawing) markSigned(); });
+  canvas.addEventListener('mouseup', function(){ drawing = false; });
+  canvas.addEventListener('mouseleave', function(){ drawing = false; });
+  canvas.addEventListener('touchstart', function(){ drawing = true; markSigned(); }, {passive:false});
+  canvas.addEventListener('touchmove', function(){ if(drawing) markSigned(); }, {passive:false});
+  canvas.addEventListener('touchend', function(){ drawing = false; });
+
+  const clearBtn = document.getElementById('clearFirma');
+  clearBtn && clearBtn.addEventListener('click', clearSigned);
+
+  // Inicialmente deshabilitado
+  clearSigned();
 });
 </script>
 @endsection

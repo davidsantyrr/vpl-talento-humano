@@ -32,7 +32,6 @@ class RecepcionController extends Controller
             'entrega_id' => ['nullable','integer','exists:entregas,id'],
             'items' => ['required','string'],
             'firma' => ['nullable','string'],
-            'comprobante_path' => ['nullable','string'],
         ]);
 
         // Usuario en sesión desde API

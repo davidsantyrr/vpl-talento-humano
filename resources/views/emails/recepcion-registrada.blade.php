@@ -226,7 +226,7 @@
                     <thead>
                         <tr>
                             <th>#</th>
-                            <th>SKU</th>
+                            <th>Producto</th>
                             <th style="text-align:center;">Cantidad</th>
                         </tr>
                     </thead>
@@ -234,7 +234,7 @@
                         @foreach($elementos as $index => $elemento)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td>{{ $elemento->sku ?? $elemento['sku'] ?? 'N/A' }}</td>
+                            <td>{{ $elemento->name_produc ?? $elemento['name_produc'] ?? $elemento['name'] ?? $elemento->name ?? ($elemento->sku ?? $elemento['sku'] ?? 'N/A') }}</td>
                             <td style="text-align:center;">{{ $elemento->cantidad ?? $elemento['cantidad'] ?? 'N/A' }}
                             </td>
                         </tr>
