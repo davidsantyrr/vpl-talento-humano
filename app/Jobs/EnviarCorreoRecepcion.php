@@ -15,19 +15,19 @@ class EnviarCorreoRecepcion implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $recepcion;
-    public $elementos;
-    public $emailDestino;
-    public $comprobantePath;
+    protected $recepcion;
+    protected $elementos;
+    protected $emailUsuario;
+    protected $comprobantePath;
 
     /**
      * Create a new job instance.
      */
-    public function __construct($recepcion, $elementos, $emailDestino, $comprobantePath = null)
+    public function __construct($recepcion, $elementos, $emailUsuario, $comprobantePath = null)
     {
         $this->recepcion = $recepcion;
         $this->elementos = $elementos;
-        $this->emailDestino = $emailDestino;
+        $this->emailUsuario = $emailUsuario;
         $this->comprobantePath = $comprobantePath;
     }
 
@@ -37,18 +37,24 @@ class EnviarCorreoRecepcion implements ShouldQueue
     public function handle(): void
     {
         try {
-            Mail::to($this->emailDestino)->send(
+            Log::info('Enviando correo de recepción', [
+                'recepcion_id' => $this->recepcion->id ?? 'N/A',
+                'email' => $this->emailUsuario,
+                'comprobante_path' => $this->comprobantePath
+            ]);
+
+            Mail::to($this->emailUsuario)->send(
                 new RecepcionRegistrada($this->recepcion, $this->elementos, $this->comprobantePath)
             );
 
-            Log::info('Correo de recepción enviado', [
-                'recepcion_id' => $this->recepcion->id,
-                'email' => $this->emailDestino
+            Log::info('Correo de recepción enviado exitosamente', [
+                'recepcion_id' => $this->recepcion->id ?? 'N/A',
+                'email' => $this->emailUsuario
             ]);
         } catch (\Exception $e) {
             Log::error('Error enviando correo de recepción', [
-                'recepcion_id' => $this->recepcion->id,
-                'email' => $this->emailDestino,
+                'recepcion_id' => $this->recepcion->id ?? 'N/A',
+                'email' => $this->emailUsuario,
                 'error' => $e->getMessage()
             ]);
             throw $e;

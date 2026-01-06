@@ -254,6 +254,76 @@ document.addEventListener('DOMContentLoaded', function(){
     
     isProcessing = true;
 
+    // Validar campos requeridos (excepto usuarios_id)
+    const camposRequeridos = [
+      { campo: form.tipo_doc, nombre: 'Tipo de documento' },
+      { campo: form.num_doc, nombre: 'Número de documento' },
+      { campo: form.nombres, nombre: 'Nombres' },
+      { campo: form.tipo, nombre: 'Tipo de recepción' },
+      { campo: form.operation_id, nombre: 'Operación' }
+    ];
+
+    let errores = [];
+    camposRequeridos.forEach(item => {
+      if (!item.campo || !item.campo.value || !item.campo.value.trim()) {
+        errores.push(item.nombre);
+      }
+    });
+
+    if (errores.length > 0) {
+      isProcessing = false;
+      Swal.fire({
+        icon: 'error',
+        title: 'Campos faltantes',
+        html: `Por favor complete:<br><strong>${errores.join(', ')}</strong>`,
+        confirmButtonText: 'Entendido'
+      });
+      return false;
+    }
+
+    // Validar elementos
+    const elementos = JSON.parse(document.getElementById('itemsField')?.value || '[]');
+    if (!elementos || elementos.length === 0) {
+      isProcessing = false;
+      Swal.fire({
+        icon: 'warning',
+        title: 'Sin elementos',
+        html: 'Debe agregar al menos <strong>1 elemento</strong> a la recepción.',
+        confirmButtonText: 'Entendido'
+      });
+      return false;
+    }
+
+    // Validar firma
+    const firmaField = document.getElementById('firmaField');
+    if (firmaField && !firmaField.value) {
+      const canvas = document.getElementById('firmaCanvas');
+      if (canvas) {
+        try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
+      }
+    }
+    if (!firmaField || !firmaField.value) {
+      isProcessing = false;
+      Swal.fire({ 
+        icon:'error', 
+        title:'Firma requerida', 
+        text:'Por favor, dibuje su firma antes de continuar.',
+        confirmButtonText: 'Entendido'
+      });
+      return false;
+    }
+
+    // Mostrar loading
+    Swal.fire({
+      title: 'Procesando recepción...',
+      html: 'Generando comprobante y guardando datos',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
     // Recolectar datos
     const registro = {
       id: null,
@@ -267,23 +337,7 @@ document.addEventListener('DOMContentLoaded', function(){
       created_at: new Date().toISOString()
     };
 
-    // Elementos desde campo hidden items
-    const elementos = JSON.parse(document.getElementById('itemsField')?.value || '[]');
-
-    // Firma
-    const firmaField = document.getElementById('firmaField');
     const firmaData = {};
-    if (firmaField && !firmaField.value) {
-      const canvas = document.getElementById('firmaCanvas');
-      if (canvas) {
-        try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
-      }
-    }
-    if (!firmaField || !firmaField.value) {
-      isProcessing = false;
-      Swal.fire({ icon:'error', title:'Firma requerida', text:'Por favor, dibuje su firma antes de continuar.' });
-      return false;
-    }
     if (firmaField && firmaField.value) {
       firmaData['recepcion'] = firmaField.value;
     }
@@ -307,14 +361,32 @@ document.addEventListener('DOMContentLoaded', function(){
         body: JSON.stringify(payloadPDF)
       });
 
-      const jsonPDF = await respPDF.json();
-      if (!jsonPDF.success) {
+      if (!respPDF.ok) {
+        const errorText = await respPDF.text();
+        console.error('Error respuesta PDF:', errorText);
         isProcessing = false;
-        Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
+        Swal.fire({
+          icon:'error', 
+          title:'Error', 
+          text: 'Error generando comprobante. Revise los logs.',
+          confirmButtonText: 'Entendido'
+        });
         return false;
       }
 
-      // 2. Enviar formulario via AJAX (sin disparar evento submit)
+      const jsonPDF = await respPDF.json();
+      if (!jsonPDF.success) {
+        isProcessing = false;
+        Swal.fire({
+          icon:'error', 
+          title:'Error', 
+          text: jsonPDF.message || 'Error generando comprobante',
+          confirmButtonText: 'Entendido'
+        });
+        return false;
+      }
+
+      // 2. Enviar formulario via AJAX
       const formData = new FormData(form);
       formData.append('comprobante_path', jsonPDF.path);
 
@@ -327,29 +399,49 @@ document.addEventListener('DOMContentLoaded', function(){
         body: formData
       });
 
+      if (!respForm.ok) {
+        const errorText = await respForm.text();
+        console.error('Error respuesta Form:', errorText);
+        isProcessing = false;
+        Swal.fire({
+          icon:'error', 
+          title:'Error', 
+          text: 'Error al registrar la recepción. Revise los logs.',
+          confirmButtonText: 'Entendido'
+        });
+        return false;
+      }
+
       const jsonForm = await respForm.json();
       
       if (jsonForm.success) {
-        Swal.fire({
+        Swal.close();
+        Toast.fire({
           icon: 'success',
-          title: 'Éxito',
-          text: jsonForm.message || 'Recepción registrada correctamente'
-        }).then(() => {
-          window.location.reload();
+          title: jsonForm.message || 'Recepción registrada correctamente'
         });
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
       } else {
         isProcessing = false;
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: jsonForm.message || 'Error al registrar la recepción'
+          text: jsonForm.message || 'Error al registrar la recepción',
+          confirmButtonText: 'Entendido'
         });
       }
 
     } catch (err) {
       isProcessing = false;
-      console.error('Error:', err);
-      Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la recepción'});
+      console.error('Error completo:', err);
+      Swal.fire({
+        icon:'error', 
+        title:'Error', 
+        text: 'No se pudo procesar la recepción',
+        confirmButtonText: 'Entendido'
+      });
       return false;
     }
   }, true); // fase captura para preceder a otros listeners

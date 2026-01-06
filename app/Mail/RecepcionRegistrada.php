@@ -4,10 +4,9 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
-use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class RecepcionRegistrada extends Mailable
 {
@@ -28,46 +27,64 @@ class RecepcionRegistrada extends Mailable
     }
 
     /**
-     * Get the message envelope.
+     * Build the message.
      */
-    public function envelope(): Envelope
+    public function build()
     {
-        $tipoTexto = ucfirst($this->recepcion->tipo_recepcion ?? 'recepción');
-        return new Envelope(
-            subject: "Comprobante de Recepción - {$tipoTexto} #{$this->recepcion->id}",
-        );
-    }
+        Log::info('🔵 RecepcionRegistrada->build() iniciado', [
+            'recepcion_id' => $this->recepcion->id ?? 'N/A',
+            'comprobante_path' => $this->comprobantePath
+        ]);
 
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'emails.recepcion-registrada',
-            with: [
+        $email = $this->subject('Comprobante de Recepción - Sistema de Gestión')
+            ->view('emails.recepcion-registrada')
+            ->with([
                 'recepcion' => $this->recepcion,
-                'elementos' => $this->elementos,
-            ],
-        );
-    }
+                'elementos' => $this->elementos
+            ]);
 
-    /**
-     * Get the attachments for the message.
-     */
-    public function attachments(): array
-    {
-        $attachments = [];
-        
-        if ($this->comprobantePath) {
-            $fullPath = storage_path('app/' . $this->comprobantePath);
-            if (file_exists($fullPath)) {
-                $attachments[] = Attachment::fromPath($fullPath)
-                    ->as('Comprobante_Recepcion_' . $this->recepcion->id . '.pdf')
-                    ->withMime('application/pdf');
+        // Adjuntar PDF si existe
+        if (!empty($this->comprobantePath)) {
+            // Intentar diferentes rutas posibles
+            $posiblesPaths = [
+                storage_path('app/' . $this->comprobantePath),
+                storage_path('app/public/' . $this->comprobantePath),
+                $this->comprobantePath, // Por si ya es ruta absoluta
+            ];
+
+            $fullPath = null;
+            foreach ($posiblesPaths as $path) {
+                if (file_exists($path)) {
+                    $fullPath = $path;
+                    break;
+                }
             }
+            
+            if ($fullPath && file_exists($fullPath)) {
+                $email->attach($fullPath, [
+                    'as' => 'Comprobante_Recepcion_' . ($this->recepcion->id ?? 'N/A') . '.pdf',
+                    'mime' => 'application/pdf'
+                ]);
+                
+                Log::info('✅ PDF adjuntado al correo de recepción', [
+                    'path' => $this->comprobantePath,
+                    'full_path' => $fullPath,
+                    'size' => filesize($fullPath),
+                    'exists' => true
+                ]);
+            } else {
+                Log::error('❌ PDF NO encontrado para adjuntar al correo de recepción', [
+                    'path' => $this->comprobantePath,
+                    'intentos' => $posiblesPaths,
+                    'exists' => false
+                ]);
+            }
+        } else {
+            Log::warning('⚠ No se proporcionó path del comprobante para recepción', [
+                'recepcion_id' => $this->recepcion->id ?? 'N/A'
+            ]);
         }
-        
-        return $attachments;
+
+        return $email;
     }
 }

@@ -97,7 +97,7 @@ class ComprobanteController extends Controller
                 }
 
                 if (empty($firmaRequerida) || strlen($firmaRequerida) < 100) {
-                    Log::error('❌ Firma inválida o vacía', [
+                    Log::error('Firma inválida o vacía', [
                         'tipo' => $tipo,
                         'firma_length' => strlen($firmaRequerida ?? ''),
                         'firma' => $firma
@@ -108,7 +108,7 @@ class ComprobanteController extends Controller
                     ], 400);
                 }
 
-                Log::info('✅ Firma VÁLIDA, pasando al template', [
+                Log::info('Firma VÁLIDA, pasando al template', [
                     'firma_length' => strlen($firmaRequerida),
                     'firma_array_keys' => array_keys($firma)
                 ]);

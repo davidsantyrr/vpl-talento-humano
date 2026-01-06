@@ -143,15 +143,16 @@
         
         .firma-line {
             border-top: 2px solid #333;
-            margin-top: 40px;
+            margin-top: 10px;
             padding-top: 10px;
-            min-height: 120px;
+            min-height: 50px;
         }
         
         .firma-label {
             font-weight: bold;
             color: #111f2e;
             margin-bottom: 8px;
+            margin-top: 8px;
         }
         
         .status-badge {
@@ -321,37 +322,41 @@
         @if($tipo === 'entrega')
             {{-- En entrega: solo firma del que RECIBE --}}
             <div class="firma-box" style="width: 100%; text-align: center;">
-                <div class="firma-line">
-                    <p class="firma-label">Firma del que Recibe</p>
-                    <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
+                <div style="margin-bottom: 10px;">
                     @if(!empty($firmaSrc))
-                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:10px auto; display:block;">
+                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:0 auto 10px auto; display:block;">
                     @else
-                        <p style="color: #ff0000; margin-top: 20px; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
-                        <p style="color: #666; font-size: 8px; margin-top: 5px; line-height: 1.3;">
+                        <p style="color: #ff0000; margin: 10px 0; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
+                        <p style="color: #666; font-size: 8px; margin: 5px 0; line-height: 1.3;">
                             @foreach($debugMsg as $msg)
                                 {{ $msg }}<br>
                             @endforeach
                         </p>
                     @endif
                 </div>
+                <div class="firma-line">
+                    <p class="firma-label">Firma del que Recibe</p>
+                    <p style="margin: 5px 0;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
+                </div>
             </div>
         @else
             {{-- En recepción: solo firma del que ENTREGA (devuelve) --}}
             <div class="firma-box" style="width: 100%; text-align: center;">
-                <div class="firma-line">
-                    <p class="firma-label">Firma del que Entrega (Devolución)</p>
-                    <p style="margin-bottom: 10px;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
+                <div style="margin-bottom: 10px;">
                     @if(!empty($firmaSrc))
-                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:10px auto; display:block;">
+                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:0 auto 10px auto; display:block;">
                     @else
-                        <p style="color: #ff0000; margin-top: 20px; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
-                        <p style="color: #666; font-size: 8px; margin-top: 5px; line-height: 1.3;">
+                        <p style="color: #ff0000; margin: 10px 0; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
+                        <p style="color: #666; font-size: 8px; margin: 5px 0; line-height: 1.3;">
                             @foreach($debugMsg as $msg)
                                 {{ $msg }}<br>
                             @endforeach
                         </p>
                     @endif
+                </div>
+                <div class="firma-line">
+                    <p class="firma-label">Firma del que Entrega (Devolución)</p>
+                    <p style="margin: 5px 0;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
                 </div>
             </div>
         @endif
