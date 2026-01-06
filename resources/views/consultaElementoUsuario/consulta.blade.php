@@ -34,29 +34,33 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                
-                                <th>ultima entrega
-                                <th>ultima recepcion</th>
-                                <th>proxima entrega</th>
-                                <th>acciones</th>
+                                <th>Elemento</th>
+                                <th>Última entrega</th>
+                                <th>Última recepción</th>
+                                <th>Próxima entrega</th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($resultados as $resultado)
                                 <tr>
-                                    
-                                    <td>{{ $resultado->elemento }}</td>
+                                    <td>
+                                        {{-- Mostrar SKU y nombre si existe --}}
+                                        <div>{{ $resultado->elemento }}</div>
+                                        @if(!empty($resultado->elemento_nombre))
+                                            <small class="text-muted">{{ $resultado->elemento_nombre }}</small>
+                                        @endif
+                                    </td>
                                     <td>{{ $resultado->ultima_entrega }}</td>
                                     <td>{{ $resultado->ultima_recepcion }}</td>
                                     <td>{{ $resultado->proxima_entrega }}</td>
-
                                     <td>
                                         <button class="btn btn-sm btn-info">descargar pdf</button>
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="text-center">No se encontraron resultados.</td>
+                                    <td colspan="5" class="text-center">No se encontraron resultados.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -68,17 +72,19 @@
                         <thead>
                             <tr>
                                 <th>Elemento</th>
-                                <th>cantidad</th>
-
+                                <th>Cantidad</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($resultados as $resultado)
                                 <tr>
-                                    
-                                    <td>{{ $resultado->elemento }}</td>
+                                    <td>
+                                        <div>{{ $resultado->elemento }}</div>
+                                        @if(!empty($resultado->elemento_nombre))
+                                            <small class="text-muted">{{ $resultado->elemento_nombre }}</small>
+                                        @endif
+                                    </td>
                                     <td>{{ $resultado->cantidad }}</td>
-
                                 </tr>
                             @empty
                                 <tr>

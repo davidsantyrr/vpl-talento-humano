@@ -81,9 +81,21 @@ class controllerConsulta extends Controller
 
                 $usuarioDisplay = $usuario ? trim($usuario->nombres . ' ' . $usuario->apellidos) : ($fallbackNombre ?: $numeroDocumento);
 
+                // intentar obtener nombre del producto por SKU (modelo Producto o Articulos)
+                $producto = null;
+                try {
+                    $producto = \App\Models\Producto::find($sku);
+                } catch (\Exception $e) {
+                    $producto = null;
+                }
+                if (! $producto) {
+                    $producto = \App\Models\Articulos::where('sku', $sku)->first();
+                }
+
                 $resultado = (object) [
                     'usuario' => $usuarioDisplay,
                     'elemento' => $sku,
+                    'elemento_nombre' => $producto ? ($producto->name_produc ?? ($producto->nombre ?? null)) : null,
                     'ultima_entrega' => $ultimaEntrega ? $ultimaEntrega->toDateTimeString() : null,
                     'ultima_recepcion' => $ultimaRecepcion ? $ultimaRecepcion->toDateTimeString() : null,
                     'cantidad' => $totalEntregado - $totalRecepcionado,
