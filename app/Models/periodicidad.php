@@ -10,6 +10,7 @@ class periodicidad extends Model
 
     protected $fillable = [
         'id',
+        'sku',
         'nombre',
         'periodicidad',
         'aviso_rojo',

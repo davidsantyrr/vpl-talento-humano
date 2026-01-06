@@ -10,6 +10,7 @@ use App\Http\Controllers\gestiones\gestionAreaController;
 use App\Http\Controllers\gestiones\gestionCentroCostoController;
 use App\Http\Controllers\gestiones\GestionUsuarioController;
 use App\Http\Controllers\gestiones\gestionPeriodicidad;
+use App\Http\Controllers\gestiones\gestionCorreosController;
 use App\Http\Controllers\consultaEementosUsuario\controllerConsulta;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
@@ -131,3 +132,5 @@ Route::post('/formularioEntregas', [EntregaController::class, 'store'])
     ->name('entregas.store');
 Route::get('/formularioEntregas', [EntregaController::class, 'create'])
     ->name('formularioEntregas');
+
+Route::resource('gestionCorreos', gestionCorreosController::class);
