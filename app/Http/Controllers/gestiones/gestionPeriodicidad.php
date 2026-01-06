@@ -11,7 +11,10 @@ class gestionPeriodicidad extends Controller
 		// Cargar periodicidades (paginado para la vista)
 		$periodicidades = \App\Models\periodicidad::paginate(10);
 
-		return view('gestiones.gestionPeriodicidad', compact('periodicidades'));
+		// Cargar productos para el select (mostrar sku + nombre)
+		$productos = \App\Models\Producto::select('sku','name_produc')->get();
+
+		return view('gestiones.gestionPeriodicidad', compact('periodicidades','productos'));
 	}
 
 	public function store(Request $request)

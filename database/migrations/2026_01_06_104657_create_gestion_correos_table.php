@@ -11,14 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('periodicidad', function (Blueprint $table) {
+        Schema::create('gestion_correos', function (Blueprint $table) {
             $table->id();
-            $table->string('sku' )->index();
-            $table->string('nombre');
-            $table->string('periodicidad');
-            $table->string('aviso_rojo')->nullable();
-            $table->string('aviso_amarillo')->nullable();
-            $table->string('aviso_verde')->nullable();
+            $table->string('rol');
+            $table->string('correo');                              
             $table->timestamps();
         });
     }
@@ -28,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('periodicidad');
+        Schema::dropIfExists('gestion_correos');
     }
 };

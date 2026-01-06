@@ -17,7 +17,10 @@
 
         <div class="header-actions">
             <button class="btn btn-primary btn-add" data-bs-toggle="modal" data-bs-target="#modalAddElemento">Agregar elemento</button>
-            <button class="btn btn-primary btn-back">Volver</button>
+            <a href="{{ url('/gestionCorreos') }}" class="btn btn-primary">
+                gestion correos
+            </a>
+
         </div>
     </div>
 
@@ -158,7 +161,13 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nombre</label>
-                            <input type="text" name="nombre" class="form-control" required maxlength="191">
+                            <input type="text" id="searchProductoAdd" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
+                            <select name="nombre" id="selectProductoAdd" class="form-select" required size="6">
+                                <option value="">-- Seleccione un producto --</option>
+                                @foreach($productos as $p)
+                                    <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Periodicidad</label>
@@ -222,7 +231,13 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nombre</label>
-                            <input type="text" name="nombre" class="form-control" required maxlength="191">
+                            <input type="text" id="searchProductoEdit" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
+                            <select name="nombre" id="selectProductoEdit" class="form-select" required size="6">
+                                <option value="">-- Seleccione un producto --</option>
+                                @foreach($productos as $p)
+                                    <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Periodicidad</label>
