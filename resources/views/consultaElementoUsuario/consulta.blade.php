@@ -16,25 +16,27 @@
                             <label for="usuario" class="form-label">Usuario</label>
                             <input type="text" name="usuario" id="usuario" class="form-control" value="{{ request('usuario') }}">
                         </div>
-                        <div class="col-md-4">
-                            <label for="elemento" class="form-label">Elemento</label>
-                            <input type="text" name="elemento" id="elemento" class="form-control" value="{{ request('elemento') }}">
-                        </div>
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">Buscar</button>
                             <a href="{{ route('consultaElementoUsuario.consulta') }}" class="btn btn-secondary">Limpiar</a>
                         </div>
                     </div>
                 </form>
+                @if(isset($usuario_info) && $usuario_info)
+                    <div class="mb-3">
+                        <strong>Usuario:</strong> {{ trim($usuario_info->nombres . ' ' . $usuario_info->apellidos) }}
+                        
+                    </div>
+                @elseif(request('usuario'))
+                    <div class="mb-3 text-muted">Usuario no encontrado en el registro, mostrando resultados por número de documento.</div>
+                @endif
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Usuario</th>
-                                <th>Elemento</th>
+                                
                                 <th>ultima entrega
                                 <th>ultima recepcion</th>
-                                <th>cantidad</th>
                                 <th>proxima entrega</th>
                                 <th>acciones</th>
                             </tr>
@@ -42,11 +44,10 @@
                         <tbody>
                             @forelse($resultados as $resultado)
                                 <tr>
-                                    <td>{{ $resultado->usuario }}</td>
+                                    
                                     <td>{{ $resultado->elemento }}</td>
                                     <td>{{ $resultado->ultima_entrega }}</td>
                                     <td>{{ $resultado->ultima_recepcion }}</td>
-                                    <td>{{ $resultado->cantidad }}</td>
                                     <td>{{ $resultado->proxima_entrega }}</td>
 
                                     <td>

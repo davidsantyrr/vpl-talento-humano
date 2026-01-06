@@ -14,6 +14,7 @@ use App\Http\Controllers\consultaEementosUsuario\controllerConsulta;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
+use App\Http\Controllers\ComprobanteController;
 
 Route::get('/', function () {
     return view('index');
@@ -35,14 +36,15 @@ Route::middleware([VplAuth::class])->group(function () {
         return view('menus.menuEntrega');
     });
 
-    Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
-    Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
+Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
+Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
+Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
+Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
+Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
+Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');
 
-Route::get('/formularioEntregas', [EntregaController::class, 'create'])
-    ->name('formularioEntregas');
 
-Route::post('/formularioEntregas', [EntregaController::class, 'store'])
-    ->name('entregas.store');
+
 
 Route::resource('gestionOperacion', gestionOperacionController::class);
 
@@ -93,6 +95,8 @@ Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('en
 
 // Historial unificado de entregas y recepciones
 Route::get('/historial/unificado', [EntregaController::class, 'historialUnificado'])->name('historial.unificado');
+Route::get('/historial/pdf', [EntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
+Route::get('/historial/pdf-masivo', [EntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
 
 Route::resource('gestionOperacion', gestionOperacionController::class);
 
@@ -109,8 +113,21 @@ Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'
 // Ruta para obtener nombres de productos por SKUs
 Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
 
+Route::post('/comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
+
+// Ruta para descargar comprobante (archivo en storage/app/{dir}/{file})
+Route::get('/comprobantes/{dir}/{file}', function($dir, $file) {
+    $path = storage_path('app/' . $dir . '/' . $file);
+    if (!file_exists($path)) abort(404);
+    return response()->download($path);
+})->where('dir', 'comprobantes_entregas|comprobantes_recepciones')->name('comprobantes.download');
+
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
 // Route para consulta de elementos por usuario (vista: consultaElementoUsuario.consulta)
 Route::get('/consulta-elementos', [controllerConsulta::class, 'index'])->name('consultaElementoUsuario.consulta');
 Route::resource('consultaElementos', controllerConsulta::class);
+Route::post('/formularioEntregas', [EntregaController::class, 'store'])
+    ->name('entregas.store');
+Route::get('/formularioEntregas', [EntregaController::class, 'create'])
+    ->name('formularioEntregas');

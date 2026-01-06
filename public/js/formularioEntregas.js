@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Si el modo AJAX está activo, no añadir listeners de submit desde este archivo
+    if (window.__TH_AJAX_SUBMIT__ === true) {
+        // continuar con lógicas de UI pero sin enganchar submit
+    }
+
     const tipoSelect = document.getElementById('tipoSelect');
     const operacionSelect = document.getElementById('operacionSelect');
     const fieldOperacion = document.getElementById('field-operacion');

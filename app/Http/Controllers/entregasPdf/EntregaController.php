@@ -15,6 +15,7 @@ use App\Models\Usuarios;
 use App\Models\ElementoXEntrega;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Jobs\EnviarCorreoEntrega;
 
 
 class EntregaController extends Controller
@@ -208,6 +209,7 @@ class EntregaController extends Controller
             'operacion_id' => 'required|integer|exists:sub_areas,id',
             'tipo_documento' => 'required|string',
             'recepcion_id' => 'nullable|integer|exists:recepciones,id',
+            'comprobante_path' => 'nullable|string',
         ]);
 
         // Usuario en sesión desde API
@@ -223,6 +225,14 @@ class EntregaController extends Controller
             $nombreUsuario = $authUser->name;
         }
 
+        // Email del usuario que hace la entrega
+        $emailUsuario = 'sin-email@example.com';
+        if (is_array($authUser) && isset($authUser['email'])) {
+            $emailUsuario = $authUser['email'];
+        } elseif (is_object($authUser) && isset($authUser->email)) {
+            $emailUsuario = $authUser->email;
+        }
+
         // Primer rol del usuario
         $primerRol = 'web';
         if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
@@ -236,6 +246,7 @@ class EntregaController extends Controller
         
         Log::info('Valores a guardar:', [
             'nombreUsuario' => $nombreUsuario,
+            'emailUsuario' => $emailUsuario,
             'primerRol' => $primerRol
         ]);
 
@@ -250,9 +261,13 @@ class EntregaController extends Controller
             $usuario = Usuarios::where('numero_documento', $data['numberDocumento'])->first();
             
             // Preparar datos para la entrega
+            // Las entregas tipo "periodica" y "primera vez" se marcan como recibidas automáticamente
+            $recibidoAutomatico = in_array($data['tipo'], ['periodica', 'primera vez']);
+            
             $entregaData = [
                 'rol_entrega' => $primerRol,
                 'entrega_user' => $nombreUsuario,
+                'entrega_email' => $emailUsuario,
                 'tipo_entrega' => $data['tipo'] ?? null,
                 'tipo_documento' => $data['tipo_documento'],
                 'numero_documento' => $data['numberDocumento'],
@@ -260,6 +275,7 @@ class EntregaController extends Controller
                 'apellidos' => $data['apellidos'] ?? null,
                 'operacion_id' => $data['operacion_id'] ?? null,
                 'recepciones_id' => !empty($data['recepcion_id']) ? $data['recepcion_id'] : null,
+                'recibido' => $recibidoAutomatico,
             ];
             
             // Si el usuario existe en BD, agregar su ID
@@ -273,6 +289,8 @@ class EntregaController extends Controller
                     'numero_documento' => $data['numberDocumento']
                 ]);
             }
+
+            Log::info('Datos completos a insertar en entregas:', $entregaData);
 
             // Crear entrega con datos completos
             $entrega = Entrega::create($entregaData);
@@ -294,7 +312,9 @@ class EntregaController extends Controller
             }
 
             // Si es tipo "cambio" y tiene recepcion_id, marcar la recepción como entregada
+            // y vincular la entrega con la recepción
             if ($data['tipo'] === 'cambio' && !empty($data['recepcion_id'])) {
+                // Marcar recepción como entregada (completada)
                 DB::table('recepciones')
                     ->where('id', $data['recepcion_id'])
                     ->update([
@@ -302,28 +322,63 @@ class EntregaController extends Controller
                         'updated_at' => now()
                     ]);
                 
-                Log::info('Recepción marcada como entregada', [
+                // Marcar esta entrega como recibida (completada)
+                DB::table('entregas')
+                    ->where('id', $entrega->id)
+                    ->update([
+                        'recibido' => true,
+                        'updated_at' => now()
+                    ]);
+                
+                Log::info('Recepción marcada como entregada y entrega marcada como recibida', [
                     'recepcion_id' => $data['recepcion_id'],
                     'entrega_id' => $entrega->id
                 ]);
             }
 
-            // TODO: Generar PDF más adelante
-            // Por ahora solo guardamos los datos
-            
+            // Actualizar inventario según tipo de entrega
+            $this->actualizarInventarioEntrega($data['tipo'], $items, $entrega->id);
+
             DB::commit();
 
             Log::info('Entrega creada exitosamente', [
                 'entrega_id' => $entrega->id,
+                'tipo_entrega' => $data['tipo'],
+                'recibido_automatico' => $recibidoAutomatico,
                 'usuario_id' => $usuario ? $usuario->id : null,
                 'datos_manuales' => !$usuario,
                 'elementos_count' => count($items)
             ]);
 
+            // Disparar Job para enviar correo
+            if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
+                try {
+                    // Enviar correo de forma síncrona (inmediata)
+                    EnviarCorreoEntrega::dispatchSync(
+                        $entrega,
+                        $items,
+                        $emailUsuario,
+                        $data['comprobante_path'] ?? null
+                    );
+
+                    Log::info('Correo de entrega enviado exitosamente', [
+                        'entrega_id' => $entrega->id,
+                        'email' => $emailUsuario
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error al enviar correo de entrega', [
+                        'entrega_id' => $entrega->id,
+                        'email' => $emailUsuario,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Entrega registrada correctamente'
+                    'message' => 'Entrega registrada correctamente',
+                    'entrega_id' => $entrega->id
                 ], 200);
             }
 
@@ -457,5 +512,445 @@ class EntregaController extends Controller
             Log::error('Error obteniendo nombres de productos', ['error' => $e->getMessage()]);
             return response()->json([], 200);
         }
+    }
+
+    /**
+     * API: Descargar PDF individual de una entrega o recepción
+     */
+    public function descargarPDFIndividual(Request $request)
+    {
+        try {
+            $tipo = $request->query('tipo'); // 'entrega' o 'recepcion'
+            $id = $request->query('id');
+
+            if (!in_array($tipo, ['entrega', 'recepcion'])) {
+                return response()->json(['error' => 'Tipo inválido'], 400);
+            }
+
+            if ($tipo === 'entrega') {
+                $registro = DB::table('entregas')
+                    ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+                    ->select([
+                        'entregas.id',
+                        'entregas.created_at',
+                        'entregas.tipo_entrega as tipo',
+                        'entregas.entrega_user',
+                        DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
+                        DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'entregas.recibido'
+                    ])
+                    ->where('entregas.id', $id)
+                    ->whereNull('entregas.deleted_at')
+                    ->first();
+
+                if (!$registro) {
+                    return response()->json(['error' => 'Entrega no encontrada'], 404);
+                }
+
+                $elementos = DB::table('elemento_x_entrega')
+                    ->where('entrega_id', $id)
+                    ->select(['sku', 'cantidad'])
+                    ->get();
+
+            } else {
+                $registro = DB::table('recepciones')
+                    ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
+                    ->select([
+                        'recepciones.id',
+                        'recepciones.created_at',
+                        'recepciones.tipo_recepcion as tipo',
+                        DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
+                        DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'recepciones.entregado as recibido'
+                    ])
+                    ->where('recepciones.id', $id)
+                    ->whereNull('recepciones.deleted_at')
+                    ->first();
+
+                if (!$registro) {
+                    return response()->json(['error' => 'Recepción no encontrada'], 404);
+                }
+
+                $elementos = DB::table('elemento_x_recepcion')
+                    ->where('recepcion_id', $id)
+                    ->select(['sku', 'cantidad'])
+                    ->get();
+            }
+
+            $pdf = Pdf::loadView('pdf.comprobante', [
+                'tipo' => $tipo,
+                'registro' => $registro,
+                'elementos' => $elementos
+            ]);
+
+            // Formatear fecha de creación del registro
+            $fechaRegistro = \Carbon\Carbon::parse($registro->created_at)->format('Y-m-d');
+            $tipoTexto = $tipo === 'entrega' ? 'Entrega' : 'Recepcion';
+            $nombreArchivo = "{$tipoTexto}_{$fechaRegistro}_#{$id}.pdf";
+
+            return $pdf->download($nombreArchivo);
+
+        } catch (\Exception $e) {
+            Log::error('Error descargando PDF individual', [
+                'error' => $e->getMessage(),
+                'tipo' => $request->query('tipo'),
+                'id' => $request->query('id')
+            ]);
+            return response()->json(['error' => 'Error al generar PDF'], 500);
+        }
+    }
+
+    /**
+     * API: Descargar PDF masivo en ZIP
+     */
+    public function descargarPDFMasivo(Request $request)
+    {
+        try {
+            $tipoRegistro = $request->query('tipo_registro');
+            $operacionId = $request->query('operacion_id');
+            $fechaInicio = $request->query('fecha_inicio');
+            $fechaFin = $request->query('fecha_fin');
+
+            // Validaciones
+            if (!in_array($tipoRegistro, ['entrega', 'recepcion', 'todos'])) {
+                return response()->json(['error' => 'Tipo de registro inválido'], 400);
+            }
+
+            // Obtener registros
+            $registros = collect();
+
+            if (in_array($tipoRegistro, ['entrega', 'todos'])) {
+                $queryEntregas = DB::table('entregas')
+                    ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+                    ->select([
+                        'entregas.id',
+                        'entregas.created_at',
+                        'entregas.tipo_entrega as tipo',
+                        'entregas.entrega_user',
+                        DB::raw("'entrega' as registro_tipo"),
+                        DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
+                        DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'entregas.recibido'
+                    ])
+                    ->whereNull('entregas.deleted_at')
+                    ->whereBetween('entregas.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59']);
+
+                if ($operacionId) {
+                    $queryEntregas->where('entregas.operacion_id', $operacionId);
+                }
+
+                $registros = $registros->merge($queryEntregas->get());
+            }
+
+            if (in_array($tipoRegistro, ['recepcion', 'todos'])) {
+                $queryRecepciones = DB::table('recepciones')
+                    ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
+                    ->select([
+                        'recepciones.id',
+                        'recepciones.created_at',
+                        'recepciones.tipo_recepcion as tipo',
+                        DB::raw("NULL as entrega_user"),
+                        DB::raw("'recepcion' as registro_tipo"),
+                        DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
+                        DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'recepciones.entregado as recibido'
+                    ])
+                    ->whereNull('recepciones.deleted_at')
+                    ->whereBetween('recepciones.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59']);
+
+                if ($operacionId) {
+                    $queryRecepciones->where('recepciones.operacion_id', $operacionId);
+                }
+
+                $registros = $registros->merge($queryRecepciones->get());
+            }
+
+            if ($registros->isEmpty()) {
+                return response()->json(['error' => 'No se encontraron registros'], 404);
+            }
+
+            // Crear directorio temporal
+            $tempDir = storage_path('app/temp/pdf_masivo_' . time());
+            if (!file_exists($tempDir)) {
+                mkdir($tempDir, 0777, true);
+            }
+
+            // Generar PDFs
+            foreach ($registros as $registro) {
+                $tipo = $registro->registro_tipo;
+                
+                if ($tipo === 'entrega') {
+                    $elementos = DB::table('elemento_x_entrega')
+                        ->where('entrega_id', $registro->id)
+                        ->select(['sku', 'cantidad'])
+                        ->get();
+                } else {
+                    $elementos = DB::table('elemento_x_recepcion')
+                        ->where('recepcion_id', $registro->id)
+                        ->select(['sku', 'cantidad'])
+                        ->get();
+                }
+
+                $pdf = Pdf::loadView('pdf.comprobante', [
+                    'tipo' => $tipo,
+                    'registro' => $registro,
+                    'elementos' => $elementos
+                ]);
+
+                // Formatear nombre con fecha de creación del registro
+                $fechaRegistro = \Carbon\Carbon::parse($registro->created_at)->format('Y-m-d');
+                $tipoTexto = $tipo === 'entrega' ? 'Entrega' : 'Recepcion';
+                $nombreArchivo = "{$tipoTexto}_{$fechaRegistro}_#{$registro->id}.pdf";
+                
+                $pdf->save("{$tempDir}/{$nombreArchivo}");
+            }
+
+            // Crear ZIP
+            $zipName = "registros_" . now()->format('Y-m-d_His') . ".zip";
+            $zipPath = storage_path("app/temp/{$zipName}");
+            
+            $zip = new \ZipArchive();
+            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+                throw new \Exception('No se pudo crear el archivo ZIP');
+            }
+
+            // Agregar archivos al ZIP
+            $files = glob("{$tempDir}/*.pdf");
+            foreach ($files as $file) {
+                $zip->addFile($file, basename($file));
+            }
+            $zip->close();
+
+            // Limpiar archivos temporales
+            foreach ($files as $file) {
+                unlink($file);
+            }
+            rmdir($tempDir);
+
+            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
+
+        } catch (\Exception $e) {
+            Log::error('Error descargando PDF masivo', [
+                'error' => $e->getMessage(),
+                'params' => $request->query()
+            ]);
+            return response()->json(['error' => 'Error al generar ZIP: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Actualizar inventario según tipo de entrega
+     */
+    private function actualizarInventarioEntrega($tipoEntrega, $items, $entregaId)
+    {
+        try {
+            foreach ($items as $item) {
+                if (empty($item['sku'])) continue;
+
+                $sku = $item['sku'];
+                $cantidad = (int) ($item['cantidad'] ?? 1);
+
+                // Obtener ubicación por defecto
+                $ubicacionId = $this->getOrCreateDefaultUbicacion();
+
+                switch ($tipoEntrega) {
+                    case 'prestamo':
+                        // Restar de disponible y sumar a prestado
+                        $this->transferirInventario($sku, $cantidad, 'disponible', 'prestado', $ubicacionId);
+                        Log::info('Inventario actualizado: préstamo', [
+                            'entrega_id' => $entregaId,
+                            'sku' => $sku,
+                            'cantidad' => $cantidad,
+                            'de' => 'disponible',
+                            'a' => 'prestado'
+                        ]);
+                        break;
+
+                    case 'primera vez':
+                    case 'periodica':
+                        // Restar de disponible (entrega definitiva)
+                        $this->restarInventario($sku, $cantidad, 'disponible', $ubicacionId);
+                        Log::info('Inventario actualizado: entrega definitiva', [
+                            'entrega_id' => $entregaId,
+                            'sku' => $sku,
+                            'cantidad' => $cantidad,
+                            'tipo' => $tipoEntrega
+                        ]);
+                        break;
+
+                    case 'cambio':
+                        // Restar de disponible (se entrega artículo nuevo)
+                        $this->restarInventario($sku, $cantidad, 'disponible', $ubicacionId);
+                        Log::info('Inventario actualizado: cambio', [
+                            'entrega_id' => $entregaId,
+                            'sku' => $sku,
+                            'cantidad' => $cantidad
+                        ]);
+                        break;
+                }
+            }
+        } catch (\Exception $e) {
+            Log::error('Error actualizando inventario en entrega', [
+                'error' => $e->getMessage(),
+                'entrega_id' => $entregaId,
+                'tipo' => $tipoEntrega
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Transferir inventario entre estados
+     */
+    private function transferirInventario($sku, $cantidad, $estatusOrigen, $estatusDestino, $ubicacionId)
+    {
+        // Buscar inventario origen
+        $inventarioOrigen = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatusOrigen)
+            ->first();
+
+        if (!$inventarioOrigen || (int)$inventarioOrigen->stock < $cantidad) {
+            throw new \Exception("No hay suficiente stock disponible para SKU: {$sku}");
+        }
+
+        // Restar del origen
+        $nuevoStockOrigen = (int)$inventarioOrigen->stock - $cantidad;
+        if ($nuevoStockOrigen > 0) {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioOrigen->id)
+                ->update(['stock' => $nuevoStockOrigen]);
+        } else {
+            // Si llega a 0, eliminar la fila
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioOrigen->id)
+                ->delete();
+        }
+
+        // Buscar o crear inventario destino
+        $inventarioDestino = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatusDestino)
+            ->first();
+
+        if ($inventarioDestino) {
+            // Sumar al destino existente
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventarioDestino->id)
+                ->update(['stock' => (int)$inventarioDestino->stock + $cantidad]);
+        } else {
+            // Crear nuevo registro de destino
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->insert([
+                    'sku' => $sku,
+                    'stock' => $cantidad,
+                    'estatus' => $estatusDestino,
+                    'ubicaciones_id' => $ubicacionId
+                ]);
+        }
+    }
+
+    /**
+     * Restar inventario de un estado específico
+     */
+    private function restarInventario($sku, $cantidad, $estatus, $ubicacionId)
+    {
+        $inventario = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatus)
+            ->first();
+
+        if (!$inventario || (int)$inventario->stock < $cantidad) {
+            throw new \Exception("No hay suficiente stock {$estatus} para SKU: {$sku}");
+        }
+
+        $nuevoStock = (int)$inventario->stock - $cantidad;
+        if ($nuevoStock > 0) {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventario->id)
+                ->update(['stock' => $nuevoStock]);
+        } else {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventario->id)
+                ->delete();
+        }
+    }
+
+    /**
+     * Sumar inventario a un estado específico
+     */
+    private function sumarInventario($sku, $cantidad, $estatus, $ubicacionId)
+    {
+        $inventario = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->where('sku', $sku)
+            ->where('estatus', $estatus)
+            ->first();
+
+        if ($inventario) {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->where('id', $inventario->id)
+                ->update(['stock' => (int)$inventario->stock + $cantidad]);
+        } else {
+            DB::connection('mysql_third')
+                ->table('inventarios')
+                ->insert([
+                    'sku' => $sku,
+                    'stock' => $cantidad,
+                    'estatus' => $estatus,
+                    'ubicaciones_id' => $ubicacionId
+                ]);
+        }
+    }
+
+    /**
+     * Obtener o crear ubicación por defecto
+     */
+    private function getOrCreateDefaultUbicacion()
+    {
+        $ubicacion = DB::connection('mysql_third')
+            ->table('ubicaciones')
+            ->where('bodega', 'General')
+            ->where('ubicacion', 'Almacén Principal')
+            ->first();
+
+        if ($ubicacion) {
+            return (int)$ubicacion->id;
+        }
+
+        return (int) DB::connection('mysql_third')
+            ->table('ubicaciones')
+            ->insertGetId([
+                'bodega' => 'General',
+                'ubicacion' => 'Almacén Principal',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
     }
 }

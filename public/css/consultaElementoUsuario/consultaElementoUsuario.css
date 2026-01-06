@@ -71,12 +71,12 @@ h1 {
 
 /* ===== Encabezado ===== */
 .table thead {
-    background-color: var(--primary);
+    background-color: var(--primary-light); /* fondo claro para mejor contraste */
 }
 
 .table thead th {
-    color: #fff;
-    font-weight: 500;
+    color: var(--text-dark); /* texto oscuro, visible sobre fondo claro */
+    font-weight: 600;
     font-size: 14px;
     text-align: center;
     border: none;

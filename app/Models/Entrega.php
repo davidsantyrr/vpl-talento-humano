@@ -25,6 +25,7 @@ class Entrega extends Model
     protected $fillable = [
         'rol_entrega',
         'entrega_user',
+        'entrega_email',
         'tipo_entrega',
         'tipo_documento',
         'numero_documento',
