@@ -23,31 +23,36 @@ class EntregaController extends Controller
     /** Mostrar el formulario de entregas */
     public function create()
     {
-        $operations = SubArea::orderBy('operationName')->get();
-        // Attempt to select expected columns; if the external table uses different column names,
-        // fall back to reading rows and map candidate fields.
-        $allProducts = collect();
         try {
-            $conn = (new Producto())->getConnectionName() ?: config('database.default');
-            $hasSku = Schema::connection($conn)->hasColumn('productos', 'sku');
-            $hasName = Schema::connection($conn)->hasColumn('productos', 'name_produc');
-            if ($hasSku && $hasName) {
-                $allProducts = Producto::select('sku', 'name_produc')->orderBy('name_produc')->get();
-            } else {
-                // fallback: pull some rows and map likely fields
-                $rows = Producto::limit(500)->get();
-                $allProducts = $rows->map(function($r){
-                    $sku = $r->sku ?? $r->codigo ?? $r->id ?? null;
-                    $name = $r->name_produc ?? $r->nombre ?? $r->name ?? '';
-                    return (object)['sku' => $sku, 'name_produc' => $name];
-                })->filter(fn($x) => $x->sku !== null)->values();
+            // Intentar obtener operaciones (puede que la tabla no exista o tenga otro nombre)
+            try {
+                $operations = \Illuminate\Support\Facades\DB::table('gestion_operaciones')->get();
+            } catch (\Exception $e) {
+                \Log::warning('No se pudo cargar operaciones', ['error' => $e->getMessage()]);
+                $operations = collect(); // Colección vacía si falla
             }
+            
+            // Obtener cargos
+            $cargos = \App\Models\Cargo::orderBy('nombre')->get();
+            
+            // Obtener todos los productos
+            $allProducts = \App\Models\Producto::select('sku', 'name_produc')->orderBy('name_produc')->get();
+            
+            return view('formularioEntregas.formularioEntregas', compact('operations', 'cargos', 'allProducts'));
         } catch (\Exception $e) {
-            // if anything fails, return empty collection to avoid breaking the view
+            \Log::error('Error en create de EntregaController', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Intentar cargar la vista con datos vacíos
+            $operations = collect();
+            $cargos = collect();
             $allProducts = collect();
+            
+            return view('formularioEntregas.formularioEntregas', compact('operations', 'cargos', 'allProducts'))
+                ->with('error', 'Advertencia: No se pudieron cargar algunos datos del formulario');
         }
-
-        return view('formularioEntregas.formularioEntregas', compact('operations','allProducts'));
     }
 
     /** Mostrar historial de entregas (ruta pública) */
@@ -199,210 +204,113 @@ class EntregaController extends Controller
     /** Procesar el envío del formulario, generar PDF y devolver descarga */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'nombre' => 'required|string|max:255',
-            'apellidos' => 'nullable|string|max:255',
-            'numberDocumento' => 'required|string',
-            'elementos' => 'required|string',
-            'firma' => 'nullable|string',
-            'tipo' => 'required|string',
-            'operacion_id' => 'required|integer|exists:sub_areas,id',
-            'tipo_documento' => 'required|string',
-            'recepcion_id' => 'nullable|integer|exists:recepciones,id',
-            'comprobante_path' => 'nullable|string',
-        ]);
-
-        // Usuario en sesión desde API
-        $authUser = session('auth.user');
-        
-        Log::info('Auth user en sesión:', ['auth_user' => $authUser]);
-        
-        // Nombre del usuario que hace la entrega
-        $nombreUsuario = 'usuario';
-        if (is_array($authUser) && isset($authUser['name'])) {
-            $nombreUsuario = $authUser['name'];
-        } elseif (is_object($authUser) && isset($authUser->name)) {
-            $nombreUsuario = $authUser->name;
-        }
-
-        // Email del usuario que hace la entrega
-        $emailUsuario = 'sin-email@example.com';
-        if (is_array($authUser) && isset($authUser['email'])) {
-            $emailUsuario = $authUser['email'];
-        } elseif (is_object($authUser) && isset($authUser->email)) {
-            $emailUsuario = $authUser->email;
-        }
-
-        // Primer rol del usuario
-        $primerRol = 'web';
-        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
-            $first = $authUser['roles'][0] ?? null;
-            if (is_array($first) && isset($first['roles'])) { 
-                $primerRol = $first['roles']; 
-            } elseif (is_object($first) && isset($first->roles)) { 
-                $primerRol = $first->roles; 
-            }
-        }
-        
-        Log::info('Valores a guardar:', [
-            'nombreUsuario' => $nombreUsuario,
-            'emailUsuario' => $emailUsuario,
-            'primerRol' => $primerRol
-        ]);
-
-        DB::beginTransaction();
         try {
-            // ensure uploads dir
-            if (!Storage::exists('public/entregas')) {
-                Storage::makeDirectory('public/entregas');
-            }
-
-            // Intentar encontrar al usuario en la base de datos
-            $usuario = Usuarios::where('numero_documento', $data['numberDocumento'])->first();
-            
-            // Preparar datos para la entrega
-            // Las entregas tipo "periodica" y "primera vez" se marcan como recibidas automáticamente
-            $recibidoAutomatico = in_array($data['tipo'], ['periodica', 'primera vez']);
-            
-            $entregaData = [
-                'rol_entrega' => $primerRol,
-                'entrega_user' => $nombreUsuario,
-                'entrega_email' => $emailUsuario,
-                'tipo_entrega' => $data['tipo'] ?? null,
-                'tipo_documento' => $data['tipo_documento'],
-                'numero_documento' => $data['numberDocumento'],
-                'nombres' => $data['nombre'],
-                'apellidos' => $data['apellidos'] ?? null,
-                'operacion_id' => $data['operacion_id'] ?? null,
-                'recepciones_id' => !empty($data['recepcion_id']) ? $data['recepcion_id'] : null,
-                'recibido' => $recibidoAutomatico,
-            ];
-            
-            // Si el usuario existe en BD, agregar su ID
-            if ($usuario) {
-                $entregaData['usuarios_id'] = $usuario->id;
-                Log::info('Usuario encontrado en BD', ['usuario_id' => $usuario->id]);
-            } else {
-                // Usuario no existe, se guardarán solo los datos manuales
-                $entregaData['usuarios_id'] = null;
-                Log::info('Usuario no encontrado, guardando datos manuales', [
-                    'numero_documento' => $data['numberDocumento']
-                ]);
-            }
-
-            Log::info('Datos completos a insertar en entregas:', $entregaData);
-
-            // Crear entrega con datos completos
-            $entrega = Entrega::create($entregaData);
-
-            // save elementos if present
-            $items = json_decode($data['elementos'] ?? '[]', true) ?: [];
-            
-            if (empty($items)) {
-                throw new Exception('Debe agregar al menos un elemento a la entrega');
-            }
-            
-            foreach ($items as $it) {
-                if (empty($it['sku'])) continue;
-                ElementoXEntrega::create([
-                    'entrega_id' => $entrega->id,
-                    'sku' => $it['sku'],
-                    'cantidad' => $it['cantidad'] ?? 1,
-                ]);
-            }
-
-            // Si es tipo "cambio" y tiene recepcion_id, marcar la recepción como entregada
-            // y vincular la entrega con la recepción
-            if ($data['tipo'] === 'cambio' && !empty($data['recepcion_id'])) {
-                // Marcar recepción como entregada (completada)
-                DB::table('recepciones')
-                    ->where('id', $data['recepcion_id'])
-                    ->update([
-                        'entregado' => true,
-                        'updated_at' => now()
-                    ]);
-                
-                // Marcar esta entrega como recibida (completada)
-                DB::table('entregas')
-                    ->where('id', $entrega->id)
-                    ->update([
-                        'recibido' => true,
-                        'updated_at' => now()
-                    ]);
-                
-                Log::info('Recepción marcada como entregada y entrega marcada como recibida', [
-                    'recepcion_id' => $data['recepcion_id'],
-                    'entrega_id' => $entrega->id
-                ]);
-            }
-
-            // Actualizar inventario según tipo de entrega
-            $this->actualizarInventarioEntrega($data['tipo'], $items, $entrega->id);
-
-            DB::commit();
-
-            Log::info('Entrega creada exitosamente', [
-                'entrega_id' => $entrega->id,
-                'tipo_entrega' => $data['tipo'],
-                'recibido_automatico' => $recibidoAutomatico,
-                'usuario_id' => $usuario ? $usuario->id : null,
-                'datos_manuales' => !$usuario,
-                'elementos_count' => count($items)
+            Log::info('🔍 Iniciando store de entrega', [
+                'tipo_documento' => $request->tipo_documento,
+                'numero_documento' => $request->numberDocumento,
+                'nombre' => $request->nombre,
+                'tipo' => $request->tipo,
+                'operacion_id' => $request->operacion_id,
+                'elementos_count' => $request->elementos ? strlen($request->elementos) : 0
             ]);
 
-            // Disparar Job para enviar correo
-            if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
-                try {
-                    // Enviar correo de forma síncrona (inmediata)
-                    EnviarCorreoEntrega::dispatchSync(
-                        $entrega,
-                        $items,
-                        $emailUsuario,
-                        $data['comprobante_path'] ?? null
-                    );
+            // Validación
+            $validated = $request->validate([
+                'tipo_documento' => 'required|string',
+                'numberDocumento' => 'required|string',
+                'nombre' => 'required|string',
+                'apellidos' => 'nullable|string',
+                'tipo' => 'required|string',
+                'operacion_id' => 'required|integer',
+                'elementos' => 'required|string',
+                'firma' => 'required|string',
+                'comprobante_path' => 'nullable|string',
+                'recepcion_id' => 'nullable|integer',
+                'cargo_id' => 'nullable|integer',
+            ]);
 
-                    Log::info('Correo de entrega enviado exitosamente', [
-                        'entrega_id' => $entrega->id,
-                        'email' => $emailUsuario
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Error al enviar correo de entrega', [
-                        'entrega_id' => $entrega->id,
-                        'email' => $emailUsuario,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
+            Log::info('✅ Validación exitosa');
 
-            if ($request->wantsJson() || $request->ajax()) {
+            // Parsear elementos
+            $elementos = json_decode($validated['elementos'], true);
+            
+            if (!$elementos || !is_array($elementos) || count($elementos) === 0) {
+                Log::error('❌ Elementos vacíos o inválidos', ['elementos_raw' => $validated['elementos']]);
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Entrega registrada correctamente',
-                    'entrega_id' => $entrega->id
-                ], 200);
+                    'success' => false,
+                    'message' => 'Debe agregar al menos un elemento a la entrega'
+                ], 400);
             }
 
-            // Para peticiones normales, redirigimos de vuelta con mensaje de éxito
-            return redirect()->back()
-                ->with('status', 'Entrega registrada correctamente');
+            Log::info('📦 Elementos parseados', ['count' => count($elementos), 'elementos' => $elementos]);
+
+            // Crear la entrega
+            $entrega = \App\Models\Entrega::create([
+                'tipo_documento' => $validated['tipo_documento'],
+                'numero_documento' => $validated['numberDocumento'],
+                'nombres' => $validated['nombre'],
+                'apellidos' => $validated['apellidos'] ?? '',
+                'tipo' => $validated['tipo'],
+                'operacion_id' => $validated['operacion_id'],
+                'cargo_id' => $validated['cargo_id'] ?? null,
+                'firma_entrega' => $validated['firma'],
+                'comprobante_path' => $validated['comprobante_path'] ?? null,
+                'recepcion_id' => $validated['recepcion_id'] ?? null,
+                'recibido' => false,
+            ]);
+
+            Log::info('✅ Entrega creada', ['entrega_id' => $entrega->id]);
+
+            // Guardar elementos
+            foreach ($elementos as $elem) {
+                $elementoData = [
+                    'entrega_id' => $entrega->id,
+                    'sku' => $elem['sku'] ?? null,
+                    'nombre' => $elem['nombre'] ?? $elem['producto'] ?? 'Sin nombre',
+                    'cantidad' => isset($elem['cantidad']) ? (int)$elem['cantidad'] : 1,
+                ];
                 
-        } catch (Exception $e) {
-            DB::rollBack();
-            Log::error('Error creando entrega y registros', [
-                'error' => $e->getMessage(),
+                $elementoCreado = \App\Models\EntregaElemento::create($elementoData);
+                
+                Log::info('✅ Elemento guardado', [
+                    'elemento_id' => $elementoCreado->id,
+                    'sku' => $elementoData['sku'],
+                    'nombre' => $elementoData['nombre']
+                ]);
+            }
+
+            Log::info('🎉 Entrega registrada exitosamente', ['entrega_id' => $entrega->id]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Entrega registrada exitosamente',
+                'entrega_id' => $entrega->id
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('❌ Error de validación', [
+                'errors' => $e->errors(),
                 'request' => $request->except(['firma'])
             ]);
             
-            if ($request->wantsJson() || $request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ocurrió un error al procesar la entrega: ' . $e->getMessage()
-                ], 500);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
             
-            return redirect()->back()
-                ->with('error', 'Ocurrió un error al procesar la entrega: ' . $e->getMessage())
-                ->withInput();
+        } catch (\Exception $e) {
+            Log::error('❌ Error al guardar entrega', [
+                'message' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'request' => $request->except(['firma'])
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al registrar la entrega: ' . $e->getMessage()
+            ], 500);
         }
     }
 
