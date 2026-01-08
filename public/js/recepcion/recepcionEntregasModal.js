@@ -1,4 +1,3 @@
-// filepath: c:\laragon\www\vpl-talento-humano\public\js\recepcion\recepcionEntregasModal.js
 (function(){
     const modalEntregas = document.getElementById('modalEntregas');
     const buscarEntregaInput = document.getElementById('buscarEntregaInput');
@@ -133,9 +132,11 @@
                 
                 if (respUsuario.ok) {
                     const dataUsuario = await respUsuario.json();
-                    if (dataUsuario) {
-                        if (operacionSelect && dataUsuario.operacion_id) {
+                    if (operacionSelect && dataUsuario.operacion_id) {
                             operacionSelect.value = dataUsuario.operacion_id;
+                            const opHidden = document.getElementById('operacionIdHidden');
+                            if (opHidden) opHidden.value = dataUsuario.operacion_id;
+                        }
                         }
                     }
                 }

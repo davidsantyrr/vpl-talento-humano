@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const tipoSelect = document.getElementById('tipoSelect');
     const operacionSelect = document.getElementById('operacionSelect');
+    const operacionHidden = document.getElementById('operacionIdHidden');
     const fieldOperacion = document.getElementById('field-operacion');
     const fieldCargo = document.getElementById('field-cargo');
     const cargoSelect = document.getElementById('cargoSelect');
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function normalize(val) { return String(val || '').trim().toLowerCase(); }
 
     // recordar última operación seleccionada y operación asociada al usuario
-    let lastOperacionValue = operacionSelect.value || '';
+    let lastOperacionValue = operacionSelect ? operacionSelect.value || '' : '';
     let usuarioOperacionId = null;
 
     function setCargoHidden(val){ if(cargoHidden) cargoHidden.value = val || ''; }
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const tipo = normalize(tipoSelect.value);
         const showCargo = (tipo === 'primera vez' || tipo === 'periodica');
         const isCambio = (tipo === 'cambio');
+        const isEditableOperacion = (tipo === 'prestamo');
 
         // Mostrar/ocultar botones según el tipo
         if (btnAnadirElemento) {
@@ -57,14 +59,21 @@ document.addEventListener('DOMContentLoaded', function () {
             fieldOperacion.style.display = '';
         }
 
-        // Operación siempre habilitada y requerida
-        operacionSelect.disabled = false;
-        operacionSelect.required = true;
-        operacionSelect.classList.remove('disabled');
+        // Operación: solo editable si tipo === 'prestamo'
+        if (operacionSelect) {
+            operacionSelect.disabled = !isEditableOperacion;
+            if (operacionSelect.disabled) operacionSelect.classList.add('disabled'); else operacionSelect.classList.remove('disabled');
+        }
 
-        // si hay operación del usuario y no hay selección, aplicar
-        if (!operacionSelect.value && usuarioOperacionId) {
-            operacionSelect.value = usuarioOperacionId;
+        // Si no es editable y tenemos una operación de usuario o historial, mostrarla en el select (aunque esté deshabilitado)
+        if (operacionSelect && !isEditableOperacion) {
+            const prefer = usuarioOperacionId || lastOperacionValue || operacionSelect.value || '';
+            if (prefer) operacionSelect.value = prefer;
+        }
+
+        // Mantener siempre el hidden sincronizado para envío (fallbacks: select.value -> usuarioOperacionId -> lastOperacionValue)
+        if (operacionHidden) {
+            operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId ? String(usuarioOperacionId) : String(lastOperacionValue || ''));
         }
 
         // si se muestra Cargo, intentar autoseleccionar con el dato del usuario
@@ -78,7 +87,19 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // eventos
-    tipoSelect.addEventListener('change', updateOperacionState);
+    tipoSelect.addEventListener('change', function(){
+        updateOperacionState();
+        // actualizar hidden inmediatamente
+        if (operacionHidden) operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId ? String(usuarioOperacionId) : String(lastOperacionValue || ''));
+    });
+
+    // cuando el usuario cambia manualmente la operación, actualizar el valor recordado y el hidden
+    if (operacionSelect) {
+        operacionSelect.addEventListener('change', function () {
+            lastOperacionValue = operacionSelect.value || lastOperacionValue;
+            if (operacionHidden) operacionHidden.value = operacionSelect.value || '';
+        });
+    }
 
     function buscarUsuario(numero) {
         if (!numero) {
@@ -109,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (apellidosInput) apellidosInput.value = '';
                     if (tipoDocumentoSelect) tipoDocumentoSelect.value = '';
                     usuarioOperacionId = null;
+                    // asegurar hidden limpio
+                    if (operacionHidden) operacionHidden.value = lastOperacionValue || '';
                     updateOperacionState();
                     // limpiar productos
                     updateElementoOptions();
@@ -122,14 +145,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (tipoDocumentoSelect && data.tipo_documento) tipoDocumentoSelect.value = data.tipo_documento;
 
                 if (operacionSelect && data.operacion_id) {
-                    usuarioOperacionId = data.operacion_id;
+                    usuarioOperacionId = String(data.operacion_id);
                     operacionSelect.value = data.operacion_id;
-                    lastOperacionValue = data.operacion_id;
+                    lastOperacionValue = String(data.operacion_id);
                 }
 
                 // NUEVO: exponer cargo_id para otros scripts
                 if (lookupBox) lookupBox.dataset.cargoId = data.cargo_id ? String(data.cargo_id) : '';
                 if (cargoHidden) cargoHidden.value = data.cargo_id ? String(data.cargo_id) : '';
+                // SINCRONIZAR operacion hidden
+                if (operacionHidden) operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId || lastOperacionValue || '');
+
                 try {
                     document.dispatchEvent(new CustomEvent('usuario:cargado', { detail: data }));
                 } catch (e) { /* ignore */ }
@@ -149,10 +175,13 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = e && e.detail ? e.detail : null;
         if (data && typeof data.operacion_id !== 'undefined' && data.operacion_id) {
             usuarioOperacionId = String(data.operacion_id);
+            lastOperacionValue = String(data.operacion_id) || lastOperacionValue;
         }
         if (cargoHidden && typeof data?.cargo_id !== 'undefined') {
             cargoHidden.value = data.cargo_id ? String(data.cargo_id) : '';
         }
+        // sincronizar hidden
+        if (operacionHidden) operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId || lastOperacionValue || '');
         updateOperacionState();
         updateElementoOptions();
     });
@@ -198,10 +227,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // cuando el usuario cambia manualmente la operación, actualizar el valor recordado
-    operacionSelect.addEventListener('change', function () {
-        lastOperacionValue = operacionSelect.value || lastOperacionValue;
-    });
+    // cuando el usuario cambia manualmente la operación, actualizar el valor recordado y el hidden
+    if (operacionSelect) {
+        operacionSelect.addEventListener('change', function () {
+            lastOperacionValue = operacionSelect.value || lastOperacionValue;
+            if (operacionHidden) operacionHidden.value = operacionSelect.value || '';
+        });
+    }
 
     // ------------------ Selector de productos para modal de elementos ------------------
     const modal = document.getElementById('modalElementos');
@@ -501,8 +533,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if(current){ const found = elementoSelect.querySelector(`option[value="${current}"]`); elementoSelect.value = found ? current : ''; }
     }
 
-    // inicial: cargar lista completa
+    // inicial: cargar lista completa y asegurar hidden inicial
     updateElementoOptions();
+    // asegurar hidden inicial con valor del select o fallback
+    if (operacionHidden) operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId || lastOperacionValue || '');
 
     // ------------------ Modal de recepciones para tipo "cambio" ------------------
     const modalRecepciones = document.getElementById('modalRecepciones');
@@ -610,8 +644,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (dataUsuario) {
                         // Cargar operación y cargo del usuario
                         if (operacionSelect && dataUsuario.operacion_id) {
+                            usuarioOperacionId = String(dataUsuario.operacion_id);
                             operacionSelect.value = dataUsuario.operacion_id;
-                            usuarioOperacionId = dataUsuario.operacion_id;
+                            lastOperacionValue = String(dataUsuario.operacion_id) || lastOperacionValue;
                         }
                         if (lookupBox && dataUsuario.cargo_id) {
                             lookupBox.dataset.cargoId = String(dataUsuario.cargo_id);
@@ -781,7 +816,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 const nombre = document.getElementById('nombre');
                 const tipo = document.getElementById('tipoSelect');
                 const operacion = document.getElementById('operacionSelect');
-                
+                // obtener valor de operación aceptando el hidden si el select está deshabilitado
+                const operacionVal = (operacion && operacion.value) ? operacion.value : (operacionHidden ? operacionHidden.value : '');
+
                 // Array para acumular errores
                 let errores = [];
                 
@@ -806,7 +843,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
                 
                 // Validar operación
-                if (!operacion || !operacion.value) {
+                if (!operacionVal) {
                     errores.push('Operación');
                 }
                 
@@ -836,6 +873,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 const firmaField = document.getElementById('firmaField');
                 if (firmaField) firmaField.value = canvas.toDataURL('image/png');
                 if (elementosJson) elementosJson.value = JSON.stringify(elementos);
+                // Asegurar hidden de operacion actualizado antes de enviar
+                if (operacionHidden) operacionHidden.value = operacionVal || '';
                 
                 // Si todo está bien, enviar el formulario
                 form.submit();

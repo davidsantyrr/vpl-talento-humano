@@ -1,4 +1,3 @@
-// filepath: c:\laragon\www\vpl-talento-humano\public\js\recepcion\recepcionLookup.js
 (function(){
     const numeroInput = document.getElementById('numDocumento');
     const nombresInput = document.getElementById('nombresRecepcion');
@@ -47,9 +46,11 @@
                     const crearUrl = lookupBox?.dataset?.crearUrl || '/gestionUsuario';
                     showLookupMessage(`Usuario no encontrado. <a href="${crearUrl}">Crear usuario</a>`);
                     if (nombresInput) nombresInput.value = '';
-                    if (apellidosInput) apellidosInput.value = '';
                     if (tipoDocumentoSelect) tipoDocumentoSelect.value = 'CC';
                     if (operacionSelect) operacionSelect.value = '';
+                    const opHiddenClear = document.getElementById('operacionIdHidden');
+                    if (opHiddenClear) opHiddenClear.value = '';
+                    if (usuariosIdHidden) usuariosIdHidden.value = '';
                     if (usuariosIdHidden) usuariosIdHidden.value = '';
                     return;
                 }
@@ -60,9 +61,11 @@
                 if (apellidosInput) apellidosInput.value = data.apellidos ?? '';
                 if (tipoDocumentoSelect && data.tipo_documento) {
                     tipoDocumentoSelect.value = data.tipo_documento;
-                }
                 if (operacionSelect && (data.operacion_id || data.operaciones)) {
                     operacionSelect.value = data.operacion_id ?? operacionSelect.value;
+                    const opHidden = document.getElementById('operacionIdHidden');
+                    if (opHidden) opHidden.value = data.operacion_id ?? opHidden.value;
+                }
                 }
                 if (usuariosIdHidden && typeof data.id !== 'undefined') {
                     usuariosIdHidden.value = String(data.id);

@@ -31,7 +31,10 @@ class Entrega extends Model
         'numero_documento',
         'nombres',
         'apellidos',
-        'usuarios_id'
+        'usuarios_id',
+        'sub_area_id',
+        'recepciones_id',
+        'recibido'
     ];
 
     /**
@@ -51,7 +54,7 @@ class Entrega extends Model
 
     public function operacion()
     {
-        return $this->belongsTo(SubArea::class, 'operacion_id');
+        return $this->belongsTo(SubArea::class, 'sub_area_id');
     }
 
     public function recepcion()

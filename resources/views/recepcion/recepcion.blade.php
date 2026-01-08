@@ -43,12 +43,13 @@
           </div>
           <div class="field" id="field-operacion-recepcion">
             <label>Operación</label>
-            <select name="operation_id" id="operacionRecepcion">
+            <select id="operacionRecepcion" disabled>
               <option value="">Seleccione una operación</option>
               @foreach($operations as $op)
                 <option value="{{ $op->id }}">{{ $op->operationName }}</option>
               @endforeach
             </select>
+            <input type="hidden" id="operacionIdHidden" name="operation_id" value="">
           </div>
         </div>
         <div class="actions">
@@ -261,7 +262,7 @@ document.addEventListener('DOMContentLoaded', function(){
       numero_documento: form.num_doc?.value || null,
       nombres: form.nombres?.value || null,
       apellidos: form.apellidos?.value || null,
-      operacion: form.operation_id?.options[form.operation_id?.selectedIndex]?.text || null,
+      operacion: (function(){ const el = document.getElementById('operacionRecepcion'); return el ? (el.options[el.selectedIndex]?.text || null) : null; })(),
       tipo: form.tipo?.value || null,
       recibido: false,
       created_at: new Date().toISOString()
@@ -289,6 +290,13 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     try {
+      // Mostrar SweetAlert de carga
+      Swal.fire({
+        title: 'Procesando recepción...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
       // 1. Generar comprobante PDF
       const payloadPDF = {
         tipo: 'recepcion',
@@ -310,6 +318,7 @@ document.addEventListener('DOMContentLoaded', function(){
       const jsonPDF = await respPDF.json();
       if (!jsonPDF.success) {
         isProcessing = false;
+        Swal.close();
         Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
         return false;
       }
@@ -330,15 +339,12 @@ document.addEventListener('DOMContentLoaded', function(){
       const jsonForm = await respForm.json();
       
       if (jsonForm.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Éxito',
-          text: jsonForm.message || 'Recepción registrada correctamente'
-        }).then(() => {
-          window.location.reload();
-        });
+        Swal.close();
+        Toast.fire({ icon: 'success', title: jsonForm.message || 'Recepción registrada correctamente' });
+        setTimeout(() => window.location.reload(), 900);
       } else {
         isProcessing = false;
+        Swal.close();
         Swal.fire({
           icon: 'error',
           title: 'Error',
@@ -349,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function(){
     } catch (err) {
       isProcessing = false;
       console.error('Error:', err);
+      Swal.close();
       Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la recepción'});
       return false;
     }

@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('nombres')->nullable();
             $table->string('apellidos')->nullable();
             $table->foreignId('usuarios_id')->nullable()->constrained('usuarios_entregas')->onDelete('restrict');
-            $table->foreignId('operacion_id')->nullable()->constrained('sub_areas')->onDelete('restrict');
+            $table->foreignId('sub_area_id')->nullable()->constrained('sub_areas')->onDelete('restrict');
             $table->foreignId('recepciones_id')->nullable()->constrained('recepciones')->onDelete('restrict');
             $table->boolean('recibido')->default(false)->nullable();
             $table->timestamps();

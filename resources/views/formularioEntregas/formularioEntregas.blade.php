@@ -52,6 +52,8 @@
                             <option value="{{ $op->id }}">{{ $op->operationName }}</option>
                             @endforeach
                         </select>
+                        <!-- NUEVO: hidden para enviar operacion_id siempre -->
+                        <input type="hidden" id="operacionIdHidden" name="operacion_id" value="">
                     </div>
                     <div class="field span-2" id="field-cargo" style="display:none;">
                         <label>Cargo</label>
@@ -240,13 +242,27 @@ document.addEventListener('DOMContentLoaded', function(){
     isProcessing = true;
 
     // Recolectar datos necesarios
+    const operacionSelectEl = document.getElementById('operacionSelect');
+    const operacionHiddenEl = document.getElementById('operacionIdHidden');
+
     const registro = {
       id: null,
       tipo_documento: form.tipo_documento?.value || null,
       numero_documento: form.numberDocumento?.value || null,
       nombres: form.nombre?.value || null,
       apellidos: form.apellidos?.value || null,
-      operacion: form.operacion_id?.options[form.operacion_id?.selectedIndex]?.text || null,
+      // obtener texto de operación preferentemente desde el select; si está deshabilitado usar el hidden para encontrar la opción
+      operacion: (function(){
+        if (operacionSelectEl) {
+          const opt = operacionSelectEl.options[operacionSelectEl.selectedIndex];
+          if (opt && opt.textContent.trim()) return opt.textContent.trim();
+        }
+        if (operacionHiddenEl && operacionHiddenEl.value) {
+          const opt2 = document.getElementById('operacionSelect')?.querySelector(`option[value="${operacionHiddenEl.value}"]`);
+          return opt2 ? opt2.textContent.trim() : null;
+        }
+        return null;
+      })(),
       tipo: form.tipo?.value || null,
       recibido: false,
       created_at: new Date().toISOString()
@@ -273,7 +289,14 @@ document.addEventListener('DOMContentLoaded', function(){
     }
 
     try {
-      const payloadPDF = { tipo: 'entrega', registro, elementos, firma: firmaData };
+            // Mostrar SweetAlert de carga
+            Swal.fire({
+                title: 'Procesando entrega...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const payloadPDF = { tipo: 'entrega', registro, elementos, firma: firmaData };
       const respPDF = await fetch('{{ route('comprobantes.generar') }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
@@ -281,8 +304,9 @@ document.addEventListener('DOMContentLoaded', function(){
       });
       const jsonPDF = await respPDF.json();
       if (!jsonPDF.success) {
-        isProcessing = false;
-        Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
+                isProcessing = false;
+                Swal.close();
+                Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
         return false;
       }
 
@@ -295,27 +319,25 @@ document.addEventListener('DOMContentLoaded', function(){
         body: formData
       });
       const jsonForm = await respForm.json();
-      if (jsonForm.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Éxito',
-          text: jsonForm.message || 'Entrega registrada correctamente'
-        }).then(() => {
-          // Redirigir recargando la misma página para evitar rutas inexistentes
-          window.location.reload();
-        });
-      } else {
-        isProcessing = false;
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: jsonForm.message || 'Error al registrar la entrega'
-        });
-      }
+            if (jsonForm.success) {
+                Swal.close();
+                Toast.fire({ icon: 'success', title: jsonForm.message || 'Entrega registrada correctamente' });
+                // dar un pequeño tiempo para que el toast se muestre y luego recargar
+                setTimeout(() => window.location.reload(), 900);
+            } else {
+                isProcessing = false;
+                Swal.close();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: jsonForm.message || 'Error al registrar la entrega'
+                });
+            }
     } catch (err) {
       isProcessing = false;
-      console.error('Error:', err);
-      Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la entrega'});
+            console.error('Error:', err);
+            Swal.close();
+            Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la entrega'});
       return false;
     }
   }, true); // usar captura para ejecutar antes que otros listeners

@@ -219,7 +219,7 @@ class RecepcionController extends Controller
         $numero = $request->query('numero');
         try {
             $query = DB::table('entregas')
-                ->join('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+                ->join('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
                 ->select([
                     'entregas.id',
                     'entregas.created_at',

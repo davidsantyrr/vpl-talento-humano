@@ -64,7 +64,7 @@ class EntregaController extends Controller
             });
         }
         if ($request->filled('operacion')) {
-            $query->where('operacion_id', $request->input('operacion'));
+            $query->where('sub_area_id', $request->input('operacion'));
         }
 
         $entregas = $query->paginate(15)->withQueryString();
@@ -80,7 +80,7 @@ class EntregaController extends Controller
         // Obtener entregas
         $queryEntregas = DB::table('entregas')
             ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
-            ->leftJoin('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+            ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
             ->select([
                 'entregas.id',
                 'entregas.created_at',
@@ -135,7 +135,7 @@ class EntregaController extends Controller
         }
 
         if ($request->filled('operacion')) {
-            $queryEntregas->where('entregas.operacion_id', $request->input('operacion'));
+            $queryEntregas->where('entregas.sub_area_id', $request->input('operacion'));
             $queryRecepciones->where('recepciones.operacion_id', $request->input('operacion'));
         }
 
@@ -273,7 +273,7 @@ class EntregaController extends Controller
                 'numero_documento' => $data['numberDocumento'],
                 'nombres' => $data['nombre'],
                 'apellidos' => $data['apellidos'] ?? null,
-                'operacion_id' => $data['operacion_id'] ?? null,
+                'sub_area_id' => $data['operacion_id'] ?? null,
                 'recepciones_id' => !empty($data['recepcion_id']) ? $data['recepcion_id'] : null,
                 'recibido' => $recibidoAutomatico,
             ];
@@ -530,7 +530,7 @@ class EntregaController extends Controller
             if ($tipo === 'entrega') {
                 $registro = DB::table('entregas')
                     ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
-                    ->leftJoin('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+                    ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
                     ->select([
                         'entregas.id',
                         'entregas.created_at',
@@ -630,7 +630,7 @@ class EntregaController extends Controller
             if (in_array($tipoRegistro, ['entrega', 'todos'])) {
                 $queryEntregas = DB::table('entregas')
                     ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
-                    ->leftJoin('sub_areas', 'entregas.operacion_id', '=', 'sub_areas.id')
+                    ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
                     ->select([
                         'entregas.id',
                         'entregas.created_at',
@@ -648,7 +648,7 @@ class EntregaController extends Controller
                     ->whereBetween('entregas.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59']);
 
                 if ($operacionId) {
-                    $queryEntregas->where('entregas.operacion_id', $operacionId);
+                    $queryEntregas->where('entregas.sub_area_id', $operacionId);
                 }
 
                 $registros = $registros->merge($queryEntregas->get());
