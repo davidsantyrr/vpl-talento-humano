@@ -31,64 +31,62 @@
                     <div class="mb-3 text-muted">Usuario no encontrado en el registro, mostrando resultados por número de documento.</div>
                 @endif
                 <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
+                    <table class="table table-striped table-hover align-middle">
+                        <thead class="table-light">
                             <tr>
                                 <th>Elemento</th>
-                                <th>Última entrega</th>
-                                <th>Última recepción</th>
-                                <th>Próxima entrega</th>
-                                <th>Acciones</th>
+                                <th style="width:120px;">Cantidad</th>
+                                <th style="width:160px;">Última entrega</th>
+                                <th style="width:160px;">Próxima entrega</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($resultados as $resultado)
+                                @php
+                                    $sku = $resultado->elemento;
+                                    $period = \DB::table('periodicidad')->where('sku', $sku)->first();
+                                    $next = null;
+                                    if ($period) {
+                                        $base = $resultado->ultima_entrega ?? $resultado->ultima_recepcion ?? null;
+                                        if ($base) {
+                                            try {
+                                                $dt = \Carbon\Carbon::parse($base);
+                                                switch ($period->periodicidad) {
+                                                    case '1_mes': $dt->addMonth(); break;
+                                                    case '3_meses': $dt->addMonths(3); break;
+                                                    case '6_meses': $dt->addMonths(6); break;
+                                                    case '12_meses': $dt->addYear(); break;
+                                                    default: $dt = null; break;
+                                                }
+                                                if ($dt) $next = $dt->format('Y-m-d');
+                                            } catch (Exception $e) { $next = null; }
+                                        }
+                                    }
+                                @endphp
                                 <tr>
                                     <td>
-                                        {{-- Mostrar SKU y nombre si existe --}}
-                                        <div>{{ $resultado->elemento }}</div>
+                                        <div class="fw-semibold">{{ $resultado->elemento }}</div>
                                         @if(!empty($resultado->elemento_nombre))
-                                            <small class="text-muted">{{ $resultado->elemento_nombre }}</small>
+                                            <div class="text-muted small">{{ $resultado->elemento_nombre }}</div>
                                         @endif
                                     </td>
-                                    <td>{{ $resultado->ultima_entrega }}</td>
-                                    <td>{{ $resultado->ultima_recepcion }}</td>
-                                    <td>{{ $resultado->proxima_entrega }}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-info">descargar pdf</button>
+                                    <td class="text-center">{{ $resultado->cantidad }}</td>
+                                    <td class="text-center">{{ $resultado->ultima_entrega ?? '-' }}</td>
+                                    <td class="text-center">
+                                        @if($next)
+                                            <span class="badge bg-primary">{{ $next }}</span>
+                                        @else
+                                            @if($period)
+                                                <span class="text-muted">Sin historial</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center">No se encontraron resultados.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Elemento</th>
-                                <th>Cantidad</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($resultados as $resultado)
-                                <tr>
-                                    <td>
-                                        <div>{{ $resultado->elemento }}</div>
-                                        @if(!empty($resultado->elemento_nombre))
-                                            <small class="text-muted">{{ $resultado->elemento_nombre }}</small>
-                                        @endif
-                                    </td>
-                                    <td>{{ $resultado->cantidad }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="2" class="text-center">No se encontraron resultados.</td>
+                                    <td colspan="4" class="text-center">No se encontraron resultados.</td>
                                 </tr>
                             @endforelse
                         </tbody>

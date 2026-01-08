@@ -24,10 +24,10 @@
         <a href="{{ route('articulos.index') }}" class="nav-link">Inventario</a>
         <a href="{{ route('formularioEntregas') }}" class="nav-link">Entrega</a>
         <a href="{{ url('/recepcion') }}" class="nav-link">Recepción</a>
-        <a href="#" class="nav-link">Consulta</a>
+        <a href="{{ url('/consulta-elementos') }}" class="nav-link">Consulta</a>
         <a href="{{ route('historial.unificado') }}" class="nav-link">Histórico</a>
         <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
-        <a href="" class="nav-link">Configuración</a>
+        <a href="{{ url('/gestionPeriodicidad') }}" class="nav-link">Configuración</a>
         {{ $slot ?? '' }}
       </div>
       <div class="nav-actions">
