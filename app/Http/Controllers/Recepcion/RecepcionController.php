@@ -32,6 +32,7 @@ class RecepcionController extends Controller
             'entrega_id' => ['nullable','integer','exists:entregas,id'],
             'items' => ['required','string'],
             'firma' => ['nullable','string'],
+            'comprobante_path' => ['nullable','string'],
         ]);
 
         // Usuario en sesión desde API
@@ -155,56 +156,38 @@ class RecepcionController extends Controller
             $this->actualizarInventarioRecepcion($data['tipo'], $items, $recepcionId);
 
             DB::commit();
-
+            
             Log::info('Recepción creada exitosamente', [
                 'recepcion_id' => $recepcionId,
-                'tipo_recepcion' => $data['tipo'],
+                'tipo' => $data['tipo'],
                 'usuario_id' => !empty($data['usuarios_id']) ? $data['usuarios_id'] : null,
                 'datos_manuales' => empty($data['usuarios_id']),
                 'elementos_count' => count($items)
             ]);
-
+            
+            // Obtener recepción creada para enviar correo
+            $recepcion = DB::table('recepciones')->where('id', $recepcionId)->first();
+            
             // Disparar Job para enviar correo
             if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
                 try {
-                    $recepcion = (object)[
-                        'id' => $recepcionId,
-                        'recepcion_user' => $nombreUsuario,
-                        'tipo_documento' => $data['tipo_doc'],
-                        'numero_documento' => $data['num_doc'],
-                        'nombres' => $data['nombres'],
-                        'apellidos' => $data['apellidos'] ?? '',
-                        'tipo_recepcion' => $data['tipo'],
-                        'created_at' => now()
-                    ];
-
-                    $comprobantePath = $request->input('comprobante_path');
-
-                    Log::info('📧 Preparando envío de correo de recepción', [
-                        'recepcion_id' => $recepcionId,
-                        'email' => $emailUsuario,
-                        'comprobante_path' => $comprobantePath,
-                        'comprobante_exists' => !empty($comprobantePath)
-                    ]);
-
-                    \App\Jobs\EnviarCorreoRecepcion::dispatchSync(
+                    // Enviar correo de forma síncrona (inmediata)
+                    EnviarCorreoRecepcion::dispatchSync(
                         $recepcion,
                         $items,
                         $emailUsuario,
-                        $comprobantePath
+                        $data['comprobante_path'] ?? $request->input('comprobante_path', null)
                     );
 
-                    Log::info('✅ Correo de recepción enviado exitosamente', [
+                    Log::info('Correo de recepción enviado exitosamente', [
                         'recepcion_id' => $recepcionId,
-                        'email' => $emailUsuario,
-                        'comprobante_path' => $comprobantePath
+                        'email' => $emailUsuario
                     ]);
                 } catch (\Exception $e) {
-                    Log::error('❌ Error al enviar correo de recepción', [
+                    Log::error('Error al enviar correo de recepción', [
                         'recepcion_id' => $recepcionId,
                         'email' => $emailUsuario,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
+                        'error' => $e->getMessage()
                     ]);
                 }
             }

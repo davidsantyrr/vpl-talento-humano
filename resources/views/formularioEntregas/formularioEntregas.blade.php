@@ -239,76 +239,6 @@ document.addEventListener('DOMContentLoaded', function(){
     
     isProcessing = true;
 
-    // Validar campos requeridos
-    const camposRequeridos = [
-      { campo: form.tipo_documento, nombre: 'Tipo de documento' },
-      { campo: form.numberDocumento, nombre: 'Número de documento' },
-      { campo: form.nombre, nombre: 'Nombres' },
-      { campo: form.tipo, nombre: 'Tipo de entrega' },
-      { campo: form.operacion_id, nombre: 'Operación' }
-    ];
-
-    let errores = [];
-    camposRequeridos.forEach(item => {
-      if (!item.campo || !item.campo.value || !item.campo.value.trim()) {
-        errores.push(item.nombre);
-      }
-    });
-
-    if (errores.length > 0) {
-      isProcessing = false;
-      Swal.fire({
-        icon: 'error',
-        title: 'Campos faltantes',
-        html: `Por favor complete:<br><strong>${errores.join(', ')}</strong>`,
-        confirmButtonText: 'Entendido'
-      });
-      return false;
-    }
-
-    // Validar elementos
-    const elementos = JSON.parse(document.getElementById('elementosJson').value || '[]');
-    if (!elementos || elementos.length === 0) {
-      isProcessing = false;
-      Swal.fire({
-        icon: 'warning',
-        title: 'Sin elementos',
-        html: 'Debe agregar al menos <strong>1 elemento</strong> a la entrega.',
-        confirmButtonText: 'Entendido'
-      });
-      return false;
-    }
-
-    // Validar firma
-    const firmaField = document.getElementById('firmaField');
-    if (firmaField && !firmaField.value) {
-      const canvas = document.getElementById('firmaCanvas');
-      if (canvas) {
-        try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
-      }
-    }
-    if (!firmaField || !firmaField.value) {
-      isProcessing = false;
-      Swal.fire({ 
-        icon:'error', 
-        title:'Firma requerida', 
-        text:'Por favor, dibuje su firma antes de continuar.',
-        confirmButtonText: 'Entendido'
-      });
-      return false;
-    }
-
-    // Mostrar loading
-    Swal.fire({
-      title: 'Procesando entrega...',
-      html: 'Generando comprobante y guardando datos',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
     // Recolectar datos necesarios
     const registro = {
       id: null,
@@ -322,7 +252,22 @@ document.addEventListener('DOMContentLoaded', function(){
       created_at: new Date().toISOString()
     };
 
+    const elementos = JSON.parse(document.getElementById('elementosJson').value || '[]');
+
+    const firmaField = document.getElementById('firmaField');
     const firmaData = {};
+    if (firmaField && !firmaField.value) {
+      // Intentar capturar firma del canvas si está disponible
+      const canvas = document.getElementById('firmaCanvas');
+      if (canvas) {
+        try { firmaField.value = canvas.toDataURL('image/png'); } catch(_) {}
+      }
+    }
+    if (!firmaField || !firmaField.value) {
+      isProcessing = false;
+      Swal.fire({ icon:'error', title:'Firma requerida', text:'Por favor, dibuje su firma antes de continuar.' });
+      return false;
+    }
     if (firmaField && firmaField.value) {
       firmaData['entrega'] = firmaField.value;
     }
@@ -334,29 +279,10 @@ document.addEventListener('DOMContentLoaded', function(){
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: JSON.stringify(payloadPDF)
       });
-      
-      if (!respPDF.ok) {
-        const errorText = await respPDF.text();
-        console.error('Error respuesta PDF:', errorText);
-        isProcessing = false;
-        Swal.fire({
-          icon:'error', 
-          title:'Error', 
-          text: 'Error generando comprobante. Revise los logs.',
-          confirmButtonText: 'Entendido'
-        });
-        return false;
-      }
-      
       const jsonPDF = await respPDF.json();
       if (!jsonPDF.success) {
         isProcessing = false;
-        Swal.fire({
-          icon:'error', 
-          title:'Error', 
-          text: jsonPDF.message || 'Error generando comprobante',
-          confirmButtonText: 'Entendido'
-        });
+        Swal.fire({icon:'error', title:'Error', text: jsonPDF.message || 'Error generando comprobante'});
         return false;
       }
 
@@ -368,48 +294,28 @@ document.addEventListener('DOMContentLoaded', function(){
         headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: formData
       });
-      
-      if (!respForm.ok) {
-        const errorText = await respForm.text();
-        console.error('Error respuesta Form:', errorText);
-        isProcessing = false;
-        Swal.fire({
-          icon:'error', 
-          title:'Error', 
-          text: 'Error al registrar la entrega. Revise los logs.',
-          confirmButtonText: 'Entendido'
-        });
-        return false;
-      }
-      
       const jsonForm = await respForm.json();
       if (jsonForm.success) {
-        Swal.close();
-        Toast.fire({
+        Swal.fire({
           icon: 'success',
-          title: jsonForm.message || 'Entrega registrada correctamente'
-        });
-        setTimeout(() => {
+          title: 'Éxito',
+          text: jsonForm.message || 'Entrega registrada correctamente'
+        }).then(() => {
+          // Redirigir recargando la misma página para evitar rutas inexistentes
           window.location.reload();
-        }, 1500);
+        });
       } else {
         isProcessing = false;
         Swal.fire({
           icon: 'error',
           title: 'Error',
-          text: jsonForm.message || 'Error al registrar la entrega',
-          confirmButtonText: 'Entendido'
+          text: jsonForm.message || 'Error al registrar la entrega'
         });
       }
     } catch (err) {
       isProcessing = false;
       console.error('Error:', err);
-      Swal.fire({
-        icon:'error', 
-        title:'Error', 
-        text: 'No se pudo procesar la entrega',
-        confirmButtonText: 'Entendido'
-      });
+      Swal.fire({icon:'error', title:'Error', text: 'No se pudo procesar la entrega'});
       return false;
     }
   }, true); // usar captura para ejecutar antes que otros listeners

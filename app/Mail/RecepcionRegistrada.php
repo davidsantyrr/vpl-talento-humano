@@ -45,38 +45,75 @@ class RecepcionRegistrada extends Mailable
 
         // Adjuntar PDF si existe
         if (!empty($this->comprobantePath)) {
-            // Intentar diferentes rutas posibles
-            $posiblesPaths = [
-                storage_path('app/' . $this->comprobantePath),
-                storage_path('app/public/' . $this->comprobantePath),
-                $this->comprobantePath, // Por si ya es ruta absoluta
-            ];
-
+            // Buscar ruta real del archivo: soportar ruta absoluta, Storage::exists en discos y storage_path
             $fullPath = null;
-            foreach ($posiblesPaths as $path) {
-                if (file_exists($path)) {
-                    $fullPath = $path;
-                    break;
+
+            // 1) Si es ruta absoluta y existe
+            if (file_exists($this->comprobantePath)) {
+                $fullPath = $this->comprobantePath;
+            }
+
+            // 2) Intentar Storage (path relativo dentro de disks)
+            if (!$fullPath) {
+                try {
+                    if (Storage::exists($this->comprobantePath)) {
+                        $fullPath = Storage::path($this->comprobantePath);
+                    } elseif (Storage::disk('public')->exists($this->comprobantePath)) {
+                        $fullPath = Storage::disk('public')->path($this->comprobantePath);
+                    } elseif (Storage::disk('local')->exists($this->comprobantePath)) {
+                        $fullPath = Storage::disk('local')->path($this->comprobantePath);
+                    }
+                } catch (\Throwable $e) {
+                    // Ignorar errores de disks y continuar con otros intentos
+                    Log::debug('Storage check fallo', ['error' => $e->getMessage(), 'path' => $this->comprobantePath]);
                 }
             }
-            
+
+            // 3) Fallback a rutas dentro de storage/app y storage/app/public
+            if (!$fullPath) {
+                $candidates = [
+                    storage_path('app/' . ltrim($this->comprobantePath, '/')),
+                    storage_path('app/public/' . ltrim($this->comprobantePath, '/')),
+                ];
+                foreach ($candidates as $c) {
+                    if (file_exists($c)) {
+                        $fullPath = $c;
+                        break;
+                    }
+                }
+            }
+
             if ($fullPath && file_exists($fullPath)) {
-                $email->attach($fullPath, [
-                    'as' => 'Comprobante_Recepcion_' . ($this->recepcion->id ?? 'N/A') . '.pdf',
-                    'mime' => 'application/pdf'
-                ]);
-                
-                Log::info('✅ PDF adjuntado al correo de recepción', [
-                    'path' => $this->comprobantePath,
-                    'full_path' => $fullPath,
-                    'size' => filesize($fullPath),
-                    'exists' => true
-                ]);
+                try {
+                    $email->attach($fullPath, [
+                        'as' => 'Comprobante_Recepcion_' . ($this->recepcion->id ?? 'N/A') . '.pdf',
+                        'mime' => 'application/pdf'
+                    ]);
+
+                    Log::info('✅ PDF adjuntado al correo de recepción', [
+                        'path' => $this->comprobantePath,
+                        'full_path' => $fullPath,
+                        'size' => filesize($fullPath),
+                        'exists' => true
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::error('❌ Error adjuntando PDF al correo de recepción', [
+                        'path' => $this->comprobantePath,
+                        'full_path' => $fullPath,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             } else {
                 Log::error('❌ PDF NO encontrado para adjuntar al correo de recepción', [
                     'path' => $this->comprobantePath,
-                    'intentos' => $posiblesPaths,
-                    'exists' => false
+                    'checked' => [
+                        'absolute' => file_exists($this->comprobantePath),
+                        'storage_exists' => method_exists(Storage::class, 'exists') ? Storage::exists($this->comprobantePath) : null,
+                        'candidates' => [
+                            storage_path('app/' . ltrim($this->comprobantePath, '/')),
+                            storage_path('app/public/' . ltrim($this->comprobantePath, '/')),
+                        ]
+                    ],
                 ]);
             }
         } else {
