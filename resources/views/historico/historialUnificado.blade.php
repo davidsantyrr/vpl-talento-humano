@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Historial de Entregas y Recepciones')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/historico/historialUnificado.css') }}?v={{ time() }}">
+<link rel="stylesheet" href="{{ asset('css/historico/historialUnificado.css') }}">
 @endpush
 
 @section('content')
@@ -105,8 +105,80 @@
 		</div>
 
 		<div class="pagination-row">
-			{{ $paginatedRegistros->links() }}
+			@if(isset($paginatedRegistros) && method_exists($paginatedRegistros, 'lastPage') && $paginatedRegistros->lastPage() > 1)
+				@php
+					$start = max(1, $paginatedRegistros->currentPage() - 2);
+					$end = min($paginatedRegistros->lastPage(), $paginatedRegistros->currentPage() + 2);
+					$btn = 'display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;padding:0 12px;border-radius:999px;text-decoration:none;font-weight:600;font-size:14px;line-height:1;color:#111827;background:#f8fafc;border:1px solid rgba(0,0,0,0.08);';
+					$active = 'background:var(--primary);color:#fff;border-color:var(--primary);';
+					$disabled = 'opacity:.45;pointer-events:none;background:transparent;';
+				@endphp
+				<div class="pagination-inner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1200px;margin:0 auto;width:100%;">
+					<div class="pager-left">
+						<form method="GET" action="{{ url()->current() }}" style="display:inline-flex;align-items:center;gap:8px;">
+							<input type="hidden" name="q" value="{{ request('q') }}">
+							<input type="hidden" name="operacion" value="{{ request('operacion') }}">
+							<label style="font-weight:600;color:var(--gray-700);">Mostrar</label>
+							<select name="per_page" onchange="this.form.submit()" style="padding:8px 10px;border-radius:8px;border:1px solid var(--gray-300);background:#fff;">
+								@foreach([5,10,15,20,50] as $sz)
+									<option value="{{ $sz }}" {{ (int)request('per_page',15) === $sz ? 'selected' : '' }}>{{ $sz }}</option>
+								@endforeach
+							</select>
+							<span style="color:var(--gray-700);">por página</span>
+						</form>
+					</div>
+					<div class="pager-right">
+						<div style="display:flex;gap:8px;align-items:center;">
+							@if($paginatedRegistros->onFirstPage())
+								<span style="{{ $disabled }}{{ $btn }}">&laquo;&nbsp;Prev</span>
+							@else
+								<a style="{{ $btn }}" href="{{ $paginatedRegistros->previousPageUrl() }}">&laquo;&nbsp;Prev</a>
+							@endif
+
+							@if($start > 1)
+								<a style="{{ $btn }}" href="{{ $paginatedRegistros->url(1) }}">1</a>
+								@if($start > 2)
+									<span style="padding:0 8px;color:var(--gray-500);">&hellip;</span>
+								@endif
+							@endif
+
+							@for($i = $start; $i <= $end; $i++)
+								@if($paginatedRegistros->currentPage() == $i)
+									<span style="{{ $active }}{{ $btn }}">{{ $i }}</span>
+								@else
+									<a style="{{ $btn }}" href="{{ $paginatedRegistros->url($i) }}">{{ $i }}</a>
+								@endif
+							@endfor
+
+							@if($end < $paginatedRegistros->lastPage())
+								@if($end < $paginatedRegistros->lastPage() - 1)
+									<span style="padding:0 8px;color:var(--gray-500);">&hellip;</span>
+								@endif
+								<a style="{{ $btn }}" href="{{ $paginatedRegistros->url($paginatedRegistros->lastPage()) }}">{{ $paginatedRegistros->lastPage() }}</a>
+							@endif
+
+							@if($paginatedRegistros->hasMorePages())
+								<a style="{{ $btn }}" href="{{ $paginatedRegistros->nextPageUrl() }}">Next&nbsp;&raquo;</a>
+							@else
+								<span style="{{ $disabled }}{{ $btn }}">Next&nbsp;&raquo;</span>
+							@endif
+						</div>
+					</div>
+				</div>
+			@endif
 		</div>
+
+		<style>
+		.custom-paginacion {display:flex !important; justify-content:center !important; padding:12px 0 !important}
+		.custom-paginacion .custom-pagination-list {list-style:none !important; display:flex !important; gap:8px !important; margin:0 !important; padding:0 !important; align-items:center !important}
+		.custom-paginacion .custom-page {display:inline-flex !important}
+		.custom-paginacion .custom-link, .custom-paginacion .custom-page span.custom-link {display:inline-flex !important; align-items:center !important; justify-content:center !important; min-width:36px !important; height:36px !important; padding:0 12px !important; border-radius:999px !important; text-decoration:none !important; font-weight:600 !important; font-size:14px !important; line-height:1 !important; color:var(--gray-700) !important; background:#f8fafc !important; border:1px solid rgba(0,0,0,0.08) !important}
+		.custom-paginacion .custom-page.active span.custom-link {background:var(--primary) !important; color:#fff !important; border-color:transparent !important}
+		.custom-paginacion .custom-page.disabled .custom-link, .custom-paginacion .custom-page.disabled span.custom-link {opacity:.45 !important; pointer-events:none !important}
+		/* hide any pseudo or large icons */
+		.custom-paginacion::before, .custom-paginacion::after, .custom-paginacion .custom-pagination-list::before, .custom-paginacion .custom-pagination-list::after {content:none !important; display:none !important}
+		</style>
+
 	</main>
 </div>
 

@@ -16,7 +16,8 @@ use App\Models\ElementoXEntrega;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Jobs\EnviarCorreoEntrega;
-
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 
 class EntregaController extends Controller
 {
@@ -67,7 +68,9 @@ class EntregaController extends Controller
             $query->where('sub_area_id', $request->input('operacion'));
         }
 
-        $entregas = $query->paginate(15)->withQueryString();
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = $perPage > 0 ? $perPage : 10;
+        $entregas = $query->paginate($perPage)->withQueryString();
 
         return view('formularioEntregas.HistorialEntregas', compact('entregas','operations'));
     }
@@ -160,8 +163,9 @@ class EntregaController extends Controller
         // Ordenar por fecha descendente
         $registros = $registros->sortByDesc('created_at')->values();
 
-        // Paginar manualmente
-        $perPage = 15;
+        // Paginar manualmente (respetar per_page)
+        $perPage = (int) $request->query('per_page', 10);
+        $perPage = $perPage > 0 ? $perPage : 10;
         $currentPage = $request->input('page', 1);
         $total = $registros->count();
         $registros = $registros->slice(($currentPage - 1) * $perPage, $perPage)->values();
@@ -292,8 +296,41 @@ class EntregaController extends Controller
 
             Log::info('Datos completos a insertar en entregas:', $entregaData);
 
+            // Asegurar que tomamos comprobante_path si viene en FormData o JSON
+            $comprobantePath = $request->input('comprobante_path');
+            if (is_null($comprobantePath)) {
+                // también soportar get() por si acaso
+                $comprobantePath = $request->get('comprobante_path');
+            }
+            // Normalizar: si viene con prefijo storage/app/ o con / al inicio, quitar prefijos innecesarios
+            if (!empty($comprobantePath)) {
+                // Guardar solo la ruta relativa esperada (ej: comprobantes_entregas/archivo.pdf)
+                $comprobantePath = preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $comprobantePath);
+                $comprobantePath = ltrim($comprobantePath, '/');
+                $entregaData['comprobante_path'] = $comprobantePath;
+            }
+            Log::info('Comprobante path recibido para guardar en DB', ['comprobante_path' => $comprobantePath]);
+
             // Crear entrega con datos completos
             $entrega = Entrega::create($entregaData);
+
+            // Asegurar persistencia de comprobante_path por si mass-assignment no lo grabó.
+            try {
+                if (!empty($entregaData['comprobante_path'])) {
+                    // Verificar que la columna existe antes de intentar update
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('entregas', 'comprobante_path')) {
+                        // Usar update directo para evitar problemas de fillable
+                        \Illuminate\Support\Facades\DB::table('entregas')
+                            ->where('id', $entrega->id)
+                            ->update(['comprobante_path' => $entregaData['comprobante_path']]);
+                        Log::info('Comprobante_path actualizado en DB para entrega', ['entrega_id' => $entrega->id, 'comprobante_path' => $entregaData['comprobante_path']]);
+                    } else {
+                        Log::warning('La columna comprobante_path no existe en la tabla entregas. Ejecuta la migración.', ['entrega_id' => $entrega->id]);
+                    }
+                }
+            } catch (\Throwable $uEx) {
+                Log::error('Error actualizando comprobante_path tras crear entrega', ['error' => $uEx->getMessage(), 'entrega_id' => $entrega->id]);
+            }
 
             // save elementos if present
             $items = json_decode($data['elementos'] ?? '[]', true) ?: [];
@@ -341,6 +378,14 @@ class EntregaController extends Controller
 
             DB::commit();
 
+            // Refrescar la entidad y loguear el comprobante_path final
+            try {
+                $entrega = \App\Models\Entrega::find($entrega->id);
+                Log::info('Entrega finalizada - comprobante_path en DB', ['entrega_id' => $entrega->id, 'comprobante_path_db' => $entrega->comprobante_path ?? null]);
+            } catch (\Throwable $refreshEx) {
+                Log::warning('No se pudo refrescar entrega tras commit', ['error' => $refreshEx->getMessage()]);
+            }
+
             Log::info('Entrega creada exitosamente', [
                 'entrega_id' => $entrega->id,
                 'tipo_entrega' => $data['tipo'],
@@ -378,13 +423,15 @@ class EntregaController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Entrega registrada correctamente',
+                    'comprobante_path' => $entrega->comprobante_path ?? null,
                     'entrega_id' => $entrega->id
                 ], 200);
             }
 
             // Para peticiones normales, redirigimos de vuelta con mensaje de éxito
             return redirect()->back()
-                ->with('status', 'Entrega registrada correctamente');
+                ->with('status', 'Entrega registrada correctamente')
+                ->with('comprobante_path', $entrega->comprobante_path ?? null);
                 
         } catch (Exception $e) {
             DB::rollBack();
@@ -519,97 +566,83 @@ class EntregaController extends Controller
      */
     public function descargarPDFIndividual(Request $request)
     {
+        // Registrar acceso para debugging
+        Log::info('Hit /historial/pdf', ['query' => $request->all(), 'url' => $request->fullUrl()]);
+
+        $tipo = $request->query('tipo');
+        $id = $request->query('id');
+
+        if (!$tipo || !$id) {
+            abort(404);
+        }
+
+        if ($tipo === 'entrega') {
+            $comprobante = DB::table('entregas')->where('id', $id)->value('comprobante_path');
+        } elseif ($tipo === 'recepcion') {
+            $comprobante = DB::table('recepciones')->where('id', $id)->value('comprobante_path');
+        } else {
+            abort(404);
+        }
+
+        Log::info('Comprobante consultado desde DB', ['tipo' => $tipo, 'id' => $id, 'comprobante' => $comprobante]);
+
+        if (!$comprobante) {
+            Log::warning('Comprobante no encontrado en DB', ['tipo' => $tipo, 'id' => $id]);
+            abort(404);
+        }
+
+        // Normalizar ruta relativa esperada (ej: comprobantes_entregas/archivo.pdf)
+        $relativePath = ltrim(preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $comprobante), '/');
+        $fullPath = storage_path('app/' . $relativePath);
+
+        // Datos de diagnóstico
+        $disk = Storage::disk('local');
+        $diskExists = $disk->exists($relativePath);
+        $fileExists = file_exists($fullPath);
+        $isReadable = is_readable($fullPath);
+
+        Log::info('Diagnóstico comprobante', [
+            'relativePath' => $relativePath,
+            'fullPath' => $fullPath,
+            'diskExists' => $diskExists,
+            'fileExists' => $fileExists,
+            'isReadable' => $isReadable,
+        ]);
+
         try {
-            $tipo = $request->query('tipo'); // 'entrega' o 'recepcion'
-            $id = $request->query('id');
-
-            if (!in_array($tipo, ['entrega', 'recepcion'])) {
-                return response()->json(['error' => 'Tipo inválido'], 400);
+            if (!$diskExists || !$fileExists) {
+                Log::warning('Comprobante no encontrado en storage (diagnóstico) ', ['relativePath' => $relativePath, 'fullPath' => $fullPath]);
+                abort(404);
             }
 
-            if ($tipo === 'entrega') {
-                $registro = DB::table('entregas')
-                    ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
-                    ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
-                    ->select([
-                        'entregas.id',
-                        'entregas.created_at',
-                        'entregas.tipo_entrega as tipo',
-                        'entregas.entrega_user',
-                        DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
-                        DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
-                        DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
-                        DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
-                        'sub_areas.operationName as operacion',
-                        'entregas.recibido'
-                    ])
-                    ->where('entregas.id', $id)
-                    ->whereNull('entregas.deleted_at')
-                    ->first();
+            // Forzar nombre de descarga claro
+            $downloadName = basename($fullPath);
 
-                if (!$registro) {
-                    return response()->json(['error' => 'Entrega no encontrada'], 404);
+            // Forzar descarga usando BinaryFileResponse con Content-Disposition attachment
+            $response = new BinaryFileResponse($fullPath);
+            $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $downloadName);
+            $response->headers->set('Content-Type', 'application/octet-stream');
+            return $response;
+        } catch (\Throwable $e) {
+            Log::error('Error sirviendo comprobante', ['error' => $e->getMessage(), 'relativePath' => $relativePath ?? null, 'fullPath' => $fullPath ?? null]);
+            // Intentar servir con streamDownload como fallback forzando descarga
+            try {
+                if (isset($fullPath) && file_exists($fullPath)) {
+                    $downloadName = basename($fullPath);
+                    return response()->streamDownload(function() use ($fullPath) {
+                        readfile($fullPath);
+                    }, $downloadName, ['Content-Type' => 'application/octet-stream']);
                 }
-
-                $elementos = DB::table('elemento_x_entrega')
-                    ->where('entrega_id', $id)
-                    ->select(['sku', 'cantidad'])
-                    ->get();
-
-            } else {
-                $registro = DB::table('recepciones')
-                    ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
-                    ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
-                    ->select([
-                        'recepciones.id',
-                        'recepciones.created_at',
-                        'recepciones.tipo_recepcion as tipo',
-                        DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
-                        DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
-                        DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
-                        DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
-                        'sub_areas.operationName as operacion',
-                        'recepciones.entregado as recibido'
-                    ])
-                    ->where('recepciones.id', $id)
-                    ->whereNull('recepciones.deleted_at')
-                    ->first();
-
-                if (!$registro) {
-                    return response()->json(['error' => 'Recepción no encontrada'], 404);
-                }
-
-                $elementos = DB::table('elemento_x_recepcion')
-                    ->where('recepcion_id', $id)
-                    ->select(['sku', 'cantidad'])
-                    ->get();
+            } catch (\Throwable $e2) {
+                Log::error('Fallback streamDownload failed', ['error' => $e2->getMessage()]);
             }
 
-            $pdf = Pdf::loadView('pdf.comprobante', [
-                'tipo' => $tipo,
-                'registro' => $registro,
-                'elementos' => $elementos
-            ]);
-
-            // Formatear fecha de creación del registro
-            $fechaRegistro = \Carbon\Carbon::parse($registro->created_at)->format('Y-m-d');
-            $tipoTexto = $tipo === 'entrega' ? 'Entrega' : 'Recepcion';
-            $nombreArchivo = "{$tipoTexto}_{$fechaRegistro}_#{$id}.pdf";
-
-            return $pdf->download($nombreArchivo);
-
-        } catch (\Exception $e) {
-            Log::error('Error descargando PDF individual', [
-                'error' => $e->getMessage(),
-                'tipo' => $request->query('tipo'),
-                'id' => $request->query('id')
-            ]);
-            return response()->json(['error' => 'Error al generar PDF'], 500);
+            abort(500);
         }
     }
 
     /**
-     * API: Descargar PDF masivo en ZIP
+     * API: Descargar CSV masivo con los registros (entregas/recepciones)
      */
     public function descargarPDFMasivo(Request $request)
     {
@@ -619,12 +652,14 @@ class EntregaController extends Controller
             $fechaInicio = $request->query('fecha_inicio');
             $fechaFin = $request->query('fecha_fin');
 
-            // Validaciones
+            // Validaciones simples
             if (!in_array($tipoRegistro, ['entrega', 'recepcion', 'todos'])) {
                 return response()->json(['error' => 'Tipo de registro inválido'], 400);
             }
+            if (empty($fechaInicio) || empty($fechaFin)) {
+                return response()->json(['error' => 'Fecha inicio y fin son requeridas'], 400);
+            }
 
-            // Obtener registros
             $registros = collect();
 
             if (in_array($tipoRegistro, ['entrega', 'todos'])) {
@@ -635,14 +670,14 @@ class EntregaController extends Controller
                         'entregas.id',
                         'entregas.created_at',
                         'entregas.tipo_entrega as tipo',
-                        'entregas.entrega_user',
                         DB::raw("'entrega' as registro_tipo"),
                         DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
                         DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
                         'sub_areas.operationName as operacion',
-                        'entregas.recibido'
+                        'entregas.recibido',
+                        'entregas.comprobante_path'
                     ])
                     ->whereNull('entregas.deleted_at')
                     ->whereBetween('entregas.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59']);
@@ -662,14 +697,14 @@ class EntregaController extends Controller
                         'recepciones.id',
                         'recepciones.created_at',
                         'recepciones.tipo_recepcion as tipo',
-                        DB::raw("NULL as entrega_user"),
                         DB::raw("'recepcion' as registro_tipo"),
                         DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
                         DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
                         'sub_areas.operationName as operacion',
-                        'recepciones.entregado as recibido'
+                        'recepciones.entregado as recibido',
+                        'recepciones.comprobante_path'
                     ])
                     ->whereNull('recepciones.deleted_at')
                     ->whereBetween('recepciones.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59']);
@@ -685,17 +720,10 @@ class EntregaController extends Controller
                 return response()->json(['error' => 'No se encontraron registros'], 404);
             }
 
-            // Crear directorio temporal
-            $tempDir = storage_path('app/temp/pdf_masivo_' . time());
-            if (!file_exists($tempDir)) {
-                mkdir($tempDir, 0777, true);
-            }
-
-            // Generar PDFs
+            // Construir filas con elementos ya concatenados para la vista
+            $rows = collect();
             foreach ($registros as $registro) {
-                $tipo = $registro->registro_tipo;
-                
-                if ($tipo === 'entrega') {
+                if ($registro->registro_tipo === 'entrega') {
                     $elementos = DB::table('elemento_x_entrega')
                         ->where('entrega_id', $registro->id)
                         ->select(['sku', 'cantidad'])
@@ -707,54 +735,75 @@ class EntregaController extends Controller
                         ->get();
                 }
 
-                $pdf = Pdf::loadView('pdf.comprobante', [
-                    'tipo' => $tipo,
-                    'registro' => $registro,
-                    'elementos' => $elementos
+                $elementosTexto = $elementos->map(fn($e) => "{$e->sku}({$e->cantidad})")->implode('; ');
+
+                $rows->push([
+                    'id' => $registro->id,
+                    'registro_tipo' => $registro->registro_tipo,
+                    'tipo' => $registro->tipo,
+                    'fecha' => isset($registro->created_at) ? (string)$registro->created_at : '',
+                    'numero_documento' => $registro->numero_documento ?? '',
+                    'tipo_documento' => $registro->tipo_documento ?? '',
+                    'nombres' => $registro->nombres ?? '',
+                    'apellidos' => $registro->apellidos ?? '',
+                    'operacion' => $registro->operacion ?? '',
+                    'recibido' => (isset($registro->recibido) ? ($registro->recibido ? '1' : '0') : ''),
+                    'comprobante_path' => $registro->comprobante_path ?? '',
+                    'elementos' => $elementosTexto,
                 ]);
-
-                // Formatear nombre con fecha de creación del registro
-                $fechaRegistro = \Carbon\Carbon::parse($registro->created_at)->format('Y-m-d');
-                $tipoTexto = $tipo === 'entrega' ? 'Entrega' : 'Recepcion';
-                $nombreArchivo = "{$tipoTexto}_{$fechaRegistro}_#{$registro->id}.pdf";
-                
-                $pdf->save("{$tempDir}/{$nombreArchivo}");
             }
 
-            // Crear ZIP
-            $zipName = "registros_" . now()->format('Y-m-d_His') . ".zip";
-            $zipPath = storage_path("app/temp/{$zipName}");
-            
-            $zip = new \ZipArchive();
-            if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
-                throw new \Exception('No se pudo crear el archivo ZIP');
+            $fileName = "registros_" . now()->format('Y-m-d_His') . ".xlsx";
+
+            // Si la librería Maatwebsite/Excel está disponible, usarla; si no, caer a CSV.
+            if (class_exists('Maatwebsite\\Excel\\Facades\\Excel') && class_exists(\App\Exports\TempRegistrosExport::class)) {
+                $export = new \App\Exports\TempRegistrosExport($rows->toArray());
+                return call_user_func(['Maatwebsite\\Excel\\Facades\\Excel', 'download'], $export, $fileName);
             }
-
-            // Agregar archivos al ZIP
-            $files = glob("{$tempDir}/*.pdf");
-            foreach ($files as $file) {
-                $zip->addFile($file, basename($file));
+ 
+             // Fallback: generar CSV compatible con Excel
+            $fileNameCsv = pathinfo($fileName, PATHINFO_FILENAME) . '.csv';
+            $handle = fopen('php://temp', 'r+');
+            // Encabezados
+            fputcsv($handle, ['id','registro_tipo','tipo','fecha','numero_documento','tipo_documento','nombres','apellidos','operacion','recibido','comprobante_path','elementos']);
+            foreach ($rows as $r) {
+                fputcsv($handle, [
+                    $r['id'] ?? '',
+                    $r['registro_tipo'] ?? '',
+                    $r['tipo'] ?? '',
+                    $r['fecha'] ?? '',
+                    $r['numero_documento'] ?? '',
+                    $r['tipo_documento'] ?? '',
+                    $r['nombres'] ?? '',
+                    $r['apellidos'] ?? '',
+                    $r['operacion'] ?? '',
+                    $r['recibido'] ?? '',
+                    $r['comprobante_path'] ?? '',
+                    $r['elementos'] ?? ''
+                ]);
             }
-            $zip->close();
-
-            // Limpiar archivos temporales
-            foreach ($files as $file) {
-                unlink($file);
-            }
-            rmdir($tempDir);
-
-            return response()->download($zipPath, $zipName)->deleteFileAfterSend(true);
-
-        } catch (\Exception $e) {
-            Log::error('Error descargando PDF masivo', [
-                'error' => $e->getMessage(),
-                'params' => $request->query()
+            rewind($handle);
+            $stream = function() use ($handle) {
+                while (!feof($handle)) {
+                    echo fgets($handle);
+                }
+                fclose($handle);
+            };
+            return response()->streamDownload($stream, $fileNameCsv, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $fileNameCsv . '"',
             ]);
-            return response()->json(['error' => 'Error al generar ZIP: ' . $e->getMessage()], 500);
-        }
-    }
+ 
+         } catch (\Exception $e) {
+             Log::error('Error generando Excel masivo', [
+                 'error' => $e->getMessage(),
+                 'params' => $request->query()
+             ]);
+             return response()->json(['error' => 'Error al generar Excel: ' . $e->getMessage()], 500);
+         }
+     }
 
-    /**
+     /**
      * Actualizar inventario según tipo de entrega
      */
     private function actualizarInventarioEntrega($tipoEntrega, $items, $entregaId)
@@ -952,5 +1001,45 @@ class EntregaController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
+    }
+
+    // Nuevo endpoint para registrar hits de comprobantes desde el cliente
+    public function logComprobanteHit(Request $request)
+    {
+        $payload = $request->getContent();
+        $data = null;
+        try {
+            $data = json_decode($payload, true);
+        } catch (\Throwable $e) {
+            $data = ['raw' => $payload];
+        }
+        Log::info('Comprobante hit desde cliente', ['data' => $data, 'ip' => $request->ip()]);
+        return response()->json(['ok' => true]);
+    }
+
+    // Nuevo método: servir comprobante desde storage (forzar descarga)
+    public function downloadComprobante($dir, $file)
+    {
+        $relativePath = $dir . '/' . $file;
+        $fullPath = storage_path('app/' . $relativePath);
+
+        Log::info('Solicitud descarga comprobante (controller)', ['relativePath' => $relativePath, 'fullPath' => $fullPath, 'exists' => file_exists($fullPath)]);
+
+        try {
+            $disk = Storage::disk('local');
+            if (!$disk->exists($relativePath) || !file_exists($fullPath)) {
+                Log::warning('Comprobante no encontrado en storage (controller)', ['relativePath' => $relativePath]);
+                abort(404);
+            }
+
+            $downloadName = basename($fullPath);
+            $response = new BinaryFileResponse($fullPath);
+            $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $downloadName);
+            $response->headers->set('Content-Type', 'application/octet-stream');
+            return $response;
+        } catch (\Throwable $e) {
+            Log::error('Error descargando comprobante (controller)', ['error' => $e->getMessage(), 'relativePath' => $relativePath]);
+            abort(500);
+        }
     }
 }

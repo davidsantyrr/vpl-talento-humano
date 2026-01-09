@@ -22,6 +22,7 @@ class Entrega extends Model
         'numberDocumento',
         'elementos',
         'firma',
+        'comprobante_path',
     ];
 
     /**
@@ -39,5 +40,4 @@ class Entrega extends Model
         return $this->belongsTo(SubArea::class, 'operacion_id');
     }
 
-    
 }

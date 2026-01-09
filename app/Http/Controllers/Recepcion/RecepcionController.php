@@ -107,6 +107,15 @@ class RecepcionController extends Controller
                 $recepcionData['entregas_id'] = (int) $data['entrega_id'];
             }
 
+            // Normalizar comprobante_path si viene (guardar ruta relativa en DB)
+            $comprobantePath = $request->input('comprobante_path') ?? ($data['comprobante_path'] ?? null);
+            if (!empty($comprobantePath)) {
+                $comprobantePath = preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $comprobantePath);
+                $comprobantePath = ltrim($comprobantePath, '/');
+                $recepcionData['comprobante_path'] = $comprobantePath;
+                Log::info('Comprobante path para recepcion será guardado', ['comprobante_path' => $comprobantePath]);
+            }
+
             $recepcionId = DB::table('recepciones')->insertGetId($recepcionData);
 
             $items = json_decode($data['items'] ?? '[]', true) ?: [];

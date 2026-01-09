@@ -110,6 +110,7 @@ Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('en
 
 // Historial unificado de entregas y recepciones
 Route::get('/historial/unificado', [EntregaController::class, 'historialUnificado'])->name('historial.unificado');
+// Usar controlador para descargar PDF individual
 Route::get('/historial/pdf', [EntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
 Route::get('/historial/pdf-masivo', [EntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
 
@@ -132,11 +133,9 @@ Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProd
 Route::post('/comprobantes/generar', [PdfComprobanteController::class, 'generar'])->name('comprobantes.generar');
 
 // Ruta para descargar comprobante (archivo en storage/app/{dir}/{file})
-Route::get('/comprobantes/{dir}/{file}', function($dir, $file) {
-    $path = storage_path('app/' . $dir . '/' . $file);
-    if (!file_exists($path)) abort(404);
-    return response()->download($path);
-})->where('dir', 'comprobantes_entregas|comprobantes_recepciones')->name('comprobantes.download');
+Route::get('/comprobantes/{dir}/{file}', [EntregaController::class, 'downloadComprobante'])
+    ->where('dir', 'comprobantes_entregas|comprobantes_recepciones')
+    ->name('comprobantes.download');
 
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
@@ -149,3 +148,6 @@ Route::get('/formularioEntregas', [EntregaController::class, 'create'])
     ->name('formularioEntregas');
 
 Route::resource('gestionCorreos', gestionCorreosController::class);
+
+// Registrar endpoint POST para logging desde cliente y mapear al método del controlador
+Route::post('/_log_comprobante_hit', [EntregaController::class, 'logComprobanteHit']);
