@@ -127,14 +127,17 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
             const nombre = this.getAttribute('data-nombre');
+            const sku = this.getAttribute('data-sku');
             const periodicidad = this.getAttribute('data-periodicidad');
-            const avisoRojo = this.getAttribute('data-aviso_rojo');
-            const avisoAmarillo = this.getAttribute('data-aviso_amarillo');
-            const avisoVerde = this.getAttribute('data-aviso_verde');
+            const rojo = this.getAttribute('data-aviso_rojo');
+            const amarillo = this.getAttribute('data-aviso_amarillo');
+            const verde = this.getAttribute('data-aviso_verde');
 
             // Actualizar action del formulario
             const formEdit = document.getElementById('formEditElemento');
-            formEdit.action = `/gestiones/gestionPeriodicidad/${id}`;
+            const updateTpl = formEdit.getAttribute('data-update-template') || '';
+            formEdit.setAttribute('action', updateTpl.replace('__ID__', id));
+            formEdit.setAttribute('data-destroy', (formEdit.getAttribute('data-destroy-template') || '').replace('__ID__', id));
 
             // Seleccionar producto y actualizar SKU
             for (let i = 0; i < selectProductoEdit.options.length; i++) {
@@ -154,9 +157,9 @@ document.addEventListener('DOMContentLoaded', function() {
             periodicidadSelect.value = periodicidad;
 
             // Seleccionar avisos
-            formEdit.querySelector('[name="aviso_rojo"]').value = avisoRojo;
-            formEdit.querySelector('[name="aviso_amarillo"]').value = avisoAmarillo;
-            formEdit.querySelector('[name="aviso_verde"]').value = avisoVerde;
+            formEdit.querySelector('[name="aviso_rojo"]').value = rojo;
+            formEdit.querySelector('[name="aviso_amarillo"]').value = amarillo;
+            formEdit.querySelector('[name="aviso_verde"]').value = verde;
         });
     });
 
@@ -164,6 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. MANEJAR ELIMINACIÓN
     // =========================================
     const btnDeletes = document.querySelectorAll('.btn-delete');
+    const formDelete = document.getElementById('formDeleteElemento');
     btnDeletes.forEach(btn => {
         btn.addEventListener('click', function() {
             const id = this.getAttribute('data-id');
@@ -179,8 +183,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const formDelete = document.getElementById('formDeleteElemento');
-                    formDelete.action = `/gestiones/gestionPeriodicidad/${id}`;
+                    const destroyTpl = (formEdit && formEdit.getAttribute('data-destroy-template')) || '';
+                    const url = destroyTpl.replace('__ID__', id);
+                    formDelete.setAttribute('action', url);
                     formDelete.submit();
                 }
             });
@@ -189,3 +194,103 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('✅ periodicidad.js inicializado completamente');
 });
+
+// Inicialización de eventos para gestión de periodicidad
+(function(){
+  const editModal = document.getElementById('modalEditElemento');
+  const formEdit = document.getElementById('formEditElemento');
+  const selectProductoEdit = document.getElementById('selectProductoEdit');
+  const skuHiddenEdit = document.getElementById('skuHiddenEdit');
+  const searchProductoEdit = document.getElementById('searchProductoEdit');
+
+  const addModal = document.getElementById('modalAddElemento');
+  const selectProductoAdd = document.getElementById('selectProductoAdd');
+  const skuHiddenAdd = document.getElementById('skuHiddenAdd');
+  const searchProductoAdd = document.getElementById('searchProductoAdd');
+
+  // Helper: filtrar opciones por texto
+  function filterSelect(select, term){
+    const t = (term || '').toLowerCase();
+    Array.from(select.options).forEach(opt => {
+      if(!opt.value) return; // mantener placeholder
+      const text = (opt.text || '').toLowerCase();
+      opt.hidden = t && !text.includes(t);
+    });
+  }
+
+  // Vincular búsqueda en Add
+  if (searchProductoAdd && selectProductoAdd) {
+    searchProductoAdd.addEventListener('input', function(){
+      filterSelect(selectProductoAdd, this.value);
+    });
+    selectProductoAdd.addEventListener('change', function(){
+      const opt = this.selectedOptions[0];
+      skuHiddenAdd.value = opt ? (opt.getAttribute('data-sku') || '') : '';
+    });
+  }
+
+  // Vincular búsqueda en Edit
+  if (searchProductoEdit && selectProductoEdit) {
+    searchProductoEdit.addEventListener('input', function(){
+      filterSelect(selectProductoEdit, this.value);
+    });
+    selectProductoEdit.addEventListener('change', function(){
+      const opt = this.selectedOptions[0];
+      skuHiddenEdit.value = opt ? (opt.getAttribute('data-sku') || '') : '';
+    });
+  }
+
+  // Abrir modal de edición con datos y configurar acción dinámica
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const id = this.getAttribute('data-id');
+      const nombre = this.getAttribute('data-nombre');
+      const sku = this.getAttribute('data-sku');
+      const periodicidad = this.getAttribute('data-periodicidad');
+      const rojo = this.getAttribute('data-aviso_rojo');
+      const amarillo = this.getAttribute('data-aviso_amarillo');
+      const verde = this.getAttribute('data-aviso_verde');
+
+      // Seleccionar producto por nombre y colocar SKU oculto
+      if (selectProductoEdit) {
+        let foundIdx = 0;
+        Array.from(selectProductoEdit.options).forEach((opt, idx) => {
+          if (opt.value === nombre) {
+            foundIdx = idx;
+          }
+        });
+        selectProductoEdit.selectedIndex = foundIdx;
+        const opt = selectProductoEdit.options[foundIdx];
+        skuHiddenEdit.value = sku || (opt ? (opt.getAttribute('data-sku') || '') : '');
+      }
+
+      // Setear selects de periodicidad y avisos
+      const periodicidadSelect = editModal.querySelector('select[name="periodicidad"]');
+      const rojoSelect = editModal.querySelector('select[name="aviso_rojo"]');
+      const amarilloSelect = editModal.querySelector('select[name="aviso_amarillo"]');
+      const verdeSelect = editModal.querySelector('select[name="aviso_verde"]');
+      if (periodicidadSelect) periodicidadSelect.value = periodicidad || '1_mes';
+      if (rojoSelect) rojoSelect.value = rojo || '3';
+      if (amarilloSelect) amarilloSelect.value = amarillo || '7';
+      if (verdeSelect) verdeSelect.value = verde || '14';
+
+      // Construir acción usando templates absolutas
+      const updateTpl = formEdit.getAttribute('data-update-template') || '';
+      formEdit.setAttribute('action', updateTpl.replace('__ID__', id));
+      formEdit.setAttribute('data-destroy', (formEdit.getAttribute('data-destroy-template') || '').replace('__ID__', id));
+    });
+  });
+
+  // Eliminar elemento con formulario oculto
+  const formDelete = document.getElementById('formDeleteElemento');
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', function(){
+      const id = this.getAttribute('data-id');
+      if (!formDelete) return;
+      const destroyTpl = (formEdit && formEdit.getAttribute('data-destroy-template')) || '';
+      const url = destroyTpl.replace('__ID__', id);
+      formDelete.setAttribute('action', url);
+      formDelete.submit();
+    });
+  });
+})();

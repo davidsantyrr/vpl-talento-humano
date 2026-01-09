@@ -15,7 +15,7 @@ use App\Http\Controllers\consultaEementosUsuario\controllerConsulta;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
-use App\Http\Controllers\ComprobanteController;
+use App\Http\Controllers\PDF\ComprobanteController as PdfComprobanteController;
 
 Route::get('/', function () {
     return view('index');
@@ -58,6 +58,20 @@ Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 });
     // Gestión de periodicidades (CRUD)
     Route::resource('gestionPeriodicidad', App\Http\Controllers\gestiones\gestionPeriodicidad::class);
+    // Endpoints POST para compatibilidad con servidores que no permiten PUT/DELETE.
+    // NOTA: no agregar nombres duplicados para no chocar con las rutas del resource.
+    Route::post('/gestionPeriodicidad/{gestionPeriodicidad}', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'update']);
+    Route::post('/gestionPeriodicidad/{gestionPeriodicidad}/delete', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'destroy']);
+
+    // Compatibilidad con prefijo /gestiones (URLs generadas desde la UI)
+    // No registramos un resource aquí para evitar duplicar nombres de ruta.
+    Route::prefix('gestiones')->group(function(){
+        Route::post('/gestionPeriodicidad/{gestionPeriodicidad}', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'update']);
+        Route::post('/gestionPeriodicidad/{gestionPeriodicidad}/delete', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'destroy']);
+        // ruta save sin nombre (la ruta con nombre está registrada más abajo)
+        Route::post('/gestionPeriodicidad/save', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'saveAll']);
+    });
+
     // Ruta personalizada para guardado masivo
     Route::post('/gestionPeriodicidad/save', [App\Http\Controllers\gestiones\gestionPeriodicidad::class, 'saveAll'])
         ->name('gestionPeriodicidad.saveAll');
@@ -114,7 +128,8 @@ Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'
 // Ruta para obtener nombres de productos por SKUs
 Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
 
-Route::post('/comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
+// Usar el controlador dentro del namespace PDF
+Route::post('/comprobantes/generar', [PdfComprobanteController::class, 'generar'])->name('comprobantes.generar');
 
 // Ruta para descargar comprobante (archivo en storage/app/{dir}/{file})
 Route::get('/comprobantes/{dir}/{file}', function($dir, $file) {

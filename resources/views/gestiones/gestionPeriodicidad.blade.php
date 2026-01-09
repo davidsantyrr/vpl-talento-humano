@@ -105,7 +105,6 @@
             <!-- Hidden delete form (used to avoid nested forms) -->
             <form id="formDeleteElemento" method="POST" style="display:none">
                 @csrf
-                @method('DELETE')
             </form>
         </div>
 
@@ -236,9 +235,8 @@
                     <h5 class="modal-title" id="modalEditElementoLabel">Editar elemento</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="formEditElemento" method="POST" action="">
+                <form id="formEditElemento" method="POST" action="{{ route('gestionPeriodicidad.index') }}" data-update-template="{{ route('gestionPeriodicidad.update', ['gestionPeriodicidad' => '__ID__']) }}" data-destroy-template="{{ route('gestionPeriodicidad.destroy', ['gestionPeriodicidad' => '__ID__']) }}">
                     @csrf
-                    @method('PUT')
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nombre</label>

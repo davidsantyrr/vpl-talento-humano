@@ -4,14 +4,8 @@
     <meta charset="UTF-8">
     <title>{{ $tipo === 'entrega' ? 'Comprobante de Entrega' : 'Comprobante de Recepción' }} #{{ $registro->id }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: DejaVu Sans, sans-serif;
             font-size: 12px;
             color: #333;
             padding: 20px;
