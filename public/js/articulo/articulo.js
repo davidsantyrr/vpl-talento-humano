@@ -408,9 +408,11 @@ window.abrirModalDestruccion = function(sku, nombreProducto, bodega, ubicacion, 
     document.querySelectorAll('.btn-icon.location').forEach(function(btn){
       const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ openLocation(row); });
     });
+
     document.querySelectorAll('.btn-icon.edit').forEach(function(btn){
       const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ openEditor(row); });
     });
+
     document.querySelectorAll('.btn-icon.delete').forEach(function(btn){
       const row = btn.closest('tr'); if(!row) return; btn.addEventListener('click', function(){ 
         const sku = row.dataset.sku;
@@ -419,8 +421,41 @@ window.abrirModalDestruccion = function(sku, nombreProducto, bodega, ubicacion, 
         const estatus = row.dataset.estatus || 'disponible';
         const stock = parseInt(row.dataset.stock) || 0;
         const nombreProducto = row.querySelector('td:nth-child(2)').textContent;
-        
         abrirModalDestruccion(sku, nombreProducto, bodega, ubicacion, estatus, stock);
+      });
+    });
+
+    // Delete location forms: confirm with SweetAlert and call endpoint via fetch
+    document.querySelectorAll('.delete-location-form').forEach(function(form){
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        Swal.fire({
+          title: 'Eliminar ubicación',
+          text: '¿Seguro que deseas eliminar esta ubicación? Se borrará el registro de inventario asociado.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Eliminar',
+          cancelButtonText: 'Cancelar'
+        }).then(function(dec){
+          if (!dec.isConfirmed) return;
+          const action = form.action;
+          const fd = new FormData(form);
+          fetch(action, { method: 'POST', headers: { 'X-CSRF-TOKEN': window.ArticulosPageConfig.csrfToken, 'Accept': 'application/json' }, body: fd })
+            .then(function(res){ return res.json().catch(function(){ return { success:true }; }); })
+            .then(function(data){
+              if (data && data.success) {
+                toast('success', data.message || 'Ubicación eliminada correctamente', 2500);
+                const btn = form.querySelector('button[type=submit]');
+                const row = btn ? btn.closest('tr') : null;
+                if (row) row.remove();
+              } else {
+                toast('error', (data && data.message) ? data.message : 'Error al eliminar la ubicación', 3000);
+              }
+            }).catch(function(err){
+              console.error('Error eliminando ubicación', err);
+              toast('error', 'Error al eliminar la ubicación', 3000);
+            });
+        });
       });
     });
   }

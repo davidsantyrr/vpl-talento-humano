@@ -43,6 +43,7 @@ Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->na
 Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
 Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
 Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');
+Route::post('/articulos/ubicacion/eliminar', [App\Http\Controllers\articulos\ArticulosController::class, 'eliminarUbicacion'])->name('articulos.ubicacion.eliminar');
 
 
 

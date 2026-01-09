@@ -26,7 +26,7 @@ class ArticulosController extends Controller
             ->table('inventarios as i')
             ->leftJoin('ubicaciones as u', 'u.id', '=', 'i.ubicaciones_id')
             ->whereIn('i.sku', $skus)
-            ->select('i.sku','i.stock','i.estatus','u.ubicacion','u.bodega')
+            ->select('i.id as inventario_id','i.sku','i.stock','i.estatus','u.ubicacion','u.bodega','u.id as ubicaciones_id')
             ->orderBy('i.sku')
             ->get();
         // agrupar por SKU
@@ -73,6 +73,19 @@ class ArticulosController extends Controller
                       . '<button type="button" class="btn-icon delete" title="Destruir" aria-label="Destruir">'
                       . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
                       . '</button>';
+
+                    // Mostrar botón para eliminar la ubicación si hay más de una ubicación para el mismo estatus
+                    $sameStatusLocations = collect($rows)->filter(function($x) use ($estatus){ return ($x->estatus ?? '') === $estatus; })->pluck('ubicacion')->filter()->unique();
+                    if ($sameStatusLocations->count() > 1 && !empty($ubicacionSel) && !empty($inv->inventario_id)) {
+                        $botonesAccion .= '<form method="POST" action="' . route('articulos.ubicacion.eliminar') . '" class="delete-location-form" style="display:inline;margin-left:6px;">'
+                            . csrf_field()
+                            . '<input type="hidden" name="inventario_id" value="' . e($inv->inventario_id) . '">'
+                            . '<input type="hidden" name="per_page" value="' . e($perPage) . '">'
+                            . '<button type="submit" class="btn-icon delete-location" title="Eliminar ubicación" aria-label="Eliminar ubicación">'
+                            . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
+                            . '</button>'
+                            . '</form>';
+                    }
                 }
 
                 $rowsHtml .= '<tr data-sku="' . e($p->sku) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
@@ -411,6 +424,46 @@ class ArticulosController extends Controller
                 'success' => false,
                 'message' => 'Error al procesar la destrucción: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function eliminarUbicacion(Request $request)
+    {
+        $data = $request->validate([
+            'inventario_id' => ['required','integer'],
+            'per_page' => ['nullable','integer']
+        ]);
+
+        try {
+            $inv = DB::connection('mysql_third')->table('inventarios')->where('id', $data['inventario_id'])->first();
+            if (!$inv) {
+                return redirect()->back()->with('error', 'Inventario no encontrado');
+            }
+
+            $ubicacionesId = $inv->ubicaciones_id ?? null;
+
+            // Eliminar inventario
+            DB::connection('mysql_third')->table('inventarios')->where('id', $data['inventario_id'])->delete();
+
+            // Si la ubicación quedó sin referencias, eliminarla también
+            if (!is_null($ubicacionesId)) {
+                $count = DB::connection('mysql_third')->table('inventarios')->where('ubicaciones_id', $ubicacionesId)->count();
+                if ($count === 0) {
+                    DB::connection('mysql_third')->table('ubicaciones')->where('id', $ubicacionesId)->delete();
+                }
+            }
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => true, 'message' => 'Ubicación eliminada']);
+            }
+            return redirect()->route('articulos.index', ['per_page' => (int)($data['per_page'] ?? 20)])->with('status', 'Ubicación eliminada');
+
+        } catch (\Exception $e) {
+            Log::error('Error eliminando inventario/ubicación', ['error' => $e->getMessage(), 'inventario_id' => $data['inventario_id']]);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Error eliminando la ubicación'], 500);
+            }
+            return redirect()->back()->with('error', 'Error eliminando la ubicación');
         }
     }
 
