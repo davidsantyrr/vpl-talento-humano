@@ -16,6 +16,7 @@ use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
 use App\Http\Controllers\ComprobanteController;
+use App\Http\Controllers\ElementoXUsuario\ElementoXUsuarioController;
 
 Route::get('/', function () {
     return view('index');
@@ -87,6 +88,12 @@ Route::resource('gestionUsuario', GestionUsuarioController::class);
 
 // AJAX: buscar usuario por número de documento
 Route::get('/usuarios/buscar', [GestionUsuarioController::class, 'findByDocumento'])->name('usuarios.find');
+// Asignar producto a usuario (guardar en elemento_x_usuario)
+Route::post('/usuarios/{id}/producto-asignado', [GestionUsuarioController::class, 'asignarProducto'])->name('usuarios.asignarProducto');
+// Obtener productos asignados para un usuario (precarga en modal)
+Route::get('/usuarios/{id}/productos-asignados', [GestionUsuarioController::class, 'productosAsignados'])->name('usuarios.productosAsignados');
+// Eliminar asignación de producto a usuario
+Route::delete('/usuarios/producto-asignado/{asignacionId}', [GestionUsuarioController::class, 'eliminarProductoAsignado'])->name('usuarios.productoAsignado.eliminar');
 
 Route::post('/formularioEntregas', [EntregaController::class, 'store'])
     ->name('entregas.store');
@@ -134,3 +141,4 @@ Route::get('/formularioEntregas', [EntregaController::class, 'create'])
     ->name('formularioEntregas');
 
 Route::resource('gestionCorreos', gestionCorreosController::class);
+Route::resource('elementoXusuario', App\Http\Controllers\elementoXusuario\elementoXusuarioController::class);

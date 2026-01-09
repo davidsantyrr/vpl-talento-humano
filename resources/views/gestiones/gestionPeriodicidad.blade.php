@@ -51,31 +51,34 @@
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="periodicidad[{{ $periodicidad->id }}]" disabled>
-                                <option value="1_mes" {{ $periodicidad->periodicidad == '1_mes' ? 'selected' : '' }}>1 mes</option>
-                                <option value="3_meses" {{ $periodicidad->periodicidad == '3_meses' ? 'selected' : '' }}>3 meses</option>
-                                <option value="6_meses" {{ $periodicidad->periodicidad == '6_meses' ? 'selected' : '' }}>6 meses</option>
-                                <option value="12_meses" {{ $periodicidad->periodicidad == '12_meses' ? 'selected' : '' }}>12 meses</option>
+                                <option value="1" {{ $periodicidad->periodicidad == '1' ? 'selected' : '' }}>1 mes</option>
+                                <option value="3" {{ $periodicidad->periodicidad == '3' ? 'selected' : '' }}>3 meses</option>
+                                <option value="6" {{ $periodicidad->periodicidad == '6' ? 'selected' : '' }}>6 meses</option>
+                                <option value="12" {{ $periodicidad->periodicidad == '12' ? 'selected' : '' }}>12 meses</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="rojo[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_rojo == '3' ? 'selected' : '' }} value="3">3 días antes</option>
-                                <option {{ $periodicidad->aviso_rojo == '7' ? 'selected' : '' }} value="7">7 días antes</option>
-                                <option {{ $periodicidad->aviso_rojo == '14' ? 'selected' : '' }} value="14">14 días antes</option>
+                                <option {{ $periodicidad->aviso_rojo == '1' ? 'selected' : '' }} value="3">semana 1</option>
+                                <option {{ $periodicidad->aviso_rojo == '2' ? 'selected' : '' }} value="7">semana 2</option>
+                                <option {{ $periodicidad->aviso_rojo == '3' ? 'selected' : '' }} value="14">semna3</option>
+                                <option {{ $periodicidad->aviso_rojo == '4' ? 'selected' : '' }} value="14">semana4</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="amarillo[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_amarillo == '3' ? 'selected' : '' }} value="3">3 días antes</option>
-                                <option {{ $periodicidad->aviso_amarillo == '7' ? 'selected' : '' }} value="7">7 días antes</option>
-                                <option {{ $periodicidad->aviso_amarillo == '14' ? 'selected' : '' }} value="14">14 días antes</option>
+                                <option {{ $periodicidad->aviso_amarillo == '1' ? 'selected' : '' }} value="3">semana 1</option>
+                                <option {{ $periodicidad->aviso_amarillo == '2' ? 'selected' : '' }} value="7">semana 2</option>
+                                <option {{ $periodicidad->aviso_amarillo == '3' ? 'selected' : '' }} value="14">semana 3</option>
+                                <option {{ $periodicidad->aviso_amarillo == '4' ? 'selected' : '' }} value="14">semana 4</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="verde[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_verde == '3' ? 'selected' : '' }} value="3">3 días antes</option>
-                                <option {{ $periodicidad->aviso_verde == '7' ? 'selected' : '' }} value="7">7 días antes</option>
-                                <option {{ $periodicidad->aviso_verde == '14' ? 'selected' : '' }} value="14">14 días antes</option>
+                                <option {{ $periodicidad->aviso_verde == '1' ? 'selected' : '' }} value="3">semana 1</option>
+                                <option {{ $periodicidad->aviso_verde == '2' ? 'selected' : '' }} value="7">semana 2</option>
+                                <option {{ $periodicidad->aviso_verde == '3' ? 'selected' : '' }} value="14">semana 3</option>
+                                <option {{ $periodicidad->aviso_verde == '4' ? 'selected' : '' }} value="14">semana 4</option>
                             </select>
                         </td>
                         <td class="text-nowrap">

@@ -43,5 +43,9 @@ class Usuarios extends Model
     {
         return $this->belongsTo(Cargo::class, 'cargo_id');
     }
+    public function elementos()
+    {
+        return $this->hasMany(ElementosXUsuarios::class, 'usuarios_entregas_id');
+    }
 
 }
