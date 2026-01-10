@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\Models\Usuarios;
 use App\Models\SubArea;
 use App\Models\Area;
+use App\Models\Producto;
+use App\Models\ElementoXUsuario;
 
 class gestionUsuarioController extends Controller
 {
@@ -15,11 +17,13 @@ class gestionUsuarioController extends Controller
         $usuarios   = Usuarios::orderBy('id', 'desc')->get();
         $operations = SubArea::orderBy('operationName')->get();
         $areas      = Area::orderBy('nombre_area')->get();
+        $productos  = Producto::orderBy('name_produc')->get(['sku','name_produc']);
 
         return view('gestiones.gestionUsuarios', compact(
         'usuarios',
         'operations',
-        'areas'
+        'areas',
+        'productos'
     ));
 }
 
@@ -48,6 +52,74 @@ class gestionUsuarioController extends Controller
         ]);
 
         return redirect()->route('gestionUsuario.index')->with('success', 'Usuario creado exitosamente.');
+    }
+
+    /**
+     * Asignar un producto (SKU) a un usuario.
+     * Persiste en tabla elemento_x_usuario.
+     */
+    public function asignarProducto(Request $request, $id)
+    {
+        $request->validate([
+            'sku' => 'required|string',
+        ]);
+
+        $usuario = Usuarios::findOrFail($id);
+        $producto = Producto::where('sku', $request->input('sku'))->firstOrFail();
+
+        // Evitar duplicados: mismo usuario + SKU
+        $existe = ElementoXUsuario::where('usuarios_entregas_id', $usuario->id)
+            ->where('sku', $producto->sku)
+            ->exists();
+
+        if (!$existe) {
+            $registro = ElementoXUsuario::create([
+                'usuarios_entregas_id' => $usuario->id,
+                'sku' => $producto->sku,
+                'name_produc' => $producto->name_produc,
+            ]);
+        } else {
+            $registro = ElementoXUsuario::where('usuarios_entregas_id', $usuario->id)
+                ->where('sku', $producto->sku)
+                ->first();
+        }
+
+        return response()->json([
+            'ok' => true,
+            'message' => $existe ? 'Ya estaba asignado' : 'Producto asignado',
+            'data' => [
+                'usuario_id' => $usuario->id,
+                'sku' => $producto->sku,
+                'name_produc' => $producto->name_produc,
+                'id' => $registro->id,
+            ],
+        ]);
+    }
+
+    /**
+     * Listar productos asignados a un usuario (para precargar en modal)
+     */
+    public function productosAsignados($id)
+    {
+        $usuario = Usuarios::findOrFail($id);
+        $items = ElementoXUsuario::where('usuarios_entregas_id', $usuario->id)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'sku', 'name_produc']);
+
+        return response()->json([
+            'ok' => true,
+            'data' => $items,
+        ]);
+    }
+
+    /**
+     * Eliminar asignación de producto a usuario
+     */
+    public function eliminarProductoAsignado($asignacionId)
+    {
+        $registro = ElementoXUsuario::findOrFail($asignacionId);
+        $registro->delete();
+        return response()->json(['ok' => true]);
     }
 
     public function edit($id)

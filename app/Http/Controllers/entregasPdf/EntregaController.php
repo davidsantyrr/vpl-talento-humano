@@ -60,8 +60,8 @@ class EntregaController extends Controller
             $q = $request->input('q');
             $query->whereHas('usuario', function($uq) use ($q){
                 $uq->where('nombres', 'like', "%{$q}%")
-                   ->orWhere('apellidos', 'like', "%{$q}%")
-                   ->orWhere('numero_documento', 'like', "%{$q}%");
+                ->orWhere('apellidos', 'like', "%{$q}%")
+                ->orWhere('numero_documento', 'like', "%{$q}%");
             });
         }
         if ($request->filled('operacion')) {
@@ -121,19 +121,19 @@ class EntregaController extends Controller
             $q = $request->input('q');
             $queryEntregas->where(function($query) use ($q) {
                 $query->where('entregas.numero_documento', 'like', "%{$q}%")
-                      ->orWhere('entregas.nombres', 'like', "%{$q}%")
-                      ->orWhere('entregas.apellidos', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.nombres', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.apellidos', 'like', "%{$q}%");
+                    ->orWhere('entregas.nombres', 'like', "%{$q}%")
+                    ->orWhere('entregas.apellidos', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.nombres', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.apellidos', 'like', "%{$q}%");
             });
             $queryRecepciones->where(function($query) use ($q) {
                 $query->where('recepciones.numero_documento', 'like', "%{$q}%")
-                      ->orWhere('recepciones.nombres', 'like', "%{$q}%")
-                      ->orWhere('recepciones.apellidos', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.nombres', 'like', "%{$q}%")
-                      ->orWhere('usuarios_entregas.apellidos', 'like', "%{$q}%");
+                    ->orWhere('recepciones.nombres', 'like', "%{$q}%")
+                    ->orWhere('recepciones.apellidos', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.nombres', 'like', "%{$q}%")
+                    ->orWhere('usuarios_entregas.apellidos', 'like', "%{$q}%");
             });
         }
 

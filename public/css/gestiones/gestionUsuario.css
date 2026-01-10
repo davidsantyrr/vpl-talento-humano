@@ -147,16 +147,15 @@ body{
 }
 
 /* Acciones */
-td.acciones {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    vertical-align: middle;
+.acciones {
+	display: inline-flex;
+	justify-content: center;
+	align-items: center;
+	gap: 8px;
 }
-td.acciones form {
-    margin: 0;
-    display: inline-flex;
+.acciones form {
+	margin: 0;
+	display: inline-flex;
 }
 
 /* ===============================
@@ -186,6 +185,14 @@ td.acciones form {
 .modal-footer{
 	background:#f5f7fb;
 	border-top:1px solid #e1e5ee;
+}
+
+/* Tables inside modal: no horizontal scroll, adapt width */
+.modal .table{
+	min-width:auto;
+}
+.modal .table-responsive{
+	overflow-x:visible;
 }
 
 /* ===============================
