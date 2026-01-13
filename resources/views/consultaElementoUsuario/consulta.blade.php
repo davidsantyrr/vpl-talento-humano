@@ -19,7 +19,7 @@
                         <div class="col-md-4 d-flex align-items-end">
                             <button type="submit" class="btn btn-primary me-2">Buscar</button>
                             <a href="{{ route('consultaElementoUsuario.consulta') }}" class="btn btn-secondary">Limpiar</a>
-                            <a href="{{ route('') }}" class="btn btn-secondary">elementos a entregar</a>
+                            <a href="#" class="btn btn-secondary">elementos a entregar</a>
                         </div>
                     </div>
                 </form>

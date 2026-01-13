@@ -17,6 +17,7 @@ use App\Http\Controllers\ElementoXcargo\CargoProductosController;
 use App\Http\Controllers\Recepcion\RecepcionController;
 use App\Http\Controllers\ComprobanteController;
 use App\Http\Controllers\ElementoXUsuario\ElementoXUsuarioController;
+use App\Http\Controllers\elementoPeriodicidad\elementoPeriodicidadController as ElementoPeriodicidadController;
 use App\Http\Controllers\PDF\ComprobanteController as PdfComprobanteController;
 
 Route::get('/', function () {
@@ -162,3 +163,10 @@ Route::resource('elementoXusuario', App\Http\Controllers\elementoXusuario\elemen
 
 // Registrar endpoint POST para logging desde cliente y mapear al método del controlador
 Route::post('/_log_comprobante_hit', [EntregaController::class, 'logComprobanteHit']);
+
+// Rutas para calendario de entregas periódicas (protegidas por middleware VplAuth)
+Route::middleware([VplAuth::class])->group(function(){
+    Route::get('/elemento-periodicidad', [ElementoPeriodicidadController::class, 'index'])->name('elementoPeriodicidad.index');
+    Route::get('/elemento-periodicidad/usuarios/{sku}', [ElementoPeriodicidadController::class, 'usuariosForSku'])->name('elementoPeriodicidad.usuarios');
+    Route::get('/elemento-periodicidad/productos-por-semana', [ElementoPeriodicidadController::class, 'productosPorSemana'])->name('elementoPeriodicidad.productosPorSemana');
+});

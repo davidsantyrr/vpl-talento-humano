@@ -1,0 +1,37 @@
+/* estilos para el calendario de entregas periódicas */
+.container-fluid h1 {
+    margin-bottom: 0.75rem;
+}
+.card-header .badge {
+    font-size: 0.9rem;
+}
+.sku-row .sku-name {
+    font-weight: 600;
+}
+.sku-count-btn {
+    min-width: 44px;
+}
+.sku-row .small.text-muted {
+    display: block;
+}
+@media (max-width: 576px) {
+    .col-12.col-md-6.col-lg-3 {
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* estilos adicionales para calendario anual */
+.month-card .card-header .fw-semibold {
+    font-size: 1rem;
+}
+.week-box {
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.week-box .badge {
+    font-weight: 600;
+}
+.month-card .card-body { padding: .75rem; }
+.list-group .list-group-item .fw-semibold { font-weight: 600; }
