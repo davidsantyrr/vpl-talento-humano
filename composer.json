@@ -13,11 +13,7 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-<<<<<<< HEAD
         "maatwebsite/excel": "^3.1"
-=======
-        "maatwebsite/excel": "^1.1"
->>>>>>> a3aaf98ee063cc707537321d36e0e4c2f917e1b4
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
