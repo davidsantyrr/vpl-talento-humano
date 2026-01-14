@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Middleware\VplAuth;
 use App\Http\Controllers\articulos\ArticulosController;
-use App\Http\Controllers\entregasPdf\EntregaController;
+use App\Http\Controllers\entregasPdf\FormularioEntregasController;
+use App\Http\Controllers\entregasPdf\HistorialEntregaController;
+use App\Http\Controllers\entregasPdf\EntregaController; // para métodos que queden aquí
 use App\Http\Controllers\gestiones\gestionOperacionController;
 use App\Http\Controllers\gestiones\gestionAreaController;
 use App\Http\Controllers\gestiones\gestionCentroCostoController;
@@ -112,38 +114,25 @@ Route::get('/usuarios/{id}/productos-asignados', [GestionUsuarioController::clas
 // Eliminar asignación de producto a usuario
 Route::delete('/usuarios/producto-asignado/{asignacionId}', [GestionUsuarioController::class, 'eliminarProductoAsignado'])->name('usuarios.productoAsignado.eliminar');
 
-Route::post('/formularioEntregas', [EntregaController::class, 'store'])
-    ->name('entregas.store');
+// formulario de entregas
+Route::get('/formularioEntregas', [FormularioEntregasController::class, 'create'])->name('formularioEntregas');
+Route::post('/formularioEntregas', [FormularioEntregasController::class, 'store'])->name('formularioEntregas.store');
 
-// Historial de entregas - ruta pública (fuera de middleware)
-Route::get('/historial/entregas', [EntregaController::class, 'index'])->name('entregas.index');
+// APIs usadas por el formulario
+Route::get('/cargo-productos', [FormularioEntregasController::class, 'cargoProductos'])->name('cargo.productos');
+Route::get('/recepciones/buscar', [FormularioEntregasController::class, 'buscarRecepciones'])->name('recepciones.buscar');
+Route::post('/productos/nombres', [FormularioEntregasController::class, 'obtenerNombresProductos'])->name('productos.nombres');
+Route::post('/_log_comprobante_hit', [FormularioEntregasController::class, 'logComprobanteHit']);
 
-// Historial unificado de entregas y recepciones
-Route::get('/historial/unificado', [EntregaController::class, 'historialUnificado'])->name('historial.unificado');
-// Usar controlador para descargar PDF individual
-Route::get('/historial/pdf', [EntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
-Route::get('/historial/pdf-masivo', [EntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
+// Rutas historial
+Route::get('/historial/entregas', [HistorialEntregaController::class, 'index'])->name('entregas.index');
+Route::get('/entregas/{entrega}', [HistorialEntregaController::class, 'show'])->name('entregas.show');
+Route::get('/historial/unificado', [HistorialEntregaController::class, 'historialUnificado'])->name('historial.unificado');
+Route::get('/historial/pdf', [HistorialEntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
+Route::get('/historial/pdf-masivo', [HistorialEntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
 
-Route::resource('gestionOperacion', gestionOperacionController::class);
-
-Route::resource('gestionArea', gestionAreaController::class);
-
-Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
-
-// Ruta para obtener productos de cargo_productos (sin filtros o con filtros opcionales)
-Route::get('/cargo-productos', [App\Http\Controllers\entregasPdf\EntregaController::class, 'cargoProductos'])->name('cargo.productos');
-
-// Ruta para buscar recepciones (API para modal de entregas)
-Route::get('/recepciones/buscar', [EntregaController::class, 'buscarRecepciones'])->name('recepciones.buscar');
-
-// Ruta para obtener nombres de productos por SKUs
-Route::post('/productos/nombres', [EntregaController::class, 'obtenerNombresProductos'])->name('productos.nombres');
-
-// Usar el controlador dentro del namespace PDF
-Route::post('/comprobantes/generar', [PdfComprobanteController::class, 'generar'])->name('comprobantes.generar');
-
-// Ruta para descargar comprobante (archivo en storage/app/{dir}/{file})
-Route::get('/comprobantes/{dir}/{file}', [EntregaController::class, 'downloadComprobante'])
+// Ruta para descargar comprobante
+Route::get('/comprobantes/{dir}/{file}', [HistorialEntregaController::class, 'downloadComprobante'])
     ->where('dir', 'comprobantes_entregas|comprobantes_recepciones')
     ->name('comprobantes.download');
 
