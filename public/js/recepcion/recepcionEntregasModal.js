@@ -66,7 +66,9 @@
             const entregas = await resp.json();
             
             if (!Array.isArray(entregas) || entregas.length === 0) {
-                entregasTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron entregas de préstamo para este documento</td></tr>';
+                if (entregasTbody) {
+                    entregasTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron entregas de préstamo para este documento</td></tr>';
+                }
                 Toast.fire({
                     icon: 'info',
                     title: 'No se encontraron entregas'
@@ -75,25 +77,27 @@
             }
 
             // Renderizar entregas encontradas
-            entregasTbody.innerHTML = entregas.map(e => {
-                const elementosTexto = e.elementos && e.elementos.length > 0
-                    ? e.elementos.map(el => `${el.sku} (${el.cantidad})`).join(', ')
-                    : 'Sin elementos';
-                
-                return `
-                <tr>
-                    <td>${escapeHtml(new Date(e.fecha).toLocaleDateString())}</td>
-                    <td>${escapeHtml(e.nombres)} ${escapeHtml(e.apellidos)}</td>
-                    <td>${escapeHtml(e.numero_documento)}</td>
-                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(elementosTexto)}">${escapeHtml(elementosTexto)}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm primary" onclick='seleccionarEntregaPrestamo(${JSON.stringify(e).replace(/'/g, "&apos;")})'>
-                            Seleccionar
-                        </button>
-                    </td>
-                </tr>
-                `;
-            }).join('');
+            if (entregasTbody) {
+                entregasTbody.innerHTML = entregas.map(e => {
+                    const elementosTexto = e.elementos && e.elementos.length > 0
+                        ? e.elementos.map(el => `${el.sku} (${el.cantidad})`).join(', ')
+                        : 'Sin elementos';
+                    
+                    return `
+                    <tr>
+                        <td>${escapeHtml(new Date(e.fecha).toLocaleDateString())}</td>
+                        <td>${escapeHtml(e.nombres)} ${escapeHtml(e.apellidos)}</td>
+                        <td>${escapeHtml(e.numero_documento)}</td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(elementosTexto)}">${escapeHtml(elementosTexto)}</td>
+                        <td>
+                            <button type="button" class="btn btn-sm primary" onclick='seleccionarEntregaPrestamo(${JSON.stringify(e).replace(/'/g, "&apos;")})'>
+                                Seleccionar
+                            </button>
+                        </td>
+                    </tr>
+                    `;
+                }).join('');
+            }
 
             Toast.fire({
                 icon: 'success',
@@ -107,6 +111,25 @@
             });
         }
     };
+
+    // Renderiza la tabla de items y asigna eventos para quitar
+    function renderItemsTable(){
+        if (!tableBody) return;
+        tableBody.innerHTML = items.map((it, idx) =>
+            `<tr data-idx="${idx}"><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td><td><button type="button" class="btn btn-sm btn-danger" data-idx="${idx}">Quitar</button></td></tr>`
+        ).join('');
+        Array.from(tableBody.querySelectorAll('button[data-idx]')).forEach(btn => {
+            btn.addEventListener('click', () => {
+                const i = Number(btn.dataset.idx);
+                if (!Number.isNaN(i) && i >= 0) {
+                    items.splice(i, 1);
+                    if (itemsField) itemsField.value = JSON.stringify(items);
+                    renderItemsTable();
+                }
+            });
+        });
+        if (itemsField) itemsField.value = JSON.stringify(items);
+    }
 
     // Seleccionar entrega de préstamo
     window.seleccionarEntregaPrestamo = async function(entrega){
@@ -124,20 +147,17 @@
         if (numeroInput) numeroInput.value = entrega.numero_documento || '';
         if (tipoDocumentoSelect) tipoDocumentoSelect.value = entrega.tipo_documento || 'CC';
 
-        // Buscar y cargar datos completos del usuario
+        // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
                 const fetchUrl = `${window.location.origin}/usuarios/buscar?numero=${encodeURIComponent(entrega.numero_documento)}`;
                 const respUsuario = await fetch(fetchUrl);
-                
                 if (respUsuario.ok) {
                     const dataUsuario = await respUsuario.json();
                     if (operacionSelect && dataUsuario.operacion_id) {
-                            operacionSelect.value = dataUsuario.operacion_id;
-                            const opHidden = document.getElementById('operacionIdHidden');
-                            if (opHidden) opHidden.value = dataUsuario.operacion_id;
-                        }
-                        }
+                        operacionSelect.value = dataUsuario.operacion_id;
+                        const opHidden = document.getElementById('operacionIdHidden');
+                        if (opHidden) opHidden.value = dataUsuario.operacion_id;
                     }
                 }
             } catch (err) {
@@ -175,38 +195,22 @@
                 });
             }
 
-            // Cargar elementos de la entrega
             items = entrega.elementos.map(e => ({
                 sku: e.sku,
                 name: productosMap[e.sku] || e.sku,
-                cantidad: parseInt(e.cantidad) || 1
+                cantidad: Math.max(1, parseInt(e.cantidad) || 1)
             }));
         } catch (err) {
             console.error('Error obteniendo nombres de productos:', err);
             items = entrega.elementos.map(e => ({
                 sku: e.sku,
                 name: e.sku,
-                cantidad: parseInt(e.cantidad) || 1
+                cantidad: Math.max(1, parseInt(e.cantidad) || 1)
             }));
         }
         
-        // Actualizar tabla
-        if (tableBody) {
-            tableBody.innerHTML = items.map((it, idx) => 
-                `<tr data-idx="${idx}"><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td><td><button type="button" class="btn btn-sm btn-danger" data-idx="${idx}">Quitar</button></td></tr>`
-            ).join('');
-            
-            Array.from(tableBody.querySelectorAll('button[data-idx]')).forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const i = Number(btn.dataset.idx);
-                    items.splice(i, 1);
-                    if (itemsField) itemsField.value = JSON.stringify(items);
-                    window.seleccionarEntregaPrestamo(entrega);
-                });
-            });
-        }
-        
-        if (itemsField) itemsField.value = JSON.stringify(items);
+        // Actualizar tabla y campo oculto sin reiniciar selección
+        renderItemsTable();
         
         cerrarModalEntregas();
         

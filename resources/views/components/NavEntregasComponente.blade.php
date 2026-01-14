@@ -26,8 +26,8 @@
         <a href="{{ url('/recepcion') }}" class="nav-link">Recepción</a>
         <a href="{{ url('/consulta-elementos') }}" class="nav-link">Consulta</a>
         <a href="{{ route('historial.unificado') }}" class="nav-link">Histórico</a>
-        <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Elementoxcargo</a>
-        <a href="{{ url('/gestionPeriodicidad') }}" class="nav-link">Configuración</a>
+        <a href="{{ route('elementoxcargo.productos') }}" class="nav-link">Asignar elemento</a>
+        <a href="{{ url('/gestionPeriodicidad') }}" class="nav-link">Periodicidad elemento</a>
         {{ $slot ?? '' }}
       </div>
       <div class="nav-actions">

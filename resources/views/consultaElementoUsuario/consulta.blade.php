@@ -2,6 +2,16 @@
 @section('title', 'Consulta de Elementos por Usuario')
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/consultaElementoUsuario/consultaElementoUsuario.css') }}">
+<style>
+/* botones compactos con misma altura */
+.compact-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 36px;
+	padding: .25rem .6rem;
+}
+</style>
 @endpush
 
 @section('content')
@@ -17,9 +27,9 @@
                             <input type="text" name="usuario" id="usuario" class="form-control" value="{{ request('usuario') }}">
                         </div>
                         <div class="col-md-4 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary me-2">Buscar</button>
-                            <a href="{{ route('consultaElementoUsuario.consulta') }}" class="btn btn-secondary">Limpiar</a>
-                            <a href="#" class="btn btn-secondary">elementos a entregar</a>
+                            <button type="submit" class="btn btn-primary btn-sm compact-btn me-2">Buscar</button>
+                            <a href="{{ route('consultaElementoUsuario.consulta') }}" class="btn btn-primary btn-sm compact-btn me-2">Limpiar</a>
+                            <a href="{{ route('elementoPeriodicidad.index') }}" class="btn btn-primary btn-sm compact-btn me-2">elementos a entregar</a>
                         </div>
                     </div>
                 </form>
@@ -94,3 +104,6 @@
                     </table>
                 </div>
             </div>
+        </div>
+    </div>
+@endsection

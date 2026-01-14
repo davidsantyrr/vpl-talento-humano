@@ -5,7 +5,6 @@
 @endpush
 @section('content')
 <x-NavEntregasComponente/>
-
 <div class="gestion-card">
 
     {{-- HEADER --}}
@@ -51,34 +50,31 @@
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="periodicidad[{{ $periodicidad->id }}]" disabled>
-                                <option value="1" {{ $periodicidad->periodicidad == '1' ? 'selected' : '' }}>1 mes</option>
-                                <option value="3" {{ $periodicidad->periodicidad == '3' ? 'selected' : '' }}>3 meses</option>
-                                <option value="6" {{ $periodicidad->periodicidad == '6' ? 'selected' : '' }}>6 meses</option>
-                                <option value="12" {{ $periodicidad->periodicidad == '12' ? 'selected' : '' }}>12 meses</option>
+                                <option value="1_mes" {{ $periodicidad->periodicidad == '1_mes' ? 'selected' : '' }}>1 mes</option>
+                                <option value="3_meses" {{ $periodicidad->periodicidad == '3_meses' ? 'selected' : '' }}>3 meses</option>
+                                <option value="6_meses" {{ $periodicidad->periodicidad == '6_meses' ? 'selected' : '' }}>6 meses</option>
+                                <option value="12_meses" {{ $periodicidad->periodicidad == '12_meses' ? 'selected' : '' }}>12 meses</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="rojo[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_rojo == '1' ? 'selected' : '' }} value="3">semana 1</option>
-                                <option {{ $periodicidad->aviso_rojo == '2' ? 'selected' : '' }} value="7">semana 2</option>
-                                <option {{ $periodicidad->aviso_rojo == '3' ? 'selected' : '' }} value="14">semna3</option>
-                                <option {{ $periodicidad->aviso_rojo == '4' ? 'selected' : '' }} value="14">semana4</option>
+                                <option value="3"  {{ (string)$periodicidad->aviso_rojo === '3' ? 'selected' : '' }}>3 días antes</option>
+                                <option value="7"  {{ (string)$periodicidad->aviso_rojo === '7' ? 'selected' : '' }}>7 días antes</option>
+                                <option value="14" {{ (string)$periodicidad->aviso_rojo === '14' ? 'selected' : '' }}>14 días antes</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="amarillo[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_amarillo == '1' ? 'selected' : '' }} value="3">semana 1</option>
-                                <option {{ $periodicidad->aviso_amarillo == '2' ? 'selected' : '' }} value="7">semana 2</option>
-                                <option {{ $periodicidad->aviso_amarillo == '3' ? 'selected' : '' }} value="14">semana 3</option>
-                                <option {{ $periodicidad->aviso_amarillo == '4' ? 'selected' : '' }} value="14">semana 4</option>
+                                <option value="3"  {{ (string)$periodicidad->aviso_amarillo === '3' ? 'selected' : '' }}>3 días antes</option>
+                                <option value="7"  {{ (string)$periodicidad->aviso_amarillo === '7' ? 'selected' : '' }}>7 días antes</option>
+                                <option value="14" {{ (string)$periodicidad->aviso_amarillo === '14' ? 'selected' : '' }}>14 días antes</option>
                             </select>
                         </td>
                         <td>
                             <select class="form-select form-select-sm" name="verde[{{ $periodicidad->id }}]" disabled>
-                                <option {{ $periodicidad->aviso_verde == '1' ? 'selected' : '' }} value="3">semana 1</option>
-                                <option {{ $periodicidad->aviso_verde == '2' ? 'selected' : '' }} value="7">semana 2</option>
-                                <option {{ $periodicidad->aviso_verde == '3' ? 'selected' : '' }} value="14">semana 3</option>
-                                <option {{ $periodicidad->aviso_verde == '4' ? 'selected' : '' }} value="14">semana 4</option>
+                                <option value="3"  {{ (string)$periodicidad->aviso_verde === '3' ? 'selected' : '' }}>3 días antes</option>
+                                <option value="7"  {{ (string)$periodicidad->aviso_verde === '7' ? 'selected' : '' }}>7 días antes</option>
+                                <option value="14" {{ (string)$periodicidad->aviso_verde === '14' ? 'selected' : '' }}>14 días antes</option>
                             </select>
                         </td>
                         <td class="text-nowrap">
@@ -98,7 +94,7 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="5" class="text-center text-muted">No se encontraron elementos.</td>
+                        <td colspan="6" class="text-center text-muted">No se encontraron elementos.</td>
                     </tr>
                     @endforelse
                 </tbody>
@@ -130,172 +126,157 @@
         </div>
     </div>
 
-    </div>
+</div>
 
 @endsection
 
-    {{-- Modal para agregar nuevo elemento --}}
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        (function(){
-            @if(session('success'))
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: @json(session('success')),
-                    showConfirmButton: false,
-                    timer: 3000,
-                });
-            @endif
-            @if(session('error'))
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'error',
-                    title: @json(session('error')),
-                    showConfirmButton: false,
-                    timer: 5000,
-                });
-            @endif
-        })();
-    </script>
-    <div class="modal fade" id="modalAddElemento" tabindex="-1" aria-labelledby="modalAddElementoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalAddElementoLabel">Agregar elemento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form method="POST" action="{{ route('gestionPeriodicidad.store') }}">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nombre</label>
-                            <input type="text" id="searchProductoAdd" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
-                            <select name="nombre" id="selectProductoAdd" class="form-select" required size="6">
-                                <option value="">-- Seleccione un producto --</option>
-                                @foreach($productos as $p)
-                                    <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
-                                @endforeach
-                            </select>
-                            <input type="hidden" name="sku" id="skuHiddenAdd" value="">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Periodicidad</label>
-                            <select name="periodicidad" class="form-select">
-                                <option value="1_mes">1 mes</option>
-                                <option value="3_meses">3 meses</option>
-                                <option value="6_meses">6 meses</option>
-                                <option value="12_meses">12 meses</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Rojo</label>
-                                <select name="aviso_rojo" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Amarillo</label>
-                                <select name="aviso_amarillo" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Verde</label>
-                                <select name="aviso_verde" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" id="btnGuardarAdd">Guardar</button>
-                    </div>
-                </form>
+{{-- Toasts --}}
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function(){
+        @if(session('success'))
+        Swal.fire({ toast:true, position:'top-end', icon:'success', title:@json(session('success')), showConfirmButton:false, timer:3000 });
+        @endif
+        @if(session('error'))
+        Swal.fire({ toast:true, position:'top-end', icon:'error', title:@json(session('error')), showConfirmButton:false, timer:5000 });
+        @endif
+    })();
+</script>
+<div class="modal fade" id="modalAddElemento" tabindex="-1" aria-labelledby="modalAddElementoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAddElementoLabel">Agregar elemento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form method="POST" action="{{ route('gestionPeriodicidad.store') }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="searchProductoAdd" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
+                        <select name="nombre" id="selectProductoAdd" class="form-select" required size="6">
+                            <option value="">-- Seleccione un producto --</option>
+                            @foreach($productos as $p)
+                                <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="sku" id="skuHiddenAdd" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Periodicidad</label>
+                        <select name="periodicidad" class="form-select">
+                            <option value="1_mes">1 mes</option>
+                            <option value="3_meses">3 meses</option>
+                            <option value="6_meses">6 meses</option>
+                            <option value="12_meses">12 meses</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Rojo</label>
+                            <select name="aviso_rojo" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Amarillo</label>
+                            <select name="aviso_amarillo" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Verde</label>
+                            <select name="aviso_verde" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btnGuardarAdd">Guardar</button>
+                </div>
+            </form>
         </div>
     </div>
-    
-    @endpush
+</div>
 
-    <!-- Edit Modal -->
-    @push('scripts')
-    <div class="modal fade" id="modalEditElemento" tabindex="-1" aria-labelledby="modalEditElementoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalEditElementoLabel">Editar elemento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="formEditElemento" method="POST" action="{{ route('gestionPeriodicidad.index') }}" data-update-template="{{ route('gestionPeriodicidad.update', ['gestionPeriodicidad' => '__ID__']) }}" data-destroy-template="{{ route('gestionPeriodicidad.destroy', ['gestionPeriodicidad' => '__ID__']) }}">
-                    @csrf
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nombre</label>
-                            <input type="text" id="searchProductoEdit" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
-                            <select name="nombre" id="selectProductoEdit" class="form-select" required size="6">
-                                <option value="">-- Seleccione un producto --</option>
-                                @foreach($productos as $p)
-                                    <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
-                                @endforeach
-                            </select>
-                            <input type="hidden" name="sku" id="skuHiddenEdit" value="">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Periodicidad</label>
-                            <select name="periodicidad" class="form-select">
-                                <option value="1_mes">1 mes</option>
-                                <option value="3_meses">3 meses</option>
-                                <option value="6_meses">6 meses</option>
-                                <option value="12_meses">12 meses</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Rojo</label>
-                                <select name="aviso_rojo" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Amarillo</label>
-                                <select name="aviso_amarillo" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                            <div class="col-4 mb-3">
-                                <label class="form-label">Verde</label>
-                                <select name="aviso_verde" class="form-select">
-                                    <option value="3">3 días antes</option>
-                                    <option value="7">7 días antes</option>
-                                    <option value="14">14 días antes</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Actualizar</button>
-                    </div>
-                </form>
+<!-- Edit Modal -->
+@push('scripts')
+<div class="modal fade" id="modalEditElemento" tabindex="-1" aria-labelledby="modalEditElementoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditElementoLabel">Editar elemento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+            <form id="formEditElemento" method="POST" action="{{ route('gestionPeriodicidad.index') }}" data-update-template="{{ route('gestionPeriodicidad.update', ['gestionPeriodicidad' => '__ID__']) }}" data-destroy-template="{{ route('gestionPeriodicidad.destroy', ['gestionPeriodicidad' => '__ID__']) }}">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="searchProductoEdit" class="form-control mb-2" placeholder="Buscar producto por SKU o nombre...">
+                        <select name="nombre" id="selectProductoEdit" class="form-select" required size="6">
+                            <option value="">-- Seleccione un producto --</option>
+                            @foreach($productos as $p)
+                                <option value="{{ $p->name_produc }}" data-sku="{{ $p->sku }}">{{ $p->sku }} - {{ $p->name_produc }}</option>
+                            @endforeach
+                        </select>
+                        <input type="hidden" name="sku" id="skuHiddenEdit" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Periodicidad</label>
+                        <select name="periodicidad" class="form-select">
+                            <option value="1_mes">1 mes</option>
+                            <option value="3_meses">3 meses</option>
+                            <option value="6_meses">6 meses</option>
+                            <option value="12_meses">12 meses</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Rojo</label>
+                            <select name="aviso_rojo" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Amarillo</label>
+                            <select name="aviso_amarillo" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label class="form-label">Verde</label>
+                            <select name="aviso_verde" class="form-select">
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                                <option value="14">14 días antes</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
         </div>
     </div>
-    @endpush
-    @push('scripts')
-    <script src="{{ asset('js/periodicidad/periodicidad.js') }}"></script>
+</div>
+@endpush
+@push('scripts')
+<script src="{{ asset('js/periodicidad/periodicidad.js') }}"></script>
+@endpush

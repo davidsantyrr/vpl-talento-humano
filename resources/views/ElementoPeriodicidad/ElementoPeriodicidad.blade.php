@@ -126,7 +126,8 @@ document.addEventListener('DOMContentLoaded', function(){
                     data.products.forEach(function(p){
                         html += '<li class="list-group-item d-flex justify-content-between align-items-center">';
                         html += '<div><div class="fw-semibold">' + (p.name || p.sku) + '</div><div class="small text-muted">' + p.sku + '</div></div>';
-                        html += '<div><button class="btn btn-sm btn-primary view-prod-users" data-sku="' + encodeURIComponent(p.sku) + '" data-weekstart="' + weekStart + '">Ver usuarios (' + p.count + ')</button></div>';
+                        // **CAMBIO: Cambiar p.count a p.usersCount para mostrar el conteo correcto de usuarios**
+                        html += '<div><button class="btn btn-sm btn-primary view-prod-users" data-sku="' + encodeURIComponent(p.sku) + '" data-weekstart="' + weekStart + '">Ver usuarios (' + p.usersCount + ')</button></div>';
                         html += '</li>';
                     });
                     html += '</ul>';
