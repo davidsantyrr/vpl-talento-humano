@@ -159,3 +159,6 @@ Route::middleware([VplAuth::class])->group(function(){
     Route::get('/elemento-periodicidad/usuarios/{sku}', [ElementoPeriodicidadController::class, 'usuariosForSku'])->name('elementoPeriodicidad.usuarios');
     Route::get('/elemento-periodicidad/productos-por-semana', [ElementoPeriodicidadController::class, 'productosPorSemana'])->name('elementoPeriodicidad.productosPorSemana');
 });
+
+// Ruta para generación de comprobantes (POST) usada por la vista JS (nombre requerido: comprobantes.generar)
+Route::post('comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');

@@ -48,9 +48,9 @@ class gestionPeriodicidad extends Controller
 				'nombre' => 'required|string|max:191',
 				'sku' => 'required|string|max:191',
 				'periodicidad' => 'required|string|max:50',
-				'aviso_rojo' => 'required|string|max:50',
-				'aviso_amarillo' => 'required|string|max:50',
-				'aviso_verde' => 'required|string|max:50',
+				'aviso_rojo' => 'required|integer|min:0',
+				'aviso_amarillo' => 'required|integer|min:0',
+				'aviso_verde' => 'required|integer|min:0',
 			]);
 
 			// Obtener rol del usuario desde sesión (igual que en entregas)
@@ -81,9 +81,9 @@ class gestionPeriodicidad extends Controller
 				'nombre' => $data['nombre'],
 				'rol_periodicidad' => $rolUsuario, // ← USAR rol_periodicidad
 				'periodicidad' => $data['periodicidad'],
-				'aviso_rojo' => $data['aviso_rojo'],
-				'aviso_amarillo' => $data['aviso_amarillo'],
-				'aviso_verde' => $data['aviso_verde'],
+				'aviso_rojo' => (string)$data['aviso_rojo'],
+				'aviso_amarillo' => (string)$data['aviso_amarillo'],
+				'aviso_verde' => (string)$data['aviso_verde'],
 			]);
 
 			return redirect()->route('gestionPeriodicidad.index')->with('success', 'Elemento agregado exitosamente.');
@@ -107,9 +107,20 @@ class gestionPeriodicidad extends Controller
 			$model = \App\Models\periodicidad::find($id);
 			if ($model) {
 				$model->periodicidad = $p;
-				$model->aviso_rojo = $rojos[$id] ?? null;
-				$model->aviso_amarillo = $amarillos[$id] ?? null;
-				$model->aviso_verde = $verdes[$id] ?? null;
+				$model->aviso_rojo = isset($rojos[$id]) ? (string)intval($rojos[$id]) : null;
+				$model->aviso_amarillo = isset($amarillos[$id]) ? (string)intval($amarillos[$id]) : null;
+				$model->aviso_verde = isset($verdes[$id]) ? (string)intval($verdes[$id]) : null;
+				$model->save();
+			}
+		}
+
+		// También actualizar registros que no cambiaron periodicidad (si llegan sin 'periodicidad' por estar disabled)
+		foreach ($rojos as $id => $v) {
+			$model = \App\Models\periodicidad::find($id);
+			if ($model) {
+				$model->aviso_rojo = (string)intval($v);
+				if (isset($amarillos[$id])) $model->aviso_amarillo = (string)intval($amarillos[$id]);
+				if (isset($verdes[$id])) $model->aviso_verde = (string)intval($verdes[$id]);
 				$model->save();
 			}
 		}
@@ -167,9 +178,9 @@ class gestionPeriodicidad extends Controller
 				'nombre' => 'required|string|max:191',
 				'sku' => 'required|string|max:191',
 				'periodicidad' => 'required|string|max:50',
-				'aviso_rojo' => 'required|string|max:50',
-				'aviso_amarillo' => 'required|string|max:50',
-				'aviso_verde' => 'required|string|max:50',
+				'aviso_rojo' => 'required|integer|min:0',
+				'aviso_amarillo' => 'required|integer|min:0',
+				'aviso_verde' => 'required|integer|min:0',
 			]);
 
 			$model = \App\Models\periodicidad::find($id);
@@ -177,13 +188,12 @@ class gestionPeriodicidad extends Controller
 				return redirect()->route('gestionPeriodicidad.index')->with('error', 'Elemento no encontrado.');
 			}
 
-			// Actualizar sin tocar el rol
 			$model->sku = $data['sku'];
 			$model->nombre = $data['nombre'];
 			$model->periodicidad = $data['periodicidad'];
-			$model->aviso_rojo = $data['aviso_rojo'];
-			$model->aviso_amarillo = $data['aviso_amarillo'];
-			$model->aviso_verde = $data['aviso_verde'];
+			$model->aviso_rojo = (string)$data['aviso_rojo'];
+			$model->aviso_amarillo = (string)$data['aviso_amarillo'];
+			$model->aviso_verde = (string)$data['aviso_verde'];
 			$model->save();
 
 			return redirect()->route('gestionPeriodicidad.index')->with('success', 'Elemento actualizado exitosamente.');

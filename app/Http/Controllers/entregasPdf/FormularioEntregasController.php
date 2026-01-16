@@ -47,16 +47,111 @@ class FormularioEntregasController extends Controller
 	// Procesar el envío del formulario, generar PDF y devolver redirección/JSON (migrado desde EntregaController::store)
 	public function store(Request $request)
 	{
-		// ...copiar la validación y la mayor parte de la lógica tal cual desde EntregaController::store...
-		// Para mantener la respuesta corta aquí se reutiliza la implementación original sin cambios
-		// (mover todo el bloque try/catch con DB::beginTransaction(), creación de Entrega,
-		// guardado de elementos, actualización de inventario, envío de correo, respuesta).
-		// filepath original: app/Http/Controllers/entregasPdf/EntregaController.php -> store()
+		// Procesar el formulario de entregas (validación mínima y persistencia)
+		$data = $request->validate([
+			'tipo_documento' => ['nullable','string'],
+			'numberDocumento' => ['nullable','string'],
+			'nombre' => ['nullable','string'],
+			'apellidos' => ['nullable','string'],
+			'tipo' => ['required','string','in:prestamo,primera vez,periodica,cambio'],
+			'operacion_id' => ['nullable','integer','exists:sub_areas,id'],
+			'cargo_id' => ['nullable','integer'],
+			'elementos' => ['required','string'], // JSON
+			'recepcion_id' => ['nullable','integer','exists:recepciones,id'],
+			'firma' => ['nullable','string'],
+			'comprobante_path' => ['nullable','string'],
+		]);
 
-		// ...existing code...
-		// Nota: implementa exactamente el mismo código que estaba en EntregaController::store
-		// (para no duplicar en esta respuesta por longitud). Asegúrate de copiar todo el bloque
-		// desde la validación hasta el commit/return tal cual.
+		// Usuario en sesión (misma convención usada en RecepcionController)
+		$authUser = session('auth.user');
+		$nombreUsuario = 'usuario';
+		$emailUsuario = 'sin-email@example.com';
+		$primerRol = 'web';
+
+		if (is_array($authUser) && isset($authUser['name'])) { $nombreUsuario = $authUser['name']; }
+		elseif (is_object($authUser) && isset($authUser->name)) { $nombreUsuario = $authUser->name; }
+
+		if (is_array($authUser) && isset($authUser['email'])) { $emailUsuario = $authUser['email']; }
+		elseif (is_object($authUser) && isset($authUser->email)) { $emailUsuario = $authUser->email; }
+
+		if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
+			$first = $authUser['roles'][0] ?? null;
+			if (is_array($first) && isset($first['roles'])) { $primerRol = $first['roles']; }
+			elseif (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
+		}
+
+		DB::beginTransaction();
+		try {
+			$entregaData = [
+				'rol_entrega' => $primerRol,
+				'entrega_user' => $nombreUsuario,
+				'entrega_email' => $emailUsuario,
+				'tipo_entrega' => $data['tipo'],
+				'tipo_documento' => $data['tipo_documento'] ?? null,
+				'numero_documento' => $data['numberDocumento'] ?? null,
+				'nombres' => $data['nombre'] ?? null,
+				'apellidos' => $data['apellidos'] ?? null,
+				'sub_area_id' => !empty($data['operacion_id']) ? (int)$data['operacion_id'] : null,
+				'usuarios_id' => null,
+				'recepciones_id' => !empty($data['recepcion_id']) ? (int)$data['recepcion_id'] : null,
+				'recibido' => false,
+				'created_at' => now(),
+				'updated_at' => now(),
+			];
+
+			// Normalizar comprobante_path si viene desde la generación de PDF cliente
+			$comprobantePath = $request->input('comprobante_path') ?? ($data['comprobante_path'] ?? null);
+			if (!empty($comprobantePath)) {
+				$comprobantePath = preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $comprobantePath);
+				$comprobantePath = ltrim($comprobantePath, '/');
+				$entregaData['comprobante_path'] = $comprobantePath;
+			}
+
+			$entregaId = DB::table('entregas')->insertGetId($entregaData);
+
+			$items = json_decode($data['elementos'] ?? '[]', true) ?: [];
+			if (empty($items)) {
+				throw new \Exception('Debe agregar al menos un elemento a la entrega');
+			}
+
+			foreach ($items as $it) {
+				if (empty($it['sku'])) continue;
+				DB::table('elemento_x_entrega')->insert([
+					'entrega_id' => $entregaId,
+					'sku' => (string) ($it['sku'] ?? ''),
+					'cantidad' => (string) ($it['cantidad'] ?? 1),
+					'created_at' => now(),
+					'updated_at' => now(),
+				]);
+			}
+
+			DB::commit();
+
+			// Obtener entrega para enviar correo
+			$entrega = DB::table('entregas')->where('id', $entregaId)->first();
+
+			// Disparar job de correo si hay email válido
+			if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
+				try {
+					EnviarCorreoEntrega::dispatchSync($entrega, $items, $emailUsuario, $entregaData['comprobante_path'] ?? null);
+				} catch (\Exception $e) {
+					Log::error('Error al enviar correo de entrega', ['error' => $e->getMessage(), 'entrega_id' => $entregaId]);
+				}
+			}
+
+			if ($request->wantsJson() || $request->ajax()) {
+				return response()->json(['success' => true, 'message' => 'Entrega registrada correctamente', 'entrega_id' => $entregaId], 200);
+			}
+
+			return redirect()->back()->with('status', 'Entrega registrada correctamente');
+		} catch (\Throwable $e) {
+			DB::rollBack();
+			Log::error('Error guardando entrega desde formulario', ['error' => $e->getMessage(), 'request' => $request->except(['firma'])]);
+			if ($request->wantsJson() || $request->ajax()) {
+				return response()->json(['success' => false, 'message' => 'Ocurrió un error al registrar la entrega: ' . $e->getMessage()], 500);
+			}
+			return redirect()->back()->with('error', 'Ocurrió un error al registrar la entrega: ' . $e->getMessage());
+		}
 	}
 	
 	// API: Lista de productos de cargo_productos (mantenida aquí para uso en formulario)

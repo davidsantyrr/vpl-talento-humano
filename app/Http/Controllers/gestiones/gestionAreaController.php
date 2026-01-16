@@ -21,9 +21,8 @@ public function store(Request $request)
         'areaName' => 'required|string|max:255',
     ]);
 
-    Area::create([
-        'nombre_area' => $request->input('areaName'),
-    ]);
+    $nombre = $this->cleanText($request->input('areaName'));
+    Area::create(['nombre_area' => $nombre]);
 
     return redirect()->route('gestionArea.index')->with('success', 'Área creada exitosamente.');
 }
@@ -42,9 +41,8 @@ public function update(Request $request, $id)
     ]);
 
     $Ar = Area::findOrFail($id);
-    $Ar->update([
-        'nombre_area' => $request->input('areaName'),
-    ]);
+    $nombre = $this->cleanText($request->input('areaName'));
+    $Ar->update(['nombre_area' => $nombre]);
 
     return redirect()->route('gestionArea.index')->with('success', 'Área actualizada');
 
@@ -55,5 +53,14 @@ public function destroy($id)
     $Ar = Area::findOrFail($id);
     $Ar->delete();
     return redirect()->route('gestionArea.index')->with('success','Área eliminada');
+}
+
+// helper: limpia texto (elimina BOM y caracteres no imprimibles, normaliza espacios)
+private function cleanText($value): string
+{
+    $orig = (string)($value ?? '');
+    $clean = preg_replace('/[[:^print:]]+/u', '', $orig);
+    $clean = preg_replace('/[\x{FEFF}\x{00A0}]/u', '', $clean);
+    return preg_replace('/\s+/u', ' ', trim($clean));
 }
 }

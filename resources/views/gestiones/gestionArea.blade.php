@@ -20,7 +20,7 @@
             @method('PUT')
             <div class="mb-2">
                 <label class="form-label">Nombre del Área</label>
-                <input name="areaName" value="{{ old('areaName', $editArea->areaName) }}" class="form-control" required>
+                <input name="areaName" value="{{ old('areaName', $editArea->nombre_area) }}" class="form-control" required>
             </div>
             <button class="btn btn-primary">Actualizar Área</button>
             <a href="{{ route('gestionArea.index') }}" class="btn btn-secondary">Cancelar</a>
@@ -52,7 +52,7 @@
             @forelse($areas ?? [] as $area)
                 <tr>
                     <td data-label="ID">{{ $area->id }}</td>
-                    <td data-label="Nombre">{{ $area->areaName }}</td>
+                    <td data-label="Nombre">{{ $area->nombre_area }}</td>
                     <td data-label="Acciones" class="action-buttons">
                         <a href="{{ route('gestionArea.edit', $area->id) }}" class="btn btn-sm btn-warning">Editar</a>
                         <form action="{{ route('gestionArea.destroy', $area->id) }}" method="POST" style="display:inline-block">

@@ -70,3 +70,27 @@
 /* Table header row styling to mimic card-looking header */
 .periodicidad-table thead th:first-child{border-top-left-radius:8px}
 .periodicidad-table thead th:last-child{border-top-right-radius:8px}
+
+/* Grid de 3 columnas para los campos de semáforo en la modal */
+.modal-periodicidad-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 12px;
+	align-items: end; /* alinear inputs al mismo nivel */
+}
+.modal-periodicidad-grid .form-label {
+	display: block;
+	margin-bottom: 6px;
+	line-height: 1.2;
+	white-space: normal; /* permitir salto de línea en el texto largo */
+}
+.modal-periodicidad-grid .form-control {
+	width: 100%;
+}
+
+/* Responsive: apilar en móviles */
+@media (max-width: 768px) {
+	.modal-periodicidad-grid {
+		grid-template-columns: 1fr;
+	}
+}

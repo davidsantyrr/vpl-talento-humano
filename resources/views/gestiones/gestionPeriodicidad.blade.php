@@ -57,25 +57,19 @@
                             </select>
                         </td>
                         <td>
-                            <select class="form-select form-select-sm" name="rojo[{{ $periodicidad->id }}]" disabled>
-                                <option value="3"  {{ (string)$periodicidad->aviso_rojo === '3' ? 'selected' : '' }}>3 días antes</option>
-                                <option value="7"  {{ (string)$periodicidad->aviso_rojo === '7' ? 'selected' : '' }}>7 días antes</option>
-                                <option value="14" {{ (string)$periodicidad->aviso_rojo === '14' ? 'selected' : '' }}>14 días antes</option>
-                            </select>
+                            {{-- input numérico de días (rojo) --}}
+                            <input type="number" class="form-control form-control-sm" name="rojo[{{ $periodicidad->id }}]"
+                                min="0" step="1" value="{{ (int)($periodicidad->aviso_rojo ?? 0) }}" placeholder="días" disabled>
                         </td>
                         <td>
-                            <select class="form-select form-select-sm" name="amarillo[{{ $periodicidad->id }}]" disabled>
-                                <option value="3"  {{ (string)$periodicidad->aviso_amarillo === '3' ? 'selected' : '' }}>3 días antes</option>
-                                <option value="7"  {{ (string)$periodicidad->aviso_amarillo === '7' ? 'selected' : '' }}>7 días antes</option>
-                                <option value="14" {{ (string)$periodicidad->aviso_amarillo === '14' ? 'selected' : '' }}>14 días antes</option>
-                            </select>
+                            {{-- input numérico de días (amarillo) --}}
+                            <input type="number" class="form-control form-control-sm" name="amarillo[{{ $periodicidad->id }}]"
+                                min="0" step="1" value="{{ (int)($periodicidad->aviso_amarillo ?? 0) }}" placeholder="días" disabled>
                         </td>
                         <td>
-                            <select class="form-select form-select-sm" name="verde[{{ $periodicidad->id }}]" disabled>
-                                <option value="3"  {{ (string)$periodicidad->aviso_verde === '3' ? 'selected' : '' }}>3 días antes</option>
-                                <option value="7"  {{ (string)$periodicidad->aviso_verde === '7' ? 'selected' : '' }}>7 días antes</option>
-                                <option value="14" {{ (string)$periodicidad->aviso_verde === '14' ? 'selected' : '' }}>14 días antes</option>
-                            </select>
+                            {{-- input numérico de días (verde) --}}
+                            <input type="number" class="form-control form-control-sm" name="verde[{{ $periodicidad->id }}]"
+                                min="0" step="1" value="{{ (int)($periodicidad->aviso_verde ?? 0) }}" placeholder="días" disabled>
                         </td>
                         <td class="text-nowrap">
                             <button type="button" class="btn btn-sm btn-outline-primary btn-edit" 
@@ -173,30 +167,18 @@
                             <option value="12_meses">12 meses</option>
                         </select>
                     </div>
-                    <div class="row">
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Rojo</label>
-                            <select name="aviso_rojo" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                    <div class="modal-periodicidad-grid">
+                        <div class="mb-2">
+                            <label class="form-label">Rojo (días antes)</label>
+                            <input type="number" name="aviso_rojo" class="form-control" min="0" step="1" placeholder="ej: 3" required>
                         </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Amarillo</label>
-                            <select name="aviso_amarillo" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                        <div class="mb-2">
+                            <label class="form-label">Amarillo (días antes)</label>
+                            <input type="number" name="aviso_amarillo" class="form-control" min="0" step="1" placeholder="ej: 7" required>
                         </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Verde</label>
-                            <select name="aviso_verde" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                        <div class="mb-2">
+                            <label class="form-label">Verde (días antes)</label>
+                            <input type="number" name="aviso_verde" class="form-control" min="0" step="1" placeholder="ej: 14" required>
                         </div>
                     </div>
                 </div>
@@ -209,8 +191,7 @@
     </div>
 </div>
 
-<!-- Edit Modal -->
-@push('scripts')
+{{-- Edit Modal --}}
 <div class="modal fade" id="modalEditElemento" tabindex="-1" aria-labelledby="modalEditElementoLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -241,30 +222,18 @@
                             <option value="12_meses">12 meses</option>
                         </select>
                     </div>
-                    <div class="row">
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Rojo</label>
-                            <select name="aviso_rojo" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                    <div class="modal-periodicidad-grid">
+                        <div class="mb-2">
+                            <label class="form-label">Rojo (días antes)</label>
+                            <input type="number" name="aviso_rojo" class="form-control" min="0" step="1" placeholder="ej: 3" required>
                         </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Amarillo</label>
-                            <select name="aviso_amarillo" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                        <div class="mb-2">
+                            <label class="form-label">Amarillo (días antes)</label>
+                            <input type="number" name="aviso_amarillo" class="form-control" min="0" step="1" placeholder="ej: 7" required>
                         </div>
-                        <div class="col-4 mb-3">
-                            <label class="form-label">Verde</label>
-                            <select name="aviso_verde" class="form-select">
-                                <option value="3">3 días antes</option>
-                                <option value="7">7 días antes</option>
-                                <option value="14">14 días antes</option>
-                            </select>
+                        <div class="mb-2">
+                            <label class="form-label">Verde (días antes)</label>
+                            <input type="number" name="aviso_verde" class="form-control" min="0" step="1" placeholder="ej: 14" required>
                         </div>
                     </div>
                 </div>
@@ -276,7 +245,5 @@
         </div>
     </div>
 </div>
-@endpush
-@push('scripts')
 <script src="{{ asset('js/periodicidad/periodicidad.js') }}"></script>
 @endpush
