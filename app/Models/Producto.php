@@ -13,7 +13,8 @@ class Producto extends Model
     protected $fillable = [
         'sku',
         'name_produc',
-        'categoria_produc'
+        'categoria_produc',
+        'stock_produc'
     ];
 
     protected $primaryKey = 'sku';

@@ -93,7 +93,7 @@
 							<td>
 								<div class="actions-row">
 									<button class="btn small" onclick='verDetalle(@json($registro))'>Ver</button>
-									<button class="btn small primary" onclick="descargarPDF('{{ $registro->registro_tipo }}', {{ $registro->id }})">PDF</button>
+									<a class="btn small primary" href="{{ route('historial.pdf', ['tipo'=>$registro->registro_tipo, 'id'=>$registro->id]) }}" target="_blank">PDF</a>
 								</div>
 							</td>
 						</tr>
@@ -318,6 +318,12 @@
 		window.HistorialToast.fire({
 			icon: 'success',
 			title: @json(session('status'))
+		});
+	@endif
+	@if(session('error'))
+		window.HistorialToast.fire({
+			icon: 'error',
+			title: @json(session('error'))
 		});
 	@endif
 </script>

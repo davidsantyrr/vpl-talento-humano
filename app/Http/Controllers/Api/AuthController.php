@@ -55,9 +55,11 @@ class AuthController extends Controller
             'auth.user' => $data['user'],
             'auth.token' => $token,
         ]);
+        // Regenerar ID de sesión para evitar pérdida de estado (fix login redirect)
+        $request->session()->regenerate();
 
-        // Siempre redirigir a menú principal independientemente del rol
-        return redirect('/menus/menu');
+        // Redirigir a la ruta deseada o al menú
+        return redirect()->intended('/menus/menu');
     }
 
     public function logout(Request $request)

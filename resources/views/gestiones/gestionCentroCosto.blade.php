@@ -48,7 +48,7 @@
         required
     >
 
-    <button class="btn btn-primary">agregar centro de costo</button>
+    <button class="btn btn-primary">Agregar centro de costo</button>
 </form>
 @endif
 

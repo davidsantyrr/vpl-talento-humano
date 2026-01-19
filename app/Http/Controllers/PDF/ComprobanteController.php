@@ -34,8 +34,22 @@ class ComprobanteController extends Controller
             $firmaProcessed = [];
             foreach ($firma as $key => $value) {
                 if (is_string($value) && strpos($value, 'data:image') === 0) {
-                    // Ya es data-uri → usar tal cual
-                    $firmaProcessed[$key] = $value;
+                    // Data URI → guardar como archivo temporal y usar file:// path para máxima compatibilidad
+                    try {
+                        [$meta, $content] = explode(',', $value, 2);
+                        $ext = 'png';
+                        if (strpos($meta, 'image/jpeg') !== false) { $ext = 'jpg'; }
+                        elseif (strpos($meta, 'image/webp') !== false) { $ext = 'webp'; }
+                        $bin = base64_decode($content);
+                        $dir = storage_path('app/tmp_firmas');
+                        if (!file_exists($dir)) { mkdir($dir, 0755, true); }
+                        $file = $dir . '/' . uniqid('firma_', true) . '.' . $ext;
+                        file_put_contents($file, $bin);
+                        $firmaProcessed[$key] = 'file://' . $file;
+                    } catch (\Throwable $e) {
+                        // Si falla, usar el data-uri como fallback
+                        $firmaProcessed[$key] = $value;
+                    }
                 } elseif (is_string($value) && Storage::exists($value)) {
                     // Ruta en storage (ej: public/firmas/xxx.png) → pasar file://absolute
                     $firmaProcessed[$key] = 'file://' . storage_path('app/' . ltrim($value, '/'));

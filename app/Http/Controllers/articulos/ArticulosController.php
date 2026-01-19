@@ -4,6 +4,7 @@ namespace App\Http\Controllers\articulos;
 
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
+use App\Models\GestionArticulos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -14,11 +15,34 @@ class ArticulosController extends Controller
     {
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 20, 50]) ? $perPage : 20;
+        $category = trim((string) $request->get('category', ''));
 
-        $productos = Producto::select('sku', 'name_produc', 'categoria_produc')
-            ->orderBy('name_produc')
+        // listado de categorías disponibles (union externas + locales)
+        $catExt = Producto::select('categoria_produc')
+            ->whereNotNull('categoria_produc')
+            ->distinct()
+            ->orderBy('categoria_produc')
+            ->pluck('categoria_produc')
+            ->toArray();
+        $catLocal = GestionArticulos::select('categoria')
+            ->whereNotNull('categoria')
+            ->distinct()
+            ->orderBy('categoria')
+            ->pluck('categoria')
+            ->toArray();
+        $categories = collect(array_unique(array_merge($catExt, $catLocal)))->sort()->values();
+
+        // consulta de productos con filtro opcional por categoría
+        $productosQuery = Producto::select('sku', 'name_produc', 'categoria_produc')
+            ->orderBy('name_produc');
+
+        if ($category !== '') {
+            $productosQuery->where('categoria_produc', $category);
+        }
+
+        $productos = $productosQuery
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage]);
+            ->appends(['per_page' => $perPage, 'category' => $category]);
 
         $skus = $productos->pluck('sku');
         // traer todas las filas de inventarios (pueden existir múltiples por SKU)
@@ -33,6 +57,7 @@ class ArticulosController extends Controller
         $inventariosBySku = $inventariosRows->groupBy('sku');
 
         $rowsHtml = '';
+        $remoteSkus = collect($productos->pluck('sku'))->map(function($s){ return (string) $s; })->all();
         foreach ($productos as $p) {
             $rows = $inventariosBySku->get($p->sku);
             if (!$rows || $rows->isEmpty()) {
@@ -81,6 +106,7 @@ class ArticulosController extends Controller
                             . csrf_field()
                             . '<input type="hidden" name="inventario_id" value="' . e($inv->inventario_id) . '">'
                             . '<input type="hidden" name="per_page" value="' . e($perPage) . '">'
+                            . '<input type="hidden" name="category" value="' . e($category) . '">'
                             . '<button type="submit" class="btn-icon delete-location" title="Eliminar ubicación" aria-label="Eliminar ubicación">'
                             . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
                             . '</button>'
@@ -105,15 +131,66 @@ class ArticulosController extends Controller
             }
         }
 
+                // Agregar artículos locales no presentes en catálogo externo (mysql_second)
+                $extrasQuery = GestionArticulos::query();
+                if ($category !== '') {
+                        $extrasQuery->where('categoria', $category);
+                }
+                $extras = $extrasQuery->whereNotIn('sku', $remoteSkus)->orderBy('nombre_articulo')->get();
+
+                foreach ($extras as $loc) {
+                        $rows = collect([ (object) [
+                                'sku' => $loc->sku,
+                                'stock' => 0,
+                                'estatus' => 'disponible',
+                                'ubicacion' => '',
+                                'bodega' => ''
+                        ] ]);
+
+                        foreach ($rows as $inv) {
+                                $stock = (int) ($inv->stock ?? 0);
+                                $estatus = $inv->estatus ?? 'disponible';
+                                $ubicacionSel = $inv->ubicacion ?? '';
+                                $bodegaSel = $inv->bodega ?? '';
+
+                                $botonesAccion = '<button type="button" class="btn-icon location" title="Ubicación" aria-label="Ubicación">'
+                                    . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21s-7-6.16-7-11a7 7 0 1 1 14 0c0 4.84-7 11-7 11z" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="12" cy="10" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>'
+                                    . '</button>'
+                                    . '<button type="button" class="btn-icon edit" title="Editar" aria-label="Editar">'
+                                    . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 17.25V21h3.75L18.37 9.38l-3.75-3.75L3 17.25z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M14.62 5.63l3.75 3.75" stroke="currentColor" stroke-width="1.2"/></svg>'
+                                    . '</button>'
+                                    . '<button type="button" class="btn-icon delete" title="Destruir" aria-label="Destruir">'
+                                    . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
+                                    . '</button>';
+
+                                $rowsHtml .= '<tr data-sku="' . e($loc->sku) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
+                                        . '<td>' . e($loc->sku) . '</td>'
+                                        . '<td>' . e($loc->nombre_articulo) . '</td>'
+                                        . '<td>' . e($loc->categoria ?? '') . '</td>'
+                                        . '<td>' . e($bodegaSel ?: '-') . '</td>'
+                                        . '<td>' . e($ubicacionSel ?: '-') . '</td>'
+                                        . '<td>' . e(ucfirst($estatus)) . '</td>'
+                                        . '<td>' . e($stock) . '</td>'
+                                        . '<td>'
+                                            . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
+                                            . $botonesAccion
+                                            . '</div>'
+                                        . '</td>'
+                                        . '</tr>';
+                        }
+                }
+
         return view('articulos.articulos', [
             'rowsHtml' => $rowsHtml,
-            'paginationHtml' => $this->buildPagination($productos, $perPage),
+            'paginationHtml' => $this->buildPagination($productos, $perPage, $category),
             'perPage' => $perPage,
+            'categories' => $categories,
+            'selectedCategory' => $category,
             'status' => session('status'),
         ]);
     }
 
-    private function buildPagination($productos, $perPage)
+    private function buildPagination($productos, $perPage, $category = '')
     {
         $paginationHtml = '';
         if ($productos->hasPages()) {
@@ -121,7 +198,7 @@ class ArticulosController extends Controller
             if ($productos->onFirstPage()) {
                 $paginationHtml .= '<li class="disabled"><span>&lsaquo;</span></li>';
             } else {
-                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage])->previousPageUrl() . '" rel="prev">&lsaquo;</a></li>';
+                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->previousPageUrl() . '" rel="prev">&lsaquo;</a></li>';
             }
             $window = $perPage <= 10 ? 3 : ($perPage <= 20 ? 5 : 7);
             $start = max(1, $productos->currentPage() - intdiv($window, 2));
@@ -130,11 +207,11 @@ class ArticulosController extends Controller
                 if ($page == $productos->currentPage()) {
                     $paginationHtml .= '<li class="active"><span>' . $page . '</span></li>';
                 } else {
-                    $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage])->url($page) . '">' . $page . '</a></li>';
+                    $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->url($page) . '">' . $page . '</a></li>';
                 }
             }
             if ($productos->hasMorePages()) {
-                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage])->nextPageUrl() . '" rel="next">&rsaquo;</a></li>';
+                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->nextPageUrl() . '" rel="next">&rsaquo;</a></li>';
             } else {
                 $paginationHtml .= '<li class="disabled"><span>&rsaquo;</span></li>';
             }
@@ -431,7 +508,8 @@ class ArticulosController extends Controller
     {
         $data = $request->validate([
             'inventario_id' => ['required','integer'],
-            'per_page' => ['nullable','integer']
+            'per_page' => ['nullable','integer'],
+            'category' => ['nullable','string']
         ]);
 
         try {
@@ -456,7 +534,10 @@ class ArticulosController extends Controller
             if ($request->expectsJson()) {
                 return response()->json(['success' => true, 'message' => 'Ubicación eliminada']);
             }
-            return redirect()->route('articulos.index', ['per_page' => (int)($data['per_page'] ?? 20)])->with('status', 'Ubicación eliminada');
+            return redirect()->route('articulos.index', [
+                'per_page' => (int)($data['per_page'] ?? 20),
+                'category' => $data['category'] ?? ''
+            ])->with('status', 'Ubicación eliminada');
 
         } catch (\Exception $e) {
             Log::error('Error eliminando inventario/ubicación', ['error' => $e->getMessage(), 'inventario_id' => $data['inventario_id']]);

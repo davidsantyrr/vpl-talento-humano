@@ -13,6 +13,7 @@ use App\Http\Controllers\gestiones\gestionCentroCostoController;
 use App\Http\Controllers\gestiones\GestionUsuarioController;
 use App\Http\Controllers\gestiones\gestionPeriodicidad;
 use App\Http\Controllers\gestiones\gestionCorreosController;
+use App\Http\Controllers\gestiones\GestionArticulosController;
 use App\Http\Controllers\consultaEementosUsuario\controllerConsulta;
 use App\Http\Controllers\ElementoXcargo\CargoController;
 use App\Http\Controllers\ElementoXcargo\CargoProductosController;
@@ -42,22 +43,7 @@ Route::middleware([VplAuth::class])->group(function () {
         return view('menus.menuEntrega');
     });
 
-Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
-Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
-Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
-Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
-Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
-Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');
-Route::post('/articulos/ubicacion/eliminar', [App\Http\Controllers\articulos\ArticulosController::class, 'eliminarUbicacion'])->name('articulos.ubicacion.eliminar');
-
-
-
-
-Route::resource('gestionOperacion', gestionOperacionController::class);
-
-Route::resource('gestionArea', gestionAreaController::class);
-
-Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
+    
 
 
 
@@ -162,3 +148,21 @@ Route::middleware([VplAuth::class])->group(function(){
 
 // Ruta para generación de comprobantes (POST) usada por la vista JS (nombre requerido: comprobantes.generar)
 Route::post('comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
+Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
+Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
+Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
+Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
+Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
+Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');
+Route::post('/articulos/ubicacion/eliminar', [App\Http\Controllers\articulos\ArticulosController::class, 'eliminarUbicacion'])->name('articulos.ubicacion.eliminar');
+
+
+
+
+Route::resource('gestionOperacion', gestionOperacionController::class);
+
+Route::resource('gestionArea', gestionAreaController::class);
+
+Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
+// Gestión de artículos (resource protegido)
+    Route::resource('gestionArticulos', GestionArticulosController::class);

@@ -2,363 +2,147 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>{{ $tipo === 'entrega' ? 'Comprobante de Entrega' : 'Comprobante de Recepción' }} #{{ $registro->id }}</title>
+    <title>Comprobante de Entrega #{{ $registro->id }}</title>
     <style>
-        body {
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 12px;
-            color: #333;
-            padding: 20px;
-        }
-        
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 3px solid #111f2e;
-            padding-bottom: 15px;
-        }
-        
-        .header h1 {
-            color: #111f2e;
-            font-size: 24px;
-            margin-bottom: 5px;
-        }
-        
-        .header .subtitle {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 11px;
-            margin-top: 10px;
-        }
-        
-        .badge-entrega {
-            background: #ede9fe;
-            color: #7c3aed;
-        }
-        
-        .badge-recepcion {
-            background: #cffafe;
-            color: #0891b2;
-        }
-        
-        .info-section {
-            margin-bottom: 25px;
-        }
-        
-        .info-section h2 {
-            background: #f3f4f6;
-            padding: 8px 12px;
-            font-size: 14px;
-            color: #111f2e;
-            border-left: 4px solid #111f2e;
-            margin-bottom: 15px;
-        }
-        
-        .info-grid {
-            display: table;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-        
-        .info-row {
-            display: table-row;
-        }
-        
-        .info-label {
-            display: table-cell;
-            font-weight: bold;
-            padding: 8px 12px;
-            background: #f9fafb;
-            width: 35%;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .info-value {
-            display: table-cell;
-            padding: 8px 12px;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .elementos-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        .elementos-table thead {
-            background: #111f2e;
-            color: white;
-        }
-        
-        .elementos-table th {
-            padding: 10px;
-            text-align: left;
-            font-weight: bold;
-        }
-        
-        .elementos-table td {
-            padding: 10px;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .elementos-table tbody tr:nth-child(even) {
-            background: #f9fafb;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #e5e7eb;
-            text-align: center;
-            font-size: 10px;
-            color: #666;
-        }
-        
-        .firma-section {
-            margin-top: 60px;
-            display: table;
-            width: 100%;
-        }
-        
-        .firma-box {
-            display: table-cell;
-            width: 45%;
-            text-align: center;
-            padding: 20px;
-            vertical-align: top;
-        }
-        
-        .firma-line {
-            border-top: 2px solid #333;
-            margin-top: 10px;
-            padding-top: 10px;
-            min-height: 50px;
-        }
-        
-        .firma-label {
-            font-weight: bold;
-            color: #111f2e;
-            margin-bottom: 8px;
-            margin-top: 8px;
-        }
-        
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 11px;
-        }
-        
-        .status-success {
-            background: #d1fae5;
-            color: #047857;
-        }
-        
-        .status-warning {
-            background: #fef3c7;
-            color: #b45309;
-        }
-
-        img.firma-img {
-            max-width: 100%;
-            height: 100px;
-            object-fit: contain;
-            margin-top: 6px;
-        }
+      body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #222; margin: 18px; }
+      table { border-collapse: collapse; width: 100%; }
+      .elementos-table th, .elementos-table td { border: 1px solid #1e40af; padding: 6px; }
+      .elementos-table th { background: #eef2ff; font-weight: bold; }
+      .header td { border: 1px solid #1e40af; padding: 8px; }
+      .brand { font-weight: bold; font-size: 18px; color: #0f172a; }
+      .brand img { max-height: 46px; width: auto; }
+      .title { text-align: center; font-weight: bold; font-size: 16px; }
+      .small { font-size: 11px; color: #334155; }
+      .section-title { font-weight: bold; }
+      .center { text-align: center; }
+      .signature-line { border-top: 1px dashed #1e40af; margin-top: 22px; padding-top: 8px; text-align: center; }
+      .firma-img { display: inline-block; height: 42px; margin: 4px 0; }
+      .legal { font-size: 11px; color: #333; padding: 6px; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>{{ $tipo === 'entrega' ? 'COMPROBANTE DE ENTREGA' : 'COMPROBANTE DE RECEPCIÓN' }}</h1>
-        <p class="subtitle">Registro #{{ $registro->id }} | Fecha: {{ \Carbon\Carbon::parse($registro->created_at)->format('d/m/Y H:i:s') }}</p>
-        <span class="badge {{ $tipo === 'entrega' ? 'badge-entrega' : 'badge-recepcion' }}">
-            {{ strtoupper($tipo) }}
-        </span>
-    </div>
+@php
+    $fechaReg = \Carbon\Carbon::parse($registro->created_at)->format('d/m/Y');
+    $nombreCompleto = trim(($registro->apellidos ?? '') . ' ' . ($registro->nombres ?? ''));
+    $doc = $registro->numero_documento ?? 'N/A';
+    $cargo = $registro->cargo ?? 'N/A';
+    $personaEntrega = 'Sistema';
+    $auth = session('auth.user');
+    if (is_array($auth) && isset($auth['name'])) { $personaEntrega = $auth['name']; }
+    elseif (is_object($auth) && isset($auth->name)) { $personaEntrega = $auth->name; }
+    $motivoPrimeraVez = strtolower($registro->tipo ?? '') === 'primera vez';
+    $motivoReposicion = !$motivoPrimeraVez && strtolower($registro->tipo ?? '') !== '';
+@endphp
 
-    <div class="info-section">
-        <h2>Información del Usuario</h2>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Tipo de Documento:</div>
-                <div class="info-value">{{ $registro->tipo_documento ?? 'N/A' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Número de Documento:</div>
-                <div class="info-value">{{ $registro->numero_documento ?? 'N/A' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Nombres:</div>
-                <div class="info-value">{{ $registro->nombres ?? 'N/A' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Apellidos:</div>
-                <div class="info-value">{{ $registro->apellidos ?? 'N/A' }}</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="info-section">
-        <h2>Detalles del Registro</h2>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Operación:</div>
-                <div class="info-value">{{ $registro->operacion ?? 'N/A' }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Tipo:</div>
-                <div class="info-value">{{ ucfirst($registro->tipo ?? 'N/A') }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Estado:</div>
-                <div class="info-value">
-                    @if($tipo === 'entrega')
-                        @if(in_array($registro->tipo, ['periodica', 'primera vez']))
-                            <span class="status-badge status-success">COMPLETADO</span>
-                        @else
-                            <span class="status-badge {{ $registro->recibido ? 'status-success' : 'status-warning' }}">
-                                {{ $registro->recibido ? 'RECIBIDO' : 'PENDIENTE' }}
-                            </span>
-                        @endif
-                    @else
-                        <span class="status-badge {{ $registro->recibido ? 'status-success' : 'status-warning' }}">
-                            {{ $registro->recibido ? 'ENTREGADO' : 'PENDIENTE' }}
-                        </span>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="info-section">
-        <h2>Elementos</h2>
-        <table class="elementos-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>SKU</th>
-                    <th style="text-align: center;">Cantidad</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($elementos as $index => $elemento)
-                    <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $elemento->sku ?? $elemento['sku'] ?? ($elemento->codigo ?? 'N/A') }}</td>
-                        <td style="text-align: center;">{{ $elemento->cantidad ?? $elemento['cantidad'] ?? 'N/A' }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: #999;">No hay elementos registrados</td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-
-    <div class="firma-section">
-        @php
-            // Procesar firma de forma directa y simple
-            $firmaSrc = null;
-            $debugMsg = [];
-            
-            if (isset($firma)) {
-                $debugMsg[] = 'Variable firma existe';
-                $debugMsg[] = 'Tipo: ' . gettype($firma);
-                
-                if (is_array($firma)) {
-                    $debugMsg[] = 'Keys: ' . implode(', ', array_keys($firma));
-                    
-                    // Buscar la firma correcta según el tipo de documento
-                    $firmaKey = ($tipo === 'entrega') ? 'entrega' : 'recepcion';
-                    $debugMsg[] = "Buscando clave: {$firmaKey}";
-                    
-                    if (isset($firma[$firmaKey])) {
-                        $rawFirma = $firma[$firmaKey];
-                        $debugMsg[] = 'Firma encontrada, longitud: ' . strlen($rawFirma);
-                        
-                        // Limpiar la firma
-                        $cleanFirma = trim($rawFirma);
-                        $cleanFirma = preg_replace('/\s+/', '', $cleanFirma);
-                        $debugMsg[] = 'Firma limpia, longitud: ' . strlen($cleanFirma);
-                        
-                        // Convertir a data URL si es necesario
-                        if (str_starts_with($cleanFirma, 'data:image')) {
-                            $firmaSrc = $cleanFirma;
-                            $debugMsg[] = '✓ Ya es data URL';
-                        } else {
-                            // Quitar prefijo base64, si existe
-                            $cleanFirma = preg_replace('/^base64,/', '', $cleanFirma);
-                            if (strlen($cleanFirma) > 100) {
-                                $firmaSrc = 'data:image/png;base64,' . $cleanFirma;
-                                $debugMsg[] = '✓ Convertida a data URL';
-                            } else {
-                                $debugMsg[] = '✗ Firma muy corta';
-                            }
-                        }
-                    } else {
-                        $debugMsg[] = "✗ Clave '{$firmaKey}' no encontrada";
-                    }
-                } else {
-                    $debugMsg[] = '✗ Firma no es array';
-                }
-            } else {
-                $debugMsg[] = '✗ Variable firma NO existe';
-            }
-        @endphp
-        @if($tipo === 'entrega')
-            {{-- En entrega: solo firma del que RECIBE --}}
-            <div class="firma-box" style="width: 100%; text-align: center;">
-                <div style="margin-bottom: 10px;">
-                    @if(!empty($firmaSrc))
-                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:0 auto 10px auto; display:block;">
-                    @else
-                        <p style="color: #ff0000; margin: 10px 0; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
-                        <p style="color: #666; font-size: 8px; margin: 5px 0; line-height: 1.3;">
-                            @foreach($debugMsg as $msg)
-                                {{ $msg }}<br>
-                            @endforeach
-                        </p>
-                    @endif
-                </div>
-                <div class="firma-line">
-                    <p class="firma-label">Firma del que Recibe</p>
-                    <p style="margin: 5px 0;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
-                </div>
-            </div>
+<!-- Cabecera principal -->
+<table class="header" style="margin-bottom:8px;">
+  <tr>
+    <td style="width:40%;">
+      @php
+        $logoFile = public_path('img/logoVigia.jpeg');
+        $logoSrc = null;
+        if (is_file($logoFile)) {
+          try { $logoSrc = 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)); } catch (\Throwable $e) { $logoSrc = null; }
+        }
+      @endphp
+      <div class="brand">
+        @if($logoSrc)
+          <img src="{{ $logoSrc }}" alt="Vigía" />
         @else
-            {{-- En recepción: solo firma del que ENTREGA (devuelve) --}}
-            <div class="firma-box" style="width: 100%; text-align: center;">
-                <div style="margin-bottom: 10px;">
-                    @if(!empty($firmaSrc))
-                        <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" style="max-width:200px; height:80px; margin:0 auto 10px auto; display:block;">
-                    @else
-                        <p style="color: #ff0000; margin: 10px 0; font-weight: bold;">⚠ FIRMA NO DISPONIBLE</p>
-                        <p style="color: #666; font-size: 8px; margin: 5px 0; line-height: 1.3;">
-                            @foreach($debugMsg as $msg)
-                                {{ $msg }}<br>
-                            @endforeach
-                        </p>
-                    @endif
-                </div>
-                <div class="firma-line">
-                    <p class="firma-label">Firma del que Entrega (Devolución)</p>
-                    <p style="margin: 5px 0;">{{ $registro->nombres ?? 'N/A' }} {{ $registro->apellidos ?? '' }}</p>
-                </div>
-            </div>
+          Vigía Plus Logistics
         @endif
-    </div>
+      </div>
+    </td>
+    <td class="title" style="width:40%;">ENTREGA DE ELEMENTOS DE PROTECCIÓN PERSONAL</td>
+    <td style="width:20%;">
+      <table style="width:100%; border-collapse: collapse;">
+        <tr><td class="small">CÓDIGO</td><td class="small">SGI-FO-011</td></tr>
+        <tr><td class="small">FECHA</td><td class="small">{{ $fechaReg }}</td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
 
-    <div class="footer">
-        <p><strong>Documento generado automáticamente por el Sistema de Gestión de Talento Humano</strong></p>
-        <p>Fecha de generación: {{ now()->format('d/m/Y H:i:s') }}</p>
-    </div>
+<!-- Datos del colaborador -->
+<table style="margin-bottom:6px;">
+  <tr>
+    <td style="width:50%; border:1px solid #1e40af; padding:6px;">
+      <span class="section-title">APELLIDOS Y NOMBRES COLABORADOR:</span>
+      <div>{{ $nombreCompleto ?: 'N/A' }}</div>
+    </td>
+    <td style="width:25%; border:1px solid #1e40af; padding:6px;">
+      <span class="section-title">No. DOCUMENTO:</span>
+      <div>{{ $doc }}</div>
+    </td>
+    <td style="width:25%; border:1px solid #1e40af; padding:6px;">
+      <span class="section-title">CARGO:</span>
+      <div>{{ $cargo }}</div>
+    </td>
+  </tr>
+</table>
+
+<!-- Texto legal -->
+<div class="legal" style="border:1px solid #1e40af; margin-bottom:6px;">
+  <strong>Art. 122 ley 9 de 1979:</strong>
+  "Todos los empleadores están obligados a proporcionar a cada trabajador, sin costo para este, elementos de protección personal en cantidad y calidad acordes a los riesgos reales o potenciales en los lugares de trabajo."
+  
+</div>
+
+<!-- Tabla principal -->
+<table class="elementos-table">
+  <thead>
+    <tr>
+      <th style="width:10%;" class="center">FECHA ENTREGA</th>
+      <th style="width:22%;" class="center">ELEMENTO ENTREGADO</th>
+      <th style="width:22%;" class="center">MOTIVO ENTREGA<br><span class="small">ENTREGA 1° VEZ / REPOSICIÓN</span></th>
+      <th style="width:13%;" class="center">FIRMA COLABORADOR</th>
+      <th style="width:23%;" class="center">PERSONA QUE ENTREGA Y SENSIBILIZA</th>
+      <th style="width:10%;" class="center">OBSERVACIONES</th>
+    </tr>
+  </thead>
+  <tbody>
+    @php $rows = 8; @endphp
+    @foreach($elementos as $i => $el)
+      @php
+        $sku = is_array($el) ? ($el['sku'] ?? 'N/A') : (isset($el->sku) ? $el->sku : 'N/A');
+        $nombreProduc = is_array($el) ? ($el['name_produc'] ?? null) : (isset($el->name_produc) ? $el->name_produc : null);
+        $nombre = $nombreProduc ?: $sku;
+        $motivoText = $motivoPrimeraVez ? 'ENTREGA 1° VEZ' : ($motivoReposicion ? 'REPOSICIÓN' : '');
+        $firmaSrc = isset($firma) ? ($firma['entrega'] ?? ($firma['recepcion'] ?? null)) : null;
+      @endphp
+      <tr>
+        <td class="center">{{ $fechaReg }}</td>
+        <td>{{ $nombre }}</td>
+        <td class="center">{{ $motivoText }}</td>
+        <td class="center">
+          @if($i === 0 && !empty($firmaSrc))
+            <img class="firma-img" src="{{ $firmaSrc }}" alt="Firma" />
+          @endif
+        </td>
+        <td>{{ $personaEntrega }}</td>
+        <td></td>
+      </tr>
+    @endforeach
+    @for($j = count($elementos); $j < $rows; $j++)
+      <tr>
+        <td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td>
+      </tr>
+    @endfor
+  </tbody>
+</table>
+
+<!-- Compromiso y firma -->
+<div class="legal" style="border:1px solid #1e40af; margin-top:8px;">
+  Al recibir estos elementos de protección personal me comprometo a mantenerlos en buen estado y hacer buen uso de los mismos, acorde a los riesgos que me han sido explicados, según mi cargo. Si durante el tiempo de vida útil de los elementos que me han sido entregados se llegaran a extraviar autorizo para que automáticamente sean descontados de mi salario y autoricen la compra de unos nuevos.
+</div>
+@php $firmaSrcBottom = isset($firma) ? ($firma['entrega'] ?? ($firma['recepcion'] ?? null)) : null; @endphp
+<div style="text-align:center; margin-top:10px;">
+  @if(!empty($firmaSrcBottom))
+    <img class="firma-img" src="{{ $firmaSrcBottom }}" alt="Firma" />
+  @endif
+  <div class="signature-line">Firma Colaborador</div>
+  
+</div>
+
 </body>
 </html>

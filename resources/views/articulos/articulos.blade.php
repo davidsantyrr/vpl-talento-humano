@@ -21,6 +21,19 @@
 
     <p class="page-subtitle">Gestiona inventario en la BD 3 (bodega, ubicación, estatus y stock) para artículos provenientes de requisición.</p>
 
+    <div class="filters" style="display:flex; gap:16px; align-items:center; margin: 12px 0;">
+      <form method="GET" action="{{ route('articulos.index') }}" class="category-filter-form" style="display:flex; gap:8px; align-items:center;">
+        <label for="category">Categoría</label>
+        <select id="category" name="category" onchange="this.form.submit()">
+          <option value="">Todas</option>
+          @foreach(($categories ?? []) as $cat)
+            <option value="{{ $cat }}" {{ ($selectedCategory ?? '')===$cat ? 'selected' : '' }}>{{ $cat }}</option>
+          @endforeach
+        </select>
+        <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
+      </form>
+    </div>
+
     <div class="table-wrapper">
       <table class="tabla-articulos">
         <thead>
@@ -51,6 +64,7 @@
             @endforeach
           </select>
           <span>artículos</span>
+          <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
         </form>
       </div>
 
@@ -148,6 +162,7 @@
         <input type="hidden" name="ubicacion" id="destruccionUbicacionHidden">
         <input type="hidden" name="estatus" id="destruccionEstatusHidden">
         <input type="hidden" name="per_page" value="{{ $perPage }}">
+        <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn secondary" onclick="cerrarModalDestruccion()">Cancelar</button>
