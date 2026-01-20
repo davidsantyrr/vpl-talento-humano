@@ -116,6 +116,7 @@ Route::get('/entregas/{entrega}', [HistorialEntregaController::class, 'show'])->
 Route::get('/historial/unificado', [HistorialEntregaController::class, 'historialUnificado'])->name('historial.unificado');
 Route::get('/historial/pdf', [HistorialEntregaController::class, 'descargarPDFIndividual'])->name('historial.pdf');
 Route::get('/historial/pdf-masivo', [HistorialEntregaController::class, 'descargarPDFMasivo'])->name('historial.pdf.masivo');
+Route::get('historial/export-excel', [App\Http\Controllers\HistorialController::class, 'exportExcel'])->name('historial.export_excel');
 
 // Ruta para descargar comprobante
 Route::get('/comprobantes/{dir}/{file}', [HistorialEntregaController::class, 'downloadComprobante'])

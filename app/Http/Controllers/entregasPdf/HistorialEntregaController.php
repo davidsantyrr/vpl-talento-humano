@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use ZipArchive;
 
 class HistorialEntregaController extends Controller
 {
@@ -71,7 +73,8 @@ class HistorialEntregaController extends Controller
                 DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
                 DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
                 'sub_areas.operationName as operacion',
-                'entregas.recibido'
+                'entregas.recibido',
+                DB::raw('entregas.entrega_user as realizado_por')
             ])
             ->whereNull('entregas.deleted_at');
 
@@ -89,7 +92,8 @@ class HistorialEntregaController extends Controller
                 DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
                 DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
                 'sub_areas.operationName as operacion',
-                'recepciones.entregado as recibido'
+                'recepciones.entregado as recibido',
+                DB::raw('recepciones.recepcion_user as realizado_por')
             ])
             ->whereNull('recepciones.deleted_at');
 
@@ -317,6 +321,150 @@ class HistorialEntregaController extends Controller
      */
     public function descargarPDFMasivo(Request $request)
     {
-        return back()->with('error', 'Descarga masiva aún no implementada.');
+        $data = $request->validate([
+            'tipo_registro' => ['required', 'in:entrega,recepcion,todos'],
+            'operacion_id' => ['nullable', 'integer'],
+            'fecha_inicio' => ['required', 'date'],
+            'fecha_fin' => ['required', 'date'],
+        ]);
+
+        $tipo = $data['tipo_registro'];
+        $operacionId = $data['operacion_id'] ?? null;
+        $inicio = $data['fecha_inicio'];
+        $fin = $data['fecha_fin'];
+
+        try {
+            $registros = collect();
+
+            if ($tipo === 'entrega' || $tipo === 'todos') {
+                $qEnt = DB::table('entregas')
+                    ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
+                    ->select([
+                        'entregas.id',
+                        'entregas.created_at',
+                        DB::raw("'entrega' as registro_tipo"),
+                        'entregas.tipo_entrega as tipo',
+                        'entregas.comprobante_path as comprobante_path',
+                        DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'entregas.recibido'
+                    ])
+                    ->whereNull('entregas.deleted_at')
+                    ->whereBetween('entregas.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);
+                if ($operacionId) { $qEnt->where('entregas.sub_area_id', $operacionId); }
+                $registros = $registros->merge($qEnt->get());
+            }
+
+            if ($tipo === 'recepcion' || $tipo === 'todos') {
+                $qRec = DB::table('recepciones')
+                    ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
+                    ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
+                    ->select([
+                        'recepciones.id',
+                        'recepciones.created_at',
+                        DB::raw("'recepcion' as registro_tipo"),
+                        'recepciones.tipo_recepcion as tipo',
+                        'recepciones.comprobante_path as comprobante_path',
+                        DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                        DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
+                        DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'sub_areas.operationName as operacion',
+                        'recepciones.entregado as recibido'
+                    ])
+                    ->whereNull('recepciones.deleted_at')
+                    ->whereBetween('recepciones.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);
+                if ($operacionId) { $qRec->where('recepciones.operacion_id', $operacionId); }
+                $registros = $registros->merge($qRec->get());
+            }
+
+            if ($registros->isEmpty()) {
+                return back()->with('error', 'No hay registros en el rango seleccionado.');
+            }
+
+            // Limitar a un máximo razonable para evitar ZIP gigante
+            $maxArchivos = 500;
+            if ($registros->count() > $maxArchivos) {
+                $registros = $registros->sortByDesc('created_at')->take($maxArchivos)->values();
+            }
+
+            // Preparar ZIP temporal
+            $tmpDir = storage_path('app/tmp_downloads');
+            if (!file_exists($tmpDir)) { mkdir($tmpDir, 0755, true); }
+            $zipName = 'comprobantes_' . ($tipo === 'todos' ? 'mixto' : $tipo) . '_' . now()->format('Ymd_His') . '.zip';
+            $zipPath = $tmpDir . DIRECTORY_SEPARATOR . $zipName;
+
+            $zip = new ZipArchive();
+            if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+                return back()->with('error', 'No se pudo crear el archivo ZIP.');
+            }
+
+            foreach ($registros as $reg) {
+                $tipoReg = $reg->registro_tipo;
+                $numeroDoc = $reg->numero_documento ?? ($reg->nombres ?? 'registro');
+                $numeroDoc = preg_replace('/[^A-Za-z0-9\-_]/', '_', substr($numeroDoc, 0, 40));
+                $fecha = \Carbon\Carbon::parse($reg->created_at)->format('Ymd_His');
+                $filename = strtoupper($tipoReg) . '_' . $numeroDoc . '_' . $fecha . '.pdf';
+
+                // Si hay comprobante_path, intentar añadir archivo existente
+                $added = false;
+                if (!empty($reg->comprobante_path)) {
+                    $relative = ltrim(preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $reg->comprobante_path), '/');
+                    $candidates = [
+                        storage_path('app/' . $relative),
+                        storage_path('app/public/' . $relative),
+                    ];
+                    foreach ($candidates as $p) {
+                        if (is_string($p) && file_exists($p)) {
+                            $zip->addFile($p, $filename);
+                            $added = true;
+                            break;
+                        }
+                    }
+                }
+
+                if ($added) { continue; }
+
+                // Construir datos y renderizar PDF en memoria si no existe comprobante
+                if ($tipoReg === 'entrega') {
+                    $elementos = DB::table('elemento_x_entrega')
+                        ->where('entrega_id', $reg->id)
+                        ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                        ->get();
+                } else {
+                    $elementos = DB::table('elemento_x_recepcion')
+                        ->where('recepcion_id', $reg->id)
+                        ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                        ->get();
+                }
+
+                $pdf = Pdf::loadView('pdf.comprobante', [
+                    'tipo' => $tipoReg,
+                    'registro' => (object) $reg,
+                    'elementos' => $elementos,
+                    'firma' => []
+                ])->setPaper('A4', 'portrait');
+
+                $zip->addFromString($filename, $pdf->output());
+            }
+
+            $zip->close();
+
+            return response()->download($zipPath, $zipName, [
+                'Content-Type' => 'application/zip',
+                'Content-Disposition' => 'attachment; filename="' . $zipName . '"'
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            Log::error('Error en descarga masiva', [
+                'tipo' => $tipo ?? null,
+                'operacion' => $operacionId ?? null,
+                'inicio' => $inicio ?? null,
+                'fin' => $fin ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return back()->with('error', 'No se pudo generar la descarga masiva: ' . $e->getMessage());
+        }
     }
 }

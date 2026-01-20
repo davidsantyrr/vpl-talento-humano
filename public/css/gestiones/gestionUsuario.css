@@ -100,14 +100,15 @@ body{
 ================================ */
 .table-responsive{
 	width:100%;
-	overflow-x:auto;
+	overflow-x:visible;
 }
 
 .table{
 	width:100%;
 	border-collapse:separate;
 	border-spacing:0 10px;
-	min-width:1200px;
+	min-width:auto;
+	table-layout:fixed;
 }
 
 .table thead th{
@@ -115,9 +116,10 @@ body{
 	color:#445;
 	font-weight:600;
 	font-size:0.9rem;
-	padding:14px 16px;
+	padding:12px 12px;
 	border-bottom:2px solid #e1e5ee;
-	white-space:nowrap;
+	white-space:normal;
+	word-break:break-word;
 }
 
 .table tbody tr{
@@ -127,24 +129,45 @@ body{
 }
 
 .table tbody td{
-	padding:14px 16px;
+	padding:12px 12px;
 	font-size:0.88rem;
 	vertical-align:middle;
-	white-space:nowrap;
+	white-space:normal;
+	word-break:break-word;
 }
 
 .table tbody tr:hover{
 	background:#f7faff;
 }
 
-/* Columnas largas */
+/* Columnas largas: permitir ajuste sin desbordar */
 .table td:nth-child(2),
 .table td:nth-child(3),
 .table td:nth-child(6){
-	white-space:normal;
-	max-width:220px;
-	word-break:break-word;
+	max-width:240px;
 }
+
+/* Distribución de columnas: asignar proporciones */
+.table thead th:nth-child(1),
+.table tbody td:nth-child(1){width:6%;}
+.table thead th:nth-child(2),
+.table tbody td:nth-child(2){width:12%;}
+.table thead th:nth-child(3),
+.table tbody td:nth-child(3){width:12%;}
+.table thead th:nth-child(4),
+.table tbody td:nth-child(4){width:10%;}
+.table thead th:nth-child(5),
+.table tbody td:nth-child(5){width:12%;}
+.table thead th:nth-child(6),
+.table tbody td:nth-child(6){width:16%;}
+.table thead th:nth-child(7),
+.table tbody td:nth-child(7){width:10%;}
+.table thead th:nth-child(8),
+.table tbody td:nth-child(8){width:10%;}
+.table thead th:nth-child(9),
+.table tbody td:nth-child(9){width:10%;}
+.table thead th:nth-child(10),
+.table tbody td:nth-child(10){width:12%;}
 
 /* Acciones */
 .acciones {
@@ -229,6 +252,12 @@ body{
 	}
 
 	.table{
-		min-width:1000px;
+		min-width:auto;
 	}
+	.table thead th,
+	.table tbody td{
+		padding:10px 8px;
+		font-size:0.82rem;
+	}
+	.acciones{gap:6px;}
 }

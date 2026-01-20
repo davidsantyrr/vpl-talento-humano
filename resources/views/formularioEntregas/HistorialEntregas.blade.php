@@ -36,6 +36,7 @@
 						<th>Operación</th>
 						<th>Elementos</th>
 						<th>Firma</th>
+						<th>Realizó</th>
 						<th>Acciones</th>
 					</tr>
 				</thead>
@@ -64,6 +65,7 @@
 									-
 								@endif
 							</td>
+							<td>{{ $e->entrega_user ?? '-' }}</td>
 							<td>
 								<div class="actions-row">
 									<a href="{{ route('entregas.show', $e->id ?? 0) }}" class="btn small">Ver</a>
@@ -85,7 +87,7 @@
 							</td>
 						</tr>
 					@empty
-						<tr><td colspan="7" style="text-align:center;color:var(--muted)">No se encontraron entregas.</td></tr>
+						<tr><td colspan="8" style="text-align:center;color:var(--muted)">No se encontraron entregas.</td></tr>
 					@endforelse
 				</tbody>
 			</table>

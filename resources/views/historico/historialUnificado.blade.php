@@ -18,6 +18,20 @@
 				</svg>
 				Descarga Masiva
 			</button>
+			<!-- Exportar Excel: form que reenvía filtros actuales -->
+			<form id="formExportExcel" method="GET" action="{{ route('historial.export_excel') }}" style="display:inline-block;margin-left:8px;">
+				<input type="hidden" name="q" value="{{ request('q') }}">
+				<input type="hidden" name="operacion" value="{{ request('operacion') }}">
+				<input type="hidden" name="tipo_registro" value="{{ request('tipo_registro') }}">
+				<input type="hidden" name="fecha_inicio" value="{{ request('fecha_inicio') }}">
+				<input type="hidden" name="fecha_fin" value="{{ request('fecha_fin') }}">
+				<button class="btn secondary" type="submit" title="Exportar lista a Excel">
+					<svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="margin-right:6px;">
+						<path d="M5 0h6v2H5z"/><!-- icon simplificado -->
+					</svg>
+					Exportar Excel
+				</button>
+			</form>
 		</div>
 		<div class="controls">
 			<form method="GET" class="filters">
@@ -52,6 +66,7 @@
 						<th>Operación</th>
 						<th>Subtipo</th>
 						<th>Estado</th>
+						<th>Realizó</th>
 						<th>Acciones</th>
 					</tr>
 				</thead>
@@ -90,6 +105,7 @@
 									</span>
 								@endif
 							</td>
+							<td>{{ $registro->realizado_por ?? '-' }}</td>
 							<td>
 								<div class="actions-row">
 									<button class="btn small" onclick='verDetalle(@json($registro))'>Ver</button>
@@ -169,6 +185,20 @@
 		</div>
 
 		<style>
+		/* Cabecera fija + scroll del cuerpo */
+		.table-wrap {max-height: 70vh; overflow: auto; position: relative;}
+		.historial-table {width: 100%; table-layout: fixed;} /* necesario para ellipsis */
+		.historial-table thead th {
+			position: sticky; top: 0; z-index: 2;
+			background: #0f172a; color: #fff; /* adapta a tu tema */
+		}
+		/* Una sola línea + elipsis para todo el texto de la matriz */
+		.historial-table th, .historial-table td {
+			white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+		}
+		/* Opcional: dar algo de padding para que el tooltip no tape el texto */
+		.historial-table td { padding-right: 12px; }
+
 		.custom-paginacion {display:flex !important; justify-content:center !important; padding:12px 0 !important}
 		.custom-paginacion .custom-pagination-list {list-style:none !important; display:flex !important; gap:8px !important; margin:0 !important; padding:0 !important; align-items:center !important}
 		.custom-paginacion .custom-page {display:inline-flex !important}
@@ -326,5 +356,15 @@
 			title: @json(session('error'))
 		});
 	@endif
+
+	// Asignar el texto completo como título (hover) a todas las celdas de la matriz
+	document.addEventListener('DOMContentLoaded', function () {
+		const cells = document.querySelectorAll('.historial-table th, .historial-table td');
+		cells.forEach(c => {
+			// usar el contenido de texto plano como tooltip
+			const text = (c.innerText || '').trim();
+			if (text) c.title = text;
+		});
+	});
 </script>
 @endsection
