@@ -19,12 +19,53 @@
                     @csrf
                     <div class="col-md-4">
                         <label class="form-label">Rol</label>
-                        <select name="rol" class="form-select" required>
-                            <option value="">-- Seleccione un rol --</option>
-                            @foreach($rolesDisponibles as $rol)
-                                <option value="{{ $rol }}" {{ old('rol') == $rol ? 'selected' : '' }}>{{ $rol }}</option>
-                            @endforeach
-                        </select>
+                        @php
+                            $selectedRol = old('rol') ?? (isset($selectedRol) ? $selectedRol : '');
+                            $user = $authUser ?? session('auth.user') ?? null;
+                            if (!$selectedRol && $user) {
+                                $candidate = null;
+                                $u = is_object($user) ? (array) $user : (array) $user;
+                                // Try several common keys and nested structures
+                                foreach (['rol','role','perfil','perfiles','roles','name'] as $k) {
+                                    if (!isset($u[$k])) continue;
+                                    $v = $u[$k];
+                                    if (is_string($v) && trim($v) !== '') { $candidate = $v; break; }
+                                    if (is_array($v) && count($v)) {
+                                        $first = $v[0];
+                                        if (is_string($first) && trim($first) !== '') { $candidate = $first; break; }
+                                        if (is_object($first) || is_array($first)) {
+                                            $fa = is_object($first) ? (array) $first : $first;
+                                            foreach (['roles','rol','name','perfil'] as $kk) {
+                                                if (isset($fa[$kk]) && is_string($fa[$kk]) && trim($fa[$kk]) !== '') { $candidate = $fa[$kk]; break 2; }
+                                            }
+                                        }
+                                    }
+                                }
+                                if ($candidate) { $selectedRol = $candidate; }
+                            }
+                        @endphp
+
+                        @if(!empty($selectedRol))
+                            <input type="text" class="form-control" value="{{ $selectedRol }}" readonly>
+                            <input type="hidden" name="rol" value="{{ $selectedRol }}">
+                        @else
+                            <select name="rol" class="form-select" required>
+                                <option value="">-- Seleccione un rol --</option>
+                                @foreach($rolesDisponibles as $rol)
+                                    @php
+                                        $isSelected = false;
+                                        if ($selectedRol) {
+                                            $s = mb_strtolower(trim($selectedRol));
+                                            $r = mb_strtolower(trim($rol));
+                                            if (strpos($s, $r) !== false || strpos($r, $s) !== false) {
+                                                $isSelected = true;
+                                            }
+                                        }
+                                    @endphp
+                                    <option value="{{ $rol }}" {{ $isSelected ? 'selected' : '' }}>{{ $rol }}</option>
+                                @endforeach
+                            </select>
+                        @endif
                         @error('rol') <div class="text-danger small">{{ $message }}</div> @enderror
                         <small class="text-muted">Los roles provienen de las periodicidades configuradas</small>
                     </div>

@@ -32,9 +32,65 @@ class ArticulosController extends Controller
             ->toArray();
         $categories = collect(array_unique(array_merge($catExt, $catLocal)))->sort()->values();
 
+        // Filtrar opciones de categoría que se mostrarán en el select según rol
+        $user = session('auth.user');
+        $roleStringsForCategories = $this->collectRoleStringsFromUser($user);
+        $isAdmin = $this->matchesRoleStringArray($roleStringsForCategories, ['administrador','admin']);
+        $isHseq = $this->matchesRoleStringArray($roleStringsForCategories, ['hseq']);
+        $isTalento = $this->matchesRoleStringArray($roleStringsForCategories, ['talento','talentohumano']);
+
+        if (!$isAdmin) {
+            if ($isHseq) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+                $categories = $categories->filter(function($c) use ($patterns) {
+                    foreach ($patterns as $p) {
+                        if (stripos($c, $p) !== false) return true;
+                    }
+                    return false;
+                })->values();
+            } elseif ($isTalento) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+                $categories = $categories->filter(function($c) use ($patterns) {
+                    foreach ($patterns as $p) {
+                        if (stripos($c, $p) !== false) return true;
+                    }
+                    return false;
+                })->values();
+            } else {
+                // Si no es ninguno, mostrar nada salvo 'Todas'
+                $categories = collect([]);
+            }
+        }
+
         // consulta de productos con filtro opcional por categoría
         $productosQuery = Producto::select('sku', 'name_produc', 'categoria_produc')
             ->orderBy('name_produc');
+
+        // Aplicar filtro por rol (HSEQ / Talento humano) si corresponde
+        $user = session('auth.user');
+        $roleStrings = $this->collectRoleStringsFromUser($user);
+        $isAdmin = $this->matchesRoleStringArray($roleStrings, ['administrador','admin']);
+        $isHseq = $this->matchesRoleStringArray($roleStrings, ['hseq']);
+        $isTalento = $this->matchesRoleStringArray($roleStrings, ['talento','talentohumano']);
+
+        // Aplicar filtros solo si no es admin
+        if (!$isAdmin) {
+            if ($isHseq) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+                $productosQuery->where(function($q) use ($patterns) {
+                    foreach ($patterns as $p) {
+                        $q->orWhere('categoria_produc', 'like', '%' . $p . '%');
+                    }
+                });
+            } elseif ($isTalento) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+                $productosQuery->where(function($q) use ($patterns) {
+                    foreach ($patterns as $p) {
+                        $q->orWhere('categoria_produc', 'like', '%' . $p . '%');
+                    }
+                });
+            }
+        }
 
         if ($category !== '') {
             $productosQuery->where('categoria_produc', $category);
@@ -136,6 +192,25 @@ class ArticulosController extends Controller
                 if ($category !== '') {
                         $extrasQuery->where('categoria', $category);
                 }
+                // Aplicar mismo filtrado por rol para extras (si no es admin)
+                if (!$isAdmin) {
+                    if ($isHseq) {
+                        $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+                        $extrasQuery->where(function($q) use ($patterns) {
+                            foreach ($patterns as $p) {
+                                $q->orWhere('categoria', 'like', '%' . $p . '%');
+                            }
+                        });
+                    } elseif ($isTalento) {
+                        $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+                        $extrasQuery->where(function($q) use ($patterns) {
+                            foreach ($patterns as $p) {
+                                $q->orWhere('categoria', 'like', '%' . $p . '%');
+                            }
+                        });
+                    }
+                }
+
                 $extras = $extrasQuery->whereNotIn('sku', $remoteSkus)->orderBy('nombre_articulo')->get();
 
                 foreach ($extras as $loc) {
@@ -218,6 +293,41 @@ class ArticulosController extends Controller
             $paginationHtml .= '</ul></nav>';
         }
         return $paginationHtml;
+    }
+
+    private function collectRoleStringsFromUser($user): array
+    {
+        $out = [];
+        $push = function($val) use (&$out) { if (is_string($val)) $out[] = mb_strtolower(trim($val)); };
+        $candidates = ['role','rol','perfil','roles','perfil_name','perfilNombre','role_name','nombre_rol','slug','key','codigo','tipo','tipo_rol','name','display_name','full_name','nombre','nombres','usuario'];
+        if (is_array($user)) {
+            foreach ($candidates as $k) if (isset($user[$k])) $push($user[$k]);
+            if (isset($user['roles']) && is_array($user['roles'])) {
+                foreach ($user['roles'] as $item) {
+                    if (is_string($item)) $push($item);
+                    elseif (is_array($item)) foreach (['name','nombre','role','rol','roles'] as $kk) if (isset($item[$kk])) $push($item[$kk]);
+                    elseif (is_object($item)) foreach (['name','nombre','role','rol','roles'] as $kk) if (isset($item->$kk)) $push($item->$kk);
+                }
+            }
+        } elseif (is_object($user)) {
+            foreach ($candidates as $k) if (isset($user->$k)) $push($user->$k);
+            if (isset($user->roles) && is_array($user->roles)) foreach ($user->roles as $item) {
+                if (is_string($item)) $push($item);
+                elseif (is_object($item)) foreach (['name','nombre','role','rol','roles'] as $kk) if (isset($item->$kk)) $push($item->$kk);
+            }
+        }
+        return array_values(array_unique(array_filter($out)));
+    }
+
+    private function matchesRoleStringArray(array $values, array $needles): bool
+    {
+        foreach ($values as $v) {
+            $vClean = str_replace(' ', '', $v);
+            foreach ($needles as $n) {
+                if (strpos($vClean, str_replace(' ', '', mb_strtolower($n))) !== false) return true;
+            }
+        }
+        return false;
     }
 
     public function update(Request $request, string $sku)

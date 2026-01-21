@@ -22,7 +22,7 @@
       <article class="card c-indigo" role="article">
         <div class="card__top">
           <div class="icon" aria-hidden="true">
-            <i class="fa-solid fa-home"></i>
+            <i class="fa-solid fa-house"></i>
           </div>
           <h3>Home</h3>
           <p class="desc">Volver al menú principal del sistema</p>
@@ -48,7 +48,7 @@
       <article class="card c-orange" role="article">
         <div class="card__top">
           <div class="icon" aria-hidden="true">
-            <i class="fa-solid fa-arrows-rotate"></i>
+            <i class="fa-solid fa-truck"></i>
           </div>
           <h3>Recepción de elementos</h3>
           <p class="desc">Registra reemplazos de elementos entregados</p>
@@ -120,6 +120,19 @@
         </div>
         <div class="card__footer"><a href="{{ route('elementoxcargo.productos') }}" class="btn btn-cyan"
             aria-label="Ingresar a Configurar elementos por cargo">Ingresar</a></div>
+      </article>
+
+      <!--gestiones-->
+      <article class="card c-navy-blue" role="article">
+        <div class="card__top">
+          <div class="icon" aria-hidden="true">
+            <i class="fa-solid fa-gear"></i>
+          </div>
+          <h3>Gestiones</h3>
+          <p class="desc">Accede a las opciones de gestión del sistema de entregas</p>
+        </div>
+        <div class="card__footer"><a href="{{ route('menus.menuGestiones') }}" class="btn btn-navy-blue"
+          aria-label="Ingresar a Gestiones">Ingresar</a></div>
       </article>
 
     </section>

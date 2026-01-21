@@ -167,3 +167,8 @@ Route::resource('gestionArea', gestionAreaController::class);
 Route::resource('gestionCentroCosto', gestionCentroCostoController::class);
 // Gestión de artículos (resource protegido)
     Route::resource('gestionArticulos', GestionArticulosController::class);
+
+    
+Route::get('/menus/menuGestiones', function () {
+        return view('menus.menuGestiones');
+    })->middleware([VplAuth::class])->name('menus.menuGestiones');

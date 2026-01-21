@@ -4,6 +4,7 @@ namespace App\Http\Controllers\gestiones;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class gestionCorreosController extends Controller
 {
@@ -19,7 +20,11 @@ class gestionCorreosController extends Controller
             ->pluck('rol_periodicidad')
             ->toArray();
 
-        return view('gestiones.gestionCorreos', compact('correos', 'rolesDisponibles'));
+        // Intentar detectar rol del usuario en sesión y mapear a uno de los rolesDisponibles
+        $user = session('auth.user') ?? null;
+        $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
+
+        return view('gestiones.gestionCorreos', compact('correos', 'rolesDisponibles', 'selectedRol'));
     }
 
     public function create()
@@ -72,5 +77,70 @@ class gestionCorreosController extends Controller
         $correo->delete();
 
         return redirect()->route('gestionCorreos.index')->with('success', 'Correo eliminado.');
+    }
+
+    private function detectRoleForView($user, array $rolesDisponibles): ?string
+    {
+        if (empty($user) || empty($rolesDisponibles)) return null;
+
+        $values = $this->collectRoleStrings($user);
+        foreach ($values as $v) {
+            foreach ($rolesDisponibles as $rol) {
+                $s = mb_strtolower(trim($v));
+                $r = mb_strtolower(trim($rol));
+                if ($s === '' || $r === '') continue;
+                if (strpos($s, $r) !== false || strpos($r, $s) !== false) {
+                    return $rol;
+                }
+            }
+        }
+
+        // Si no se encontró una coincidencia, registrar para depuración
+        Log::info('gestionCorreos: no se detectó rol coincidente para la vista', [
+            'detected_role_strings' => $values,
+            'rolesDisponibles' => $rolesDisponibles,
+            'user_sample' => is_array($user) ? array_intersect_key($user, array_flip(['id','email','name'])) : $user,
+        ]);
+
+        return null;
+    }
+
+    private function collectRoleStrings($user): array
+    {
+        $out = [];
+        $push = function($val) use (&$out) {
+            if (is_string($val)) {
+                $v = $this->normalize($val);
+                if ($v) $out[] = $v;
+            }
+        };
+        $candidates = ['role','rol','perfil','perfil_name','perfilNombre','role_name','nombre_rol','slug','key','codigo','tipo','tipo_rol','name','display_name','full_name','nombre','nombres','usuario'];
+        if (is_array($user)) {
+            foreach ($candidates as $k) if (isset($user[$k])) $push($user[$k]);
+            if (isset($user['roles'])) {
+                $r = $user['roles'];
+                if (is_array($r)) foreach ($r as $item) {
+                    if (is_string($item)) $push($item);
+                    elseif (is_array($item)) foreach (['name','nombre','role','rol','roles','slug','key'] as $kk) if (isset($item[$kk])) $push($item[$kk]);
+                    elseif (is_object($item)) foreach (['name','nombre','role','rol','roles','slug','key'] as $kk) if (isset($item->$kk)) $push($item->$kk);
+                }
+            }
+        } elseif (is_object($user)) {
+            foreach ($candidates as $k) if (isset($user->$k)) $push($user->$k);
+            if (isset($user->roles) && is_array($user->roles)) foreach ($user->roles as $item) {
+                if (is_string($item)) $push($item);
+                elseif (is_object($item)) foreach (['name','nombre','role','rol','slug','key'] as $kk) if (isset($item->$kk)) $push($item->$kk);
+            }
+        }
+        return array_values(array_filter(array_unique($out)));
+    }
+
+    private function normalize(?string $value): ?string
+    {
+        if ($value === null) return null;
+        $v = trim(mb_strtolower($value));
+        $v = str_replace(['_', '-'], ' ', $v);
+        $v = preg_replace('/\s+/', ' ', $v);
+        return $v;
     }
 }

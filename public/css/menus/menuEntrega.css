@@ -450,6 +450,51 @@ body {
     background: rgba(232, 250, 255, 0.9)
 }
 
+/* Additional color variants for Gestiones view */
+.c-pink .card__top {
+    background: #ffd3d6; /* soft pink */
+}
+.c-pink .card__top h3,
+.c-pink .card__top .desc { color: #5b1316; }
+.c-pink .icon { color: #7a0f12; background: rgba(255, 245, 246, 0.9); }
+
+.c-peach .card__top { background: #fedec4; }
+.c-peach .card__top h3, .c-peach .card__top .desc { color: #5b360a; }
+.c-peach .icon { color: #7a4a05; background: rgba(255, 250, 244, 0.9); }
+
+.c-white .card__top { background: #ffffff; }
+.c-white .card__top h3, .c-white .card__top .desc { color: #0f172a; }
+.c-white .icon { color: #0b1b33; background: rgba(255,255,255,0.95); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+/* Neutral/dark variant used en algunas tarjetas de gestiones */
+.c-black .card__top { background: #ffffff; }
+.c-black .card__top h3, .c-black .card__top .desc { color: #0f172a; }
+.c-black .icon { color: #0b1b33; background: rgba(255,255,255,0.95); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+/* Navy blue custom variant used por la tarjeta 'Gestiones' */
+.c-navy-blue .card__top {
+    background: #04203a; /* fondo oscuro azul marino */
+}
+
+.c-navy-blue .card__top h3,
+.c-navy-blue .card__top .desc {
+    color: #e6f3ff; /* texto claro */
+}
+
+.c-navy-blue .icon {
+    color: #8fc9ff; /* icono azulado */
+    background: rgba(10, 30, 50, 0.85);
+}
+
+/* Botón navy para el footer */
+.btn-navy-blue {
+    background: #0b2540;
+    color: #ffffff;
+}
+.btn-navy-blue:hover {
+    background: #123154;
+}
+
 /* Hover glow sutil */
 .card:hover {
     box-shadow: var(--shadow-hover)
