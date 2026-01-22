@@ -8,6 +8,9 @@ use App\Models\GestionArticulos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\InventariosExport;
+use Illuminate\Support\Collection;
 
 class ArticulosController extends Controller
 {
@@ -101,6 +104,7 @@ class ArticulosController extends Controller
             ->appends(['per_page' => $perPage, 'category' => $category]);
 
         $skus = $productos->pluck('sku');
+        $skusArr = $skus->map(function($s){ return (string)$s; })->all();
         // traer todas las filas de inventarios (pueden existir múltiples por SKU)
         $inventariosRows = DB::connection('mysql_third')
             ->table('inventarios as i')
@@ -111,6 +115,87 @@ class ArticulosController extends Controller
             ->get();
         // agrupar por SKU
         $inventariosBySku = $inventariosRows->groupBy('sku');
+
+        // intentar traer precios desde posibles conexiones y detectar columnas de precio comunes
+        $pricesBySku = collect();
+        $connectionsToTry = ['mysql_second', 'mysql_third', null];
+        $candidateCols = ['price_produc','precio','price','precio_unitario','valor','valor_unitario','precio_proveedor','precio_provedor'];
+        foreach ($connectionsToTry as $connName) {
+            try {
+                $connection = $connName ? DB::connection($connName) : DB::connection();
+                $qb = $connection->table('productoxproveedor');
+
+                // detectar columnas disponibles en la tabla
+                $cols = [];
+                try { $cols = $connection->getSchemaBuilder()->getColumnListing('productoxproveedor'); } catch (\Throwable $_) { $cols = []; }
+
+                // obtener filas según columna disponible (sku o producto_id)
+                if (in_array('sku', $cols)) {
+                    $rows = $qb->whereIn('sku', $skusArr)->get();
+                } elseif (in_array('producto_id', $cols) || in_array('product_id', $cols)) {
+                    // mapear SKUs a producto_id en la misma conexión (tabla 'productos')
+                    $skuToId = [];
+                    try {
+                        $prodRows = $connection->table('productos')->whereIn('sku', $skusArr)->select('id','sku')->get();
+                        foreach ($prodRows as $pr) { $skuToId[(string)$pr->sku] = $pr->id; }
+                        $ids = array_values($skuToId);
+                        if (!empty($ids)) {
+                            $colId = in_array('producto_id', $cols) ? 'producto_id' : 'product_id';
+                            $rows = $qb->whereIn($colId, $ids)->get();
+                        } else {
+                            $rows = collect();
+                        }
+                    } catch (\Throwable $_) {
+                        $rows = collect();
+                    }
+                } else {
+                    // leer todo y filtrar por sku si es posible
+                    $rows = $qb->get();
+                }
+
+                if (empty($rows) || $rows->isEmpty()) continue;
+
+                foreach ($rows as $r) {
+                    $rArr = (array)$r;
+                    $found = null;
+                    // buscar columna de precio conocida
+                    foreach ($candidateCols as $c) {
+                        if (array_key_exists($c, $rArr) && is_numeric($rArr[$c])) { $found = $rArr[$c]; break; }
+                    }
+                    if ($found === null) {
+                        // buscar la primera columna numérica disponible
+                        foreach ($rArr as $k => $v) {
+                            if (in_array($k, ['sku','producto_id','product_id'])) continue;
+                            if (is_numeric($v)) { $found = $v; break; }
+                        }
+                    }
+                    // resolver clave para mapear por sku si fila usa producto_id
+                    if (array_key_exists('sku', $rArr)) {
+                        $key = (string)$rArr['sku'];
+                    } elseif (array_key_exists('producto_id', $rArr) || array_key_exists('product_id', $rArr)) {
+                        $prodId = $rArr['producto_id'] ?? ($rArr['product_id'] ?? null);
+                        $key = null;
+                        if ($prodId) {
+                            try {
+                                $prod = $connection->table('productos')->where('id', $prodId)->select('sku')->first();
+                                if ($prod && isset($prod->sku)) $key = (string)$prod->sku;
+                            } catch (\Throwable $_) { $key = null; }
+                        }
+                        if ($key === null) continue; // no podemos mapear a SKU
+                    } else {
+                        // sin clave clara; intentar saltar
+                        continue;
+                    }
+                    $pricesBySku[$key] = $found;
+                }
+
+                if (!empty($pricesBySku)) break;
+            } catch (\Throwable $e) {
+                Log::debug('ArticulosController: error leyendo productoxproveedor en ' . ($connName ?? 'default'), ['msg'=>$e->getMessage()]);
+                continue;
+            }
+        }
+        $pricesBySku = collect($pricesBySku);
 
         $rowsHtml = '';
         $remoteSkus = collect($productos->pluck('sku'))->map(function($s){ return (string) $s; })->all();
@@ -170,20 +255,24 @@ class ArticulosController extends Controller
                     }
                 }
 
-                $rowsHtml .= '<tr data-sku="' . e($p->sku) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
-                    . '<td>' . e($p->sku) . '</td>'
-                    . '<td>' . e($p->name_produc) . '</td>'
-                    . '<td>' . e($p->categoria_produc) . '</td>'
-                    . '<td>' . e($bodegaSel ?: '-') . '</td>'
-                    . '<td>' . e($ubicacionSel ?: '-') . '</td>'
-                    . '<td>' . e(ucfirst($estatus)) . '</td>'
-                    . '<td>' . e($stock) . '</td>'
-                    . '<td>'
-                      . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
-                      . $botonesAccion
-                      . '</div>'
-                    . '</td>'
-                    . '</tr>';
+                                $priceVal = $pricesBySku->get((string)$p->sku) ?? null;
+                                $priceDisplay = is_null($priceVal) ? '' : number_format((float)$priceVal, 2, '.', '');
+
+                                $rowsHtml .= '<tr data-sku="' . e($p->sku) . '" data-price="' . e($priceDisplay) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
+                                        . '<td>' . e($p->sku) . '</td>'
+                                        . '<td>' . e($p->name_produc) . '</td>'
+                                        . '<td>' . e($p->categoria_produc) . '</td>'
+                                        . '<td>' . e($bodegaSel ?: '-') . '</td>'
+                                        . '<td>' . e($ubicacionSel ?: '-') . '</td>'
+                                        . '<td>' . e(ucfirst($estatus)) . '</td>'
+                                        . '<td><input type="text" disabled class="price-input" data-sku="' . e($p->sku) . '" value="' . e($priceDisplay) . '" style="width:90px; text-align:right;" /></td>'
+                                        . '<td>' . e($stock) . '</td>'
+                                        . '<td>'
+                                            . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
+                                            . $botonesAccion
+                                            . '</div>'
+                                        . '</td>'
+                                        . '</tr>';
             }
         }
 
@@ -238,13 +327,16 @@ class ArticulosController extends Controller
                                     . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
                                     . '</button>';
 
-                                $rowsHtml .= '<tr data-sku="' . e($loc->sku) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
+                                $priceValLocal = $pricesBySku->get((string)$loc->sku) ?? null;
+                                $priceDisplayLocal = is_null($priceValLocal) ? '' : number_format((float)$priceValLocal, 2, '.', '');
+                                $rowsHtml .= '<tr data-sku="' . e($loc->sku) . '" data-price="' . e($priceDisplayLocal) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
                                         . '<td>' . e($loc->sku) . '</td>'
                                         . '<td>' . e($loc->nombre_articulo) . '</td>'
                                         . '<td>' . e($loc->categoria ?? '') . '</td>'
                                         . '<td>' . e($bodegaSel ?: '-') . '</td>'
                                         . '<td>' . e($ubicacionSel ?: '-') . '</td>'
                                         . '<td>' . e(ucfirst($estatus)) . '</td>'
+                                        . '<td><input type="text" disabled class="price-input" data-sku="' . e($loc->sku) . '" value="' . e($priceDisplayLocal) . '" style="width:90px; text-align:right;" /></td>'
                                         . '<td>' . e($stock) . '</td>'
                                         . '<td>'
                                             . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
@@ -262,6 +354,7 @@ class ArticulosController extends Controller
             'categories' => $categories,
             'selectedCategory' => $category,
             'status' => session('status'),
+            'canExport' => ($isAdmin || $isHseq || $isTalento),
         ]);
     }
 
@@ -449,8 +542,70 @@ class ArticulosController extends Controller
             }
         }
 
+        // Si se envió price en el formulario, intentar guardarla en productoxproveedor
+        if ($request->has('price')) {
+            try {
+                $priceVal = $request->input('price');
+                $priceVal = ($priceVal === '' || is_null($priceVal)) ? null : (float)$priceVal;
+                $this->upsertPriceForSku($sku, $priceVal);
+            } catch (\Throwable $e) {
+                Log::warning('No se pudo guardar price desde update', ['sku'=>$sku,'msg'=>$e->getMessage()]);
+            }
+        }
+
         return redirect()->route('articulos.index', ['per_page' => (int) ($data['per_page'] ?? 20)])
             ->with('status', 'Inventario actualizado');
+    }
+
+    // Guardar/actualizar precio en la tabla productoxproveedor (conexion mysql_second)
+    public function savePrice(Request $request)
+    {
+        $data = $request->validate([
+            'sku' => ['required','string','max:255'],
+            'price' => ['nullable','numeric']
+        ]);
+        $sku = $data['sku'];
+        $price = isset($data['price']) && $data['price'] !== '' ? (float)$data['price'] : null;
+        try {
+            DB::connection('mysql_second')->table('productoxproveedor')->updateOrInsert(
+                ['sku' => $sku],
+                ['price_produc' => $price, 'updated_at' => now(), 'created_at' => now()]
+            );
+            return response()->json(['success' => true, 'sku' => $sku, 'price' => $price]);
+        } catch (\Throwable $e) {
+            Log::error('savePrice error', ['msg'=>$e->getMessage(),'sku'=>$sku]);
+            return response()->json(['success'=>false,'message'=>'No se pudo guardar el precio'],500);
+        }
+    }
+
+    /**
+     * Upsert price into productoxproveedor for the given sku.
+     * Tries by sku column, falls back to producto_id mapping.
+     */
+    private function upsertPriceForSku(string $sku, $price)
+    {
+        try {
+            DB::connection('mysql_second')->table('productoxproveedor')->updateOrInsert(
+                ['sku' => $sku],
+                ['price_produc' => $price, 'updated_at' => now(), 'created_at' => now()]
+            );
+            return;
+        } catch (\Throwable $e) {
+            // continuar a fallback
+        }
+
+        // fallback: map producto_id from productos table
+        try {
+            $prod = DB::connection('mysql_second')->table('productos')->where('sku', $sku)->select('id')->first();
+            if ($prod && isset($prod->id)) {
+                DB::connection('mysql_second')->table('productoxproveedor')->updateOrInsert(
+                    ['producto_id' => $prod->id],
+                    ['price_produc' => $price, 'updated_at' => now(), 'created_at' => now()]
+                );
+            }
+        } catch (\Throwable $_) {
+            // swallow fallback errors
+        }
     }
 
     public function destruir(Request $request)
@@ -656,6 +811,173 @@ class ArticulosController extends Controller
             }
             return redirect()->back()->with('error', 'Error eliminando la ubicación');
         }
+    }
+
+    /**
+     * Exportar inventarios a Excel. Acceso condicionado por rol (admin/hseq).
+     */
+    public function exportInventario(Request $request)
+    {
+        $user = session('auth.user');
+        $roles = $this->collectRoleStringsFromUser($user);
+        $allowed = $this->matchesRoleStringArray($roles, ['administrador','admin','hseq','talento','talentohumano']);
+        if (!$allowed) {
+            abort(403, 'No autorizado');
+        }
+
+        // Determinar rol para aplicar filtros de categoría similares a la vista
+        $isAdmin = $this->matchesRoleStringArray($roles, ['administrador','admin']);
+        $isHseq = $this->matchesRoleStringArray($roles, ['hseq']);
+        $isTalento = $this->matchesRoleStringArray($roles, ['talento','talentohumano']);
+
+        $out = collect();
+
+        if ($isAdmin) {
+            // traer inventarios con ubicaciones (todos)
+            $rows = DB::connection('mysql_third')
+                ->table('inventarios as i')
+                ->leftJoin('ubicaciones as u', 'u.id', '=', 'i.ubicaciones_id')
+                ->select('i.sku', 'i.stock', 'i.estatus', 'u.bodega', 'u.ubicacion')
+                ->orderBy('i.sku')
+                ->get();
+
+            foreach ($rows as $r) {
+                $sku = (string)($r->sku ?? '');
+                $prod = null;
+                try { $prod = Producto::where('sku', $sku)->first(); } catch (\Throwable $_) { $prod = null; }
+                $name = $prod ? ($prod->name_produc ?? '') : '';
+                $cat = $prod ? ($prod->categoria_produc ?? '') : '';
+                $price = null;
+                try {
+                    $p = DB::connection('mysql_second')->table('productoxproveedor')->where('sku', $sku)->select('price_produc')->first();
+                    if ($p && isset($p->price_produc)) $price = $p->price_produc;
+                } catch (\Throwable $_) {
+                    try {
+                        $prodRow = DB::connection('mysql_second')->table('productos')->where('sku', $sku)->select('id')->first();
+                        if ($prodRow && isset($prodRow->id)) {
+                            $p2 = DB::connection('mysql_second')->table('productoxproveedor')->where('producto_id', $prodRow->id)->select('price_produc')->first();
+                            if ($p2 && isset($p2->price_produc)) $price = $p2->price_produc;
+                        }
+                    } catch (\Throwable $__) { }
+                }
+                $out->push([
+                    'sku' => $sku,
+                    'name' => $name,
+                    'categoria' => $cat,
+                    'bodega' => $r->bodega ?? '',
+                    'ubicacion' => $r->ubicacion ?? '',
+                    'estatus' => $r->estatus ?? '',
+                    'stock' => (int)($r->stock ?? 0),
+                    'price' => is_null($price) ? '' : (string)$price,
+                ]);
+            }
+        } else {
+            // Para roles no-admin, incluir TODOS los SKU pertenecientes a las categorías permitidas
+            $patterns = [];
+            if ($isHseq) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+            } elseif ($isTalento) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+            }
+
+            $skuList = collect();
+            if (!empty($patterns)) {
+                // traer desde tabla externa productos
+                $prodQuery = Producto::query();
+                $prodQuery->where(function($q) use ($patterns) {
+                    foreach ($patterns as $p) { if ($p !== '') $q->orWhere('categoria_produc', 'like', '%' . $p . '%'); }
+                });
+                $skuList = $skuList->merge($prodQuery->pluck('sku')->map(function($s){ return (string)$s; }));
+
+                // traer locales desde GestionArticulos
+                $extraQuery = GestionArticulos::query();
+                $extraQuery->where(function($q) use ($patterns) {
+                    foreach ($patterns as $p) { if ($p !== '') $q->orWhere('categoria', 'like', '%' . $p . '%'); }
+                });
+                $skuList = $skuList->merge($extraQuery->pluck('sku')->map(function($s){ return (string)$s; }));
+            }
+
+            $skuList = $skuList->unique()->values()->all();
+
+            foreach ($skuList as $sku) {
+                $prod = Producto::where('sku', $sku)->first();
+                $name = $prod ? ($prod->name_produc ?? '') : (string) (GestionArticulos::where('sku', $sku)->value('nombre_articulo') ?? '');
+                $cat = $prod ? ($prod->categoria_produc ?? '') : (string) (GestionArticulos::where('sku', $sku)->value('categoria') ?? '');
+
+                // obtener stock agregado y una bodega/ubicacion representativa si existe
+                $invRows = DB::connection('mysql_third')->table('inventarios as i')
+                    ->leftJoin('ubicaciones as u','u.id','=','i.ubicaciones_id')
+                    ->where('i.sku', $sku)
+                    ->select('i.stock','i.estatus','u.bodega','u.ubicacion')
+                    ->get();
+                $stockSum = 0;
+                $bodega = '';
+                $ubicacion = '';
+                $estatus = '';
+                if ($invRows && !$invRows->isEmpty()) {
+                    foreach ($invRows as $ir) { $stockSum += (int)($ir->stock ?? 0); }
+                    $first = $invRows->first();
+                    $bodega = $first->bodega ?? '';
+                    $ubicacion = $first->ubicacion ?? '';
+                    $estatus = $first->estatus ?? '';
+                }
+
+                // precio
+                $price = null;
+                try {
+                    $p = DB::connection('mysql_second')->table('productoxproveedor')->where('sku', $sku)->select('price_produc')->first();
+                    if ($p && isset($p->price_produc)) $price = $p->price_produc;
+                } catch (\Throwable $_) {
+                    try {
+                        $prodRow = DB::connection('mysql_second')->table('productos')->where('sku', $sku)->select('id')->first();
+                        if ($prodRow && isset($prodRow->id)) {
+                            $p2 = DB::connection('mysql_second')->table('productoxproveedor')->where('producto_id', $prodRow->id)->select('price_produc')->first();
+                            if ($p2 && isset($p2->price_produc)) $price = $p2->price_produc;
+                        }
+                    } catch (\Throwable $__) { }
+                }
+
+                $out->push([
+                    'sku' => $sku,
+                    'name' => $name,
+                    'categoria' => $cat,
+                    'bodega' => $bodega,
+                    'ubicacion' => $ubicacion,
+                    'estatus' => $estatus,
+                    'stock' => (int)$stockSum,
+                    'price' => is_null($price) ? '' : (string)$price,
+                ]);
+            }
+        }
+
+        // Si el usuario no es admin, filtrar por categorías permitidas según rol
+        if (!$isAdmin) {
+            $patterns = [];
+            if ($isHseq) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+            } elseif ($isTalento) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+            }
+            if (!empty($patterns)) {
+                $out = $out->filter(function($row) use ($patterns) {
+                    $cat = (string)($row['categoria'] ?? '');
+                    foreach ($patterns as $p) {
+                        if ($p === '') continue;
+                        if (stripos($cat, $p) !== false) return true;
+                    }
+                    return false;
+                })->values();
+            }
+        }
+
+        // transformar a colección de filas simples (arrays en orden de headings)
+        $rowsForExport = $out->map(function($i){
+            return [
+                $i['sku'], $i['name'], $i['categoria'], $i['bodega'], $i['ubicacion'], $i['estatus'], $i['stock'], $i['price']
+            ];
+        });
+
+        return Excel::download(new InventariosExport(collect($rowsForExport)), 'inventario.xlsx');
     }
 
     /**

@@ -35,32 +35,34 @@ class ElementoPeriodicidadController extends Controller
         ];
 
         // Estructura de meses y semanas
+        // Crear los 12 meses vacíos primero
         $months = [];
         for ($m = 1; $m <= 12; $m++) {
-            $monthStart = Carbon::create($year, $m, 1)->startOfMonth();
-            $monthEnd = $monthStart->copy()->endOfMonth();
-
-            $weeks = [];
-            $cursor = $monthStart->copy()->startOfWeek(Carbon::MONDAY);
-            while ($cursor->lte($monthEnd)) {
-                $wkStart = $cursor->copy();
-                $wkEnd = $cursor->copy()->addDays(6);
-                $key = $wkStart->format('Y-m-d');
-                $weeks[$key] = [
-                    'date' => $key,
-                    'label' => $wkStart->format('d') . ' ' . $shortMonths[$wkStart->month]
-                        . ' - ' . $wkEnd->format('d') . ' ' . $shortMonths[$wkEnd->month],
-                    'products' => [],
-                    'total' => 0,
-                    'urgency' => 'empty',
-                ];
-                $cursor->addWeek();
-            }
-
             $months[$m] = [
                 'label' => $spanishMonths[$m] . ' ' . $year,
-                'weeks' => $weeks,
+                'weeks' => [],
             ];
+        }
+
+        // Construir semanas una sola vez para todo el año y asignarlas
+        $firstWeekStart = Carbon::create($year, 1, 1)->startOfWeek(Carbon::MONDAY);
+        $lastWeekStart = Carbon::create($year, 12, 31)->startOfWeek(Carbon::MONDAY);
+        $cursor = $firstWeekStart->copy();
+        while ($cursor->lte($lastWeekStart)) {
+            $wkStart = $cursor->copy();
+            $wkEnd = $wkStart->copy()->addDays(6);
+            $key = $wkStart->format('Y-m-d');
+            $mIndex = (int)$wkStart->format('n');
+            // asignar la semana al mes correspondiente según el inicio de semana (lunes)
+            $months[$mIndex]['weeks'][$key] = [
+                'date' => $key,
+                'label' => $wkStart->format('d') . ' ' . $shortMonths[$wkStart->month]
+                    . ' - ' . $wkEnd->format('d') . ' ' . $shortMonths[$wkEnd->month],
+                'products' => [],
+                'total' => 0,
+                'urgency' => 'empty',
+            ];
+            $cursor->addWeek();
         }
 
         // --- REEMPLAZO: obtener asignaciones unificadas ---
@@ -73,21 +75,23 @@ class ElementoPeriodicidadController extends Controller
 
         foreach ($assignments as $a) {
             try {
-                $monthsStep = $this->monthsStepFromCode($a['periodicidad'] ?? null) ?? 1;
+                $periodicidadVal = $a['periodicidad'] ?? null;
+                $monthsStep = $this->monthsStepFromCode($periodicidadVal ?? null) ?? 1;
                 $lastInfo = $this->getLastEntregaInfoByAssignment($a);
                 $seed = $this->resolveSeedDate($lastInfo['fecha'] ?? null, $a['asg_created_at'] ?? null, $monthsStep);
                 $cantidadEntrega = max(1, (int)($lastInfo['cantidad'] ?? 1));
 
-                $next = $seed->copy()->addMonths($monthsStep);
-                $iter = 0;
-                while ($next->lt($yearStart) && $iter < 200) { $next->addMonths($monthsStep); $iter++; }
-                while ($next->lte($yearEnd) && $iter < 500) {
+                // Si no hay periodicidad definida, no generar una serie mensual.
+                // Solo mostrar la última entrega (si existe) dentro del año.
+                if (empty($periodicidadVal)) {
+                    if (empty($lastInfo['fecha'])) {
+                        // nada que mostrar
+                        continue;
+                    }
+                    $next = Carbon::parse($lastInfo['fecha'])->startOfDay();
+                    if ($next->lt($yearStart) || $next->gt($yearEnd)) continue;
                     $wkStart = $next->copy()->startOfWeek(Carbon::MONDAY);
                     $wkKey = $wkStart->format('Y-m-d');
-
-                    if ((int)$wkStart->format('Y') !== (int)$year) {
-                        $next->addMonths($monthsStep); $iter++; continue;
-                    }
 
                     $mIndex = (int)$wkStart->format('n');
                     if (!isset($months[$mIndex]['weeks'][$wkKey])) {
@@ -105,28 +109,65 @@ class ElementoPeriodicidadController extends Controller
                             'name' => $a['name_produc'] ?? $sku,
                             'quantity' => 0,
                             'users' => 0,
-                            // incluir datos de periodicidad y fecha exacta de próxima entrega
                             'periodicidad' => $a['periodicidad'] ?? null,
                             'monthsStep' => $monthsStep,
                             'periodicidad_row' => $a['periodicidad_row'] ?? null,
                             'next_date' => $next->toDateString(),
                         ];
-                    } else {
-                        if (empty($months[$mIndex]['weeks'][$wkKey]['products'][$sku]['next_date'])) {
-                            $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['next_date'] = $next->toDateString();
-                        }
                     }
 
                     $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['quantity'] += $cantidadEntrega;
                     $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['users'] += 1;
                     $months[$mIndex]['weeks'][$wkKey]['total'] += $cantidadEntrega;
-
-                    // log mínimo para depuración
-                    Log::debug('ElementoPeriodicidad - asignado a semana', ['sku'=>$sku,'wkKey'=>$wkKey,'added'=>$cantidadEntrega]);
-
-                    $next->addMonths($monthsStep);
-                    $iter++;
+                    continue;
                 }
+
+                // Calcular sólo la próxima entrega relevante (la primera >= hoy)
+                $reference = Carbon::now()->startOfDay();
+                $next = $seed->copy()->addMonths($monthsStep);
+                $iter = 0;
+                while ($next->lt($reference) && $iter < 500) { $next->addMonths($monthsStep); $iter++; }
+
+                // si la próxima calculada no está dentro del año, ignorar
+                if ($next->lt($yearStart) || $next->gt($yearEnd)) continue;
+
+                $wkStart = $next->copy()->startOfWeek(Carbon::MONDAY);
+                $wkKey = $wkStart->format('Y-m-d');
+                if ((int)$wkStart->format('Y') !== (int)$year) continue;
+
+                $mIndex = (int)$wkStart->format('n');
+                if (!isset($months[$mIndex]['weeks'][$wkKey])) {
+                    $wkEnd = $wkStart->copy()->addDays(6);
+                    $months[$mIndex]['weeks'][$wkKey] = [
+                        'date' => $wkKey,
+                        'label' => $wkStart->format('d') . ' ' . $shortMonths[$wkStart->month] . ' - ' . $wkEnd->format('d') . ' ' . $shortMonths[$wkEnd->month],
+                        'products' => [], 'total' => 0, 'urgency' => 'empty'
+                    ];
+                }
+
+                $sku = $a['sku'];
+                if (!isset($months[$mIndex]['weeks'][$wkKey]['products'][$sku])) {
+                    $months[$mIndex]['weeks'][$wkKey]['products'][$sku] = [
+                        'name' => $a['name_produc'] ?? $sku,
+                        'quantity' => 0,
+                        'users' => 0,
+                        // incluir datos de periodicidad y fecha exacta de próxima entrega
+                        'periodicidad' => $a['periodicidad'] ?? null,
+                        'monthsStep' => $monthsStep,
+                        'periodicidad_row' => $a['periodicidad_row'] ?? null,
+                        'next_date' => $next->toDateString(),
+                    ];
+                } else {
+                    if (empty($months[$mIndex]['weeks'][$wkKey]['products'][$sku]['next_date'])) {
+                        $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['next_date'] = $next->toDateString();
+                    }
+                }
+
+                $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['quantity'] += $cantidadEntrega;
+                $months[$mIndex]['weeks'][$wkKey]['products'][$sku]['users'] += 1;
+                $months[$mIndex]['weeks'][$wkKey]['total'] += $cantidadEntrega;
+
+                Log::debug('ElementoPeriodicidad - próxima entrega asignada', ['sku'=>$sku,'wkKey'=>$wkKey,'next'=>$next->toDateString(),'added'=>$cantidadEntrega]);
             } catch (Exception $e) {
                 Log::error('ElementoPeriodicidad.index error', ['msg'=>$e->getMessage(),'sku'=>$a['sku'] ?? null]);
                 continue;
@@ -196,10 +237,23 @@ class ElementoPeriodicidadController extends Controller
         $products = [];
         foreach ($assignments as $a) {
             try {
-                $monthsStep = $this->monthsStepFromCode($a['periodicidad'] ?? null) ?: 1;
+                $periodicidadVal = $a['periodicidad'] ?? null;
+                $monthsStep = $this->monthsStepFromCode($periodicidadVal ?? null) ?: 1;
                 $lastInfo = $this->getLastEntregaInfoByAssignment($a);
                 $seed = $this->resolveSeedDate($lastInfo['fecha'] ?? null, $a['asg_created_at'] ?? null, $monthsStep);
                 $cantidad = max(1, (int)($lastInfo['cantidad'] ?? 1));
+
+                if (empty($periodicidadVal)) {
+                    // No periodicidad: solo considerar la última entrega si cae en la semana
+                    if (empty($lastInfo['fecha'])) continue;
+                    $next = Carbon::parse($lastInfo['fecha']);
+                    if ($next->between($start, $end)) {
+                        if (!isset($products[$a['sku']])) $products[$a['sku']] = ['sku'=>$a['sku'],'name'=>$a['name_produc'] ?? $a['sku'],'quantity'=>0,'usersCount'=>0];
+                        $products[$a['sku']]['quantity'] += $cantidad;
+                        $products[$a['sku']]['usersCount'] += 1;
+                    }
+                    continue;
+                }
 
                 $next = $seed->copy()->addMonths($monthsStep);
                 $iter = 0;
@@ -231,10 +285,27 @@ class ElementoPeriodicidadController extends Controller
         foreach ($assignments as $a) {
             if ($a['sku'] !== $sku) continue;
             try {
-                $monthsStep = $this->monthsStepFromCode($a['periodicidad'] ?? null) ?: 1;
+                $periodicidadVal = $a['periodicidad'] ?? null;
+                $monthsStep = $this->monthsStepFromCode($periodicidadVal ?? null) ?: 1;
                 $lastInfo = $this->getLastEntregaInfoByAssignment($a);
                 $seed = $this->resolveSeedDate($lastInfo['fecha'] ?? null, $a['asg_created_at'] ?? null, $monthsStep);
                 $cantidad = max(1, (int)($lastInfo['cantidad'] ?? 1));
+
+                if (empty($periodicidadVal)) {
+                    // No periodicidad: solo considerar la última entrega si cae en la semana
+                    if (empty($lastInfo['fecha'])) continue;
+                    $next = Carbon::parse($lastInfo['fecha']);
+                    if ($next->between($weekStart,$weekEnd)) {
+                        $u = null;
+                        if (!empty($a['usuarios_entregas_id'])) {
+                            $u = DB::table('usuarios_entregas')->where('id',$a['usuarios_entregas_id'])->first();
+                        } elseif (!empty($a['numero_documento'])) {
+                            $u = DB::table('usuarios_entregas')->where('numero_documento',$a['numero_documento'])->first();
+                        }
+                        if ($u) $users[] = ['id'=>$u->id,'nombres'=>$u->nombres,'apellidos'=>$u->apellidos,'email'=>$u->email,'numero_documento'=>$u->numero_documento,'cantidad'=>$cantidad];
+                    }
+                    continue;
+                }
 
                 $next = $seed->copy()->addMonths($monthsStep);
                 $iter = 0;

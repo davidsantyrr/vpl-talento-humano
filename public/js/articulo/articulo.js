@@ -146,6 +146,10 @@
             <input id="sw-stock" type="number" min="0" value="${stock}" class="sw-input" />
             <small id="sw-hint" class="text-muted"></small>
           </div>
+          <div class="field">
+            <label>Precio</label>
+            <input id="sw-price" type="text" class="sw-input" placeholder="Dejar vacío para no cambiar" />
+          </div>
         </div>
       `,
       focusConfirm: false,
@@ -171,11 +175,23 @@
         }
         sel.addEventListener('change', updateHint);
         updateHint();
+        // Prefill price from row dataset (table inputs are disabled)
+        try {
+          const priceInp = document.getElementById('sw-price');
+          if (priceInp) {
+            priceInp.value = (row.dataset.price || '').toString();
+          }
+        } catch (e) { console.warn('Error prefilling price', e); }
       },
       preConfirm: () => {
         const target = document.getElementById('sw-estatus').value;
         const qtyStr = document.getElementById('sw-stock').value;
         const qty = Number(qtyStr);
+        const priceStr = (document.getElementById('sw-price') || {}).value || '';
+        if (priceStr !== '' && isNaN(Number(priceStr))) {
+          Swal.showValidationMessage('Precio inválido');
+          return false;
+        }
         if (qtyStr === '' || qty < 0) {
           Swal.showValidationMessage('Cantidad inválida');
           return false;
@@ -185,7 +201,7 @@
           Swal.fire({ toast: true, position: 'top-end', icon: 'error', title: 'Cantidad supera el stock del estatus actual', showConfirmButton: false, timer: 2500 });
           return false;
         }
-        return { targetStatus: target, qty };
+        return { targetStatus: target, qty, price: priceStr };
       }
     }).then(res => {
       if (!res.isConfirmed || !res.value) return;
@@ -198,7 +214,9 @@
       const u = document.createElement('input'); u.type = 'hidden'; u.name = 'ubicacion'; u.value = row.dataset.ubicacion || '';
       const e = document.createElement('input'); e.type = 'hidden'; e.name = 'estatus'; e.value = res.value.targetStatus || currentStatus;
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = String(res.value.qty || 0);
+      const p = document.createElement('input'); p.type = 'hidden'; p.name = 'price'; p.value = (res.value.price || '').toString();
       form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
+      form.appendChild(p);
       if (res.value.targetStatus !== currentStatus) { const f = document.createElement('input'); f.type = 'hidden'; f.name = 'from_status'; f.value = currentStatus; form.appendChild(f); }
       document.body.appendChild(form);
       form.submit();

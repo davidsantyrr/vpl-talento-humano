@@ -32,6 +32,11 @@
         </select>
         <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
       </form>
+      @if($canExport)
+        <div class="btn btn-primary" style="margin-left:auto;">
+          <a href="{{ route('articulos.exportInventario') }}" class="btn" style="display:inline-flex; align-items:center; gap:8px;">Exportar Excel</a>
+        </div>
+      @endif
     </div>
 
     <div class="table-wrapper">
@@ -44,6 +49,7 @@
             <th>Bodega</th>
             <th>Ubicación</th>
             <th>Estatus</th>
+            <th>Precio</th>
             <th>Stock</th>
             <th style="text-align:center;">Acciones</th>
           </tr>
@@ -194,4 +200,42 @@
 <script src="{{ asset('js/articulo/articulo.js') }}"></script>
 <script src="{{ asset('js/articulo/destruccion.js') }}?v={{ time() }}"></script>
 <script src="{{ asset('js/articulo/constancias.js') }}?v={{ time() }}"></script>
+<script>
+  (function(){
+    const token = window.ArticulosPageConfig.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    function savePrice(sku, price, inputEl) {
+      fetch('{{ route('articulos.savePrice') }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': token
+        },
+        body: JSON.stringify({ sku: sku, price: price })
+      }).then(r => r.json()).then(j => {
+        if (j && j.success) {
+          inputEl.classList.remove('price-error');
+          inputEl.classList.add('price-saved');
+          setTimeout(()=>inputEl.classList.remove('price-saved'),1200);
+        } else {
+          inputEl.classList.add('price-error');
+        }
+      }).catch(e=>{ inputEl.classList.add('price-error'); });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      document.querySelectorAll('.price-input').forEach(function(inp){
+        inp.addEventListener('blur', function(ev){
+          const sku = inp.getAttribute('data-sku');
+          const val = inp.value.trim();
+          if (val === '') { savePrice(sku, null, inp); return; }
+          // normalize number (allow comma)
+          const norm = val.replace(/,/g, '.');
+          if (!isFinite(norm)) { inp.classList.add('price-error'); return; }
+          savePrice(sku, parseFloat(norm), inp);
+        });
+        inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') { inp.blur(); } });
+      });
+    });
+  })();
+</script>
 @endsection
