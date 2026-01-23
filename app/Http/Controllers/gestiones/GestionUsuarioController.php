@@ -9,6 +9,8 @@ use App\Models\SubArea;
 use App\Models\Area;
 use App\Models\Producto;
 use App\Models\ElementoXUsuario;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\UsuariosImport;
 
 class gestionUsuarioController extends Controller
 {
@@ -170,6 +172,42 @@ class gestionUsuarioController extends Controller
         $usuario = Usuarios::findOrFail($id);
         $usuario->delete();
         return redirect()->route('gestionUsuario.index')->with('success', 'Usuario eliminado correctamente.');
+    }
+
+    /**
+     * Importar usuarios desde Excel (xlsx/csv).
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:xlsx,xls,csv,ods',
+                'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/csv,text/plain'
+            ],
+        ]);
+
+        $file = $request->file('file');
+        \Illuminate\Support\Facades\Log::info('Iniciando importación de usuarios', ['file' => $file->getClientOriginalName()]);
+        $import = new UsuariosImport();
+
+        try {
+            Excel::import($import, $file);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error en importación usuarios', ['error' => $e->getMessage()]);
+            return redirect()->route('gestionUsuario.index')
+                ->with('success', 'Error durante la importación: ' . $e->getMessage());
+        }
+
+        $summary = $import->getSummary();
+        \Illuminate\Support\Facades\Log::info('Resumen importación usuarios', $summary);
+
+        $msg = "Importación finalizada. Creados: {$summary['created']}. Omitidos: {$summary['skipped']}. Errores: " . count($summary['errors']);
+
+        return redirect()->route('gestionUsuario.index')
+            ->with('success', $msg)
+            ->with('import_errors', $summary['errors']);
     }
 
     /**

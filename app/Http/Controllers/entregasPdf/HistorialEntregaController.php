@@ -200,6 +200,7 @@ class HistorialEntregaController extends Controller
                 $registro = DB::table('entregas')
                     ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
                     ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
+                    ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
                     ->select([
                         'entregas.id',
                         'entregas.created_at',
@@ -209,11 +210,19 @@ class HistorialEntregaController extends Controller
                         DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'usuarios_entregas.id as usuario_id',
+                        'usuarios_entregas.cargo_id as cargo_id',
                         'sub_areas.operationName as operacion',
-                        'entregas.recibido'
+                        'entregas.recibido',
+                        'cargos.nombre as cargo'
                     ])
                     ->where('entregas.id', $id)
                     ->first();
+
+                // si no se obtuvo nombre de cargo por join, intentar resolver por cargo_id
+                if ($registro && empty($registro->cargo) && !empty($registro->cargo_id)) {
+                    $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
+                }
 
                 if (!$registro) { abort(404, 'Entrega no encontrada'); }
 
@@ -225,6 +234,7 @@ class HistorialEntregaController extends Controller
                 $registro = DB::table('recepciones')
                     ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
                     ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
+                    ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
                     ->select([
                         'recepciones.id',
                         'recepciones.created_at',
@@ -234,11 +244,18 @@ class HistorialEntregaController extends Controller
                         DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                        'usuarios_entregas.id as usuario_id',
+                        'usuarios_entregas.cargo_id as cargo_id',
                         'sub_areas.operationName as operacion',
-                        'recepciones.entregado as recibido'
+                        'recepciones.entregado as recibido',
+                        'cargos.nombre as cargo'
                     ])
                     ->where('recepciones.id', $id)
                     ->first();
+
+                if ($registro && empty($registro->cargo) && !empty($registro->cargo_id)) {
+                    $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
+                }
 
                 if (!$registro) { abort(404, 'Recepción no encontrada'); }
 
@@ -340,6 +357,7 @@ class HistorialEntregaController extends Controller
                 $qEnt = DB::table('entregas')
                     ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
                     ->leftJoin('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
+                    ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
                     ->select([
                         'entregas.id',
                         'entregas.created_at',
@@ -350,7 +368,8 @@ class HistorialEntregaController extends Controller
                         DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
                         'sub_areas.operationName as operacion',
-                        'entregas.recibido'
+                        'entregas.recibido',
+                        'cargos.nombre as cargo'
                     ])
                     ->whereNull('entregas.deleted_at')
                     ->whereBetween('entregas.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);
@@ -362,6 +381,7 @@ class HistorialEntregaController extends Controller
                 $qRec = DB::table('recepciones')
                     ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
                     ->leftJoin('sub_areas', 'recepciones.operacion_id', '=', 'sub_areas.id')
+                    ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
                     ->select([
                         'recepciones.id',
                         'recepciones.created_at',
@@ -372,7 +392,8 @@ class HistorialEntregaController extends Controller
                         DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
                         DB::raw('COALESCE(recepciones.apellidos, usuarios_entregas.apellidos) as apellidos'),
                         'sub_areas.operationName as operacion',
-                        'recepciones.entregado as recibido'
+                        'recepciones.entregado as recibido',
+                        'cargos.nombre as cargo'
                     ])
                     ->whereNull('recepciones.deleted_at')
                     ->whereBetween('recepciones.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);

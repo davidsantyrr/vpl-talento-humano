@@ -91,6 +91,7 @@
 
             <input type="hidden" name="elementos" id="elementosJson" value="[]">
             <input type="hidden" name="recepcion_id" id="recepcionIdHidden" value="">
+            <input type="hidden" name="enviar_a_gestion_correos" id="enviarGestionCorreos" value="0">
 
             <div class="section">
                 <div class="firma">
@@ -141,6 +142,10 @@
             <tbody id="elementosTbody"></tbody>
         </table>
         <div class="modal-actions" style="margin-top:16px;">
+            <div style="display:flex;align-items:center;gap:12px;margin-right:auto;">
+                <input type="checkbox" id="chkEnviarGestionCorreos">
+                <label for="chkEnviarGestionCorreos" style="margin:0;">Enviar también a correos de gestión</label>
+            </div>
             <button type="button" class="btn primary" onclick="guardarModal()">Añadir</button>
             <button type="button" class="btn secondary" onclick="cerrarModal()">Cancelar</button>
         </div>

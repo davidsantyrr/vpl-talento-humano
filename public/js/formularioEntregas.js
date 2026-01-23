@@ -325,6 +325,13 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
         elementos = tempElementos.slice();
+        // guardar también la preferencia de enviar a correos de gestión
+        try {
+            const chk = document.getElementById('chkEnviarGestionCorreos');
+            const hidden = document.getElementById('enviarGestionCorreos');
+            if (hidden) hidden.value = (chk && chk.checked) ? '1' : '0';
+        } catch (e) {}
+
         syncFormTable();
         tempElementos = [];
         modal.classList.remove('active');

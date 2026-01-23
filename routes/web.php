@@ -91,6 +91,9 @@ Route::middleware([VplAuth::class])->group(function () {
 
 Route::resource('gestionUsuario', GestionUsuarioController::class);
 
+// Importar usuarios desde Excel
+Route::post('/gestionUsuario/import', [GestionUsuarioController::class, 'import'])->name('gestionUsuario.import');
+
 // AJAX: buscar usuario por número de documento
 Route::get('/usuarios/buscar', [GestionUsuarioController::class, 'findByDocumento'])->name('usuarios.find');
 // Asignar producto a usuario (guardar en elemento_x_usuario)

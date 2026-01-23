@@ -19,17 +19,47 @@
             <p>Administra los usuarios registrados en el sistema</p>
         </div>
 
-        <button class="btn btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#modalUsuario">
-            + Agregar nuevo usuario
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalUsuario">
+                + Agregar nuevo usuario
+            </button>
+
+            <button class="btn btn-secondary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalImportarUsuarios">
+                <i class="bi bi-file-earmark-spreadsheet"></i>
+                Importar Excel
+            </button>
+        </div>
     </div>
+
+    @if(session('import_errors'))
+        <div class="alert alert-warning mt-3">
+            <strong>Import: Errores</strong>
+            <ul class="mb-0">
+                @foreach(session('import_errors') as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     {{-- ALERTA --}}
     @if(session('success'))
         <div class="alert alert-success">
             {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
         </div>
     @endif
 
@@ -190,6 +220,35 @@
 </div>
 
 {{-- MODAL SELECCIÓN DE PRODUCTO --}}
+{{-- MODAL IMPORTAR USUARIOS --}}
+<div class="modal fade" id="modalImportarUsuarios" tabindex="-1">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importar usuarios desde Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form action="{{ route('gestionUsuario.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Archivo (xlsx / csv)</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                    </div>
+
+                    <p class="small text-muted">Orden de columnas esperado: Nombres, Apellidos, Tipo documento, N° documento, Email, Fecha ingreso (YYYY-MM-DD), Operación, Área, Cargo (opcional)</p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Importar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
 <div class="modal fade" id="modalSeleccionProducto" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">

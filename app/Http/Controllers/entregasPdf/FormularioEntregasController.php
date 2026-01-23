@@ -60,6 +60,7 @@ class FormularioEntregasController extends Controller
 			'recepcion_id' => ['nullable','integer','exists:recepciones,id'],
 			'firma' => ['nullable','string'],
 			'comprobante_path' => ['nullable','string'],
+			'enviar_a_gestion_correos' => ['nullable','boolean'],
 		]);
 
 		// Usuario en sesión (misma convención usada en RecepcionController)
@@ -131,9 +132,17 @@ class FormularioEntregasController extends Controller
 			$entrega = DB::table('entregas')->where('id', $entregaId)->first();
 
 			// Disparar job de correo si hay email válido
+			$incluirCorreosGestion = $request->boolean('enviar_a_gestion_correos');
 			if (!empty($emailUsuario) && $emailUsuario !== 'sin-email@example.com') {
 				try {
-					EnviarCorreoEntrega::dispatchSync($entrega, $items, $emailUsuario, $entregaData['comprobante_path'] ?? null);
+					EnviarCorreoEntrega::dispatchSync(
+						$entrega,
+						$items,
+						$emailUsuario,
+						$entregaData['comprobante_path'] ?? null,
+						$incluirCorreosGestion,
+						$entregaData['rol_entrega'] ?? null
+					);
 				} catch (\Exception $e) {
 					Log::error('Error al enviar correo de entrega', ['error' => $e->getMessage(), 'entrega_id' => $entregaId]);
 				}
