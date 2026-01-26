@@ -883,8 +883,39 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Asegurar hidden de operacion actualizado antes de enviar
                 if (operacionHidden) operacionHidden.value = operacionVal || '';
                 
-                // Si todo está bien, enviar el formulario
-                form.submit();
+                // Si todo está bien, enviar el formulario por AJAX y actualizar stocks en la tabla sin recargar
+                const action = form.getAttribute('action') || window.location.href;
+                const fd = new FormData(form);
+                fetch(action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': token,
+                        'Accept': 'application/json'
+                    },
+                    body: fd
+                }).then(r => r.json()).then(j => {
+                    if (j && j.success) {
+                        Toast.fire({ icon: 'success', title: 'Entrega registrada correctamente' });
+                        // si vienen stocks actualizados, aplicarlos a la tabla
+                        if (j.updatedStocks && typeof j.updatedStocks === 'object') {
+                            Object.keys(j.updatedStocks).forEach(function(sku){
+                                const val = String(j.updatedStocks[sku]);
+                                document.querySelectorAll(`tr[data-sku="${sku}"]`).forEach(function(row){
+                                    row.setAttribute('data-stock', val);
+                                    // columna de stock es la 8ª (index 7)
+                                    if (row.cells && row.cells.length > 7) row.cells[7].textContent = val;
+                                });
+                            });
+                        }
+                        // opcional: limpiar formulario y modal
+                        try { elementos = []; syncFormTable(); } catch(e){}
+                    } else {
+                        Toast.fire({ icon: 'error', title: (j && j.message) ? j.message : 'Error al registrar entrega' });
+                    }
+                }).catch(err => {
+                    console.error('Entrega submit error', err);
+                    Toast.fire({ icon: 'error', title: 'Error al enviar la entrega' });
+                });
             });
         }
     }

@@ -29,7 +29,8 @@ class gestionCorreosController extends Controller
 
     public function create()
     {
-        return view('gestiones.createGestionCorreos');
+        // CRUD operations are handled from the index view (modal/inline).
+        return redirect()->route('gestionCorreos.index');
     }
 
     public function store(Request $request)
@@ -44,18 +45,56 @@ class gestionCorreosController extends Controller
         return redirect()->route('gestionCorreos.index')->with('success', 'Correo agregado.');
     }
 
-    public function edit($id)
+    /**
+     * Lookup a domain user by email and return their role and a matched periodicidad role (if any).
+     * Used by the create view via AJAX to auto-select the role for the email being added.
+     */
+    public function lookupUser(Request $request)
     {
-        $correo = \App\Models\Correos::findOrFail($id);
-        
-        // Obtener roles disponibles para el select
+        $email = $request->query('email');
+        if (empty($email)) {
+            return response()->json(['found' => false]);
+        }
+
+        $usuario = \App\Models\Usuarios::where('email', $email)->first();
+        $cargoNombre = null;
+        if ($usuario && $usuario->cargo) {
+            $cargoNombre = $usuario->cargo->nombre;
+        }
+
+        // Obtener roles disponibles
         $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
             ->toArray();
-            
-        return view('gestiones.editGestionCorreos', compact('correo', 'rolesDisponibles'));
+
+        $matched = null;
+        if ($cargoNombre) {
+            // Reusar lógica de detección (normalización simple)
+            $s = $this->normalize($cargoNombre);
+            foreach ($rolesDisponibles as $rol) {
+                $r = $this->normalize($rol);
+                if ($s === '' || $r === '') continue;
+                if (strpos($s, $r) !== false || strpos($r, $s) !== false) {
+                    $matched = $rol;
+                    break;
+                }
+            }
+        }
+
+        return response()->json([
+            'found' => (bool)$usuario,
+            'usuario' => $usuario ? ['id' => $usuario->id, 'nombres' => $usuario->nombres, 'apellidos' => $usuario->apellidos, 'email' => $usuario->email] : null,
+            'cargo' => $cargoNombre,
+            'matched_role' => $matched,
+        ]);
+    }
+
+    public function edit($id)
+    {
+        // Editing is handled in a modal within the index view. Redirect there.
+        return redirect()->route('gestionCorreos.index');
     }
 
     public function update(Request $request, $id)

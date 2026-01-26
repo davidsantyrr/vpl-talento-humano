@@ -542,6 +542,17 @@ class ArticulosController extends Controller
             }
         }
 
+        // Sincronizar stock agregado en 'inventarios' hacia 'productos.stock_produc' (si existe)
+        try {
+            $totalStock = (int) DB::connection('mysql_third')->table('inventarios')->where('sku', $sku)->sum('stock');
+            $prodModel = new Producto();
+            $prodConn = $prodModel->getConnectionName() ?: config('database.default');
+            $affected = DB::connection($prodConn)->table($prodModel->getTable())->where('sku', $sku)->update(['stock_produc' => $totalStock]);
+            Log::info('Sincronizado stock_produc desde inventarios', ['sku' => $sku, 'stock_total_inventarios' => $totalStock, 'db_rows_affected' => $affected, 'productos_connection' => $prodConn]);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo sincronizar stock_produc desde inventarios', ['sku' => $sku, 'error' => $e->getMessage()]);
+        }
+
         // Si se envió price en el formulario, intentar guardarla en productoxproveedor
         if ($request->has('price')) {
             try {

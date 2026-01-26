@@ -137,6 +137,8 @@ Route::get('/formularioEntregas', [EntregaController::class, 'create'])
     ->name('formularioEntregas');
 
 Route::resource('gestionCorreos', gestionCorreosController::class);
+// AJAX: lookup user by email to auto-select role when creating a correo
+Route::get('/gestionCorreos/lookup-user', [gestionCorreosController::class, 'lookupUser'])->name('gestionCorreos.lookupUser');
 Route::resource('elementoXusuario', App\Http\Controllers\elementoXusuario\elementoXusuarioController::class);
 
 
@@ -166,6 +168,16 @@ Route::post('/articulos/ubicacion/eliminar', [App\Http\Controllers\articulos\Art
 
 
 Route::resource('gestionOperacion', gestionOperacionController::class);
+
+// Gestión de notificaciones de inventario (CRUD desde una sola vista)
+Route::get('/gestionNotificacionesInventario', [App\Http\Controllers\gestiones\GestionNotificacionesInventarioController::class, 'index'])
+    ->middleware([VplAuth::class])->name('gestionNotificacionesInventario.index');
+Route::post('/gestionNotificacionesInventario', [App\Http\Controllers\gestiones\GestionNotificacionesInventarioController::class, 'store'])
+    ->middleware([VplAuth::class])->name('gestionNotificacionesInventario.store');
+Route::put('/gestionNotificacionesInventario/{id}', [App\Http\Controllers\gestiones\GestionNotificacionesInventarioController::class, 'update'])
+    ->middleware([VplAuth::class])->name('gestionNotificacionesInventario.update');
+Route::delete('/gestionNotificacionesInventario/{id}', [App\Http\Controllers\gestiones\GestionNotificacionesInventarioController::class, 'destroy'])
+    ->middleware([VplAuth::class])->name('gestionNotificacionesInventario.destroy');
 
 Route::resource('gestionArea', gestionAreaController::class);
 

@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Exception;
 use App\Models\SubArea;
 use App\Models\Usuarios;
+use App\Models\Cargo;
 use App\Models\Entrega;
 use App\Models\ElementoXEntrega;
 use App\Models\Producto;
@@ -83,8 +84,31 @@ class FormularioEntregasController extends Controller
 
 		DB::beginTransaction();
 		try {
+			// Determinar rol_entrega preferiblemente a partir del destinatario (cargo),
+			// si no está disponible, usar el primer rol del usuario en sesión.
+			$rolEntrega = $primerRol;
+			if (!empty($data['cargo_id'])) {
+				try {
+					$c = Cargo::find($data['cargo_id']);
+					if ($c && !empty($c->nombre)) {
+						$rolEntrega = $c->nombre;
+					}
+				} catch (\Throwable $e) {
+					// ignore and fallback
+				}
+			} elseif (!empty($data['numberDocumento'])) {
+				try {
+					$u = Usuarios::where('numero_documento', $data['numberDocumento'])->first();
+					if ($u && $u->cargo && !empty($u->cargo->nombre)) {
+						$rolEntrega = $u->cargo->nombre;
+					}
+				} catch (\Throwable $e) {
+					// ignore
+				}
+			}
+
 			$entregaData = [
-				'rol_entrega' => $primerRol,
+				'rol_entrega' => $rolEntrega,
 				'entrega_user' => $nombreUsuario,
 				'entrega_email' => $emailUsuario,
 				'tipo_entrega' => $data['tipo'],
@@ -117,13 +141,90 @@ class FormularioEntregasController extends Controller
 
 			foreach ($items as $it) {
 				if (empty($it['sku'])) continue;
+				// Normalizar SKU y cantidad
+				$sku = trim((string) ($it['sku'] ?? ''));
+				// Normalizaciones adicionales: quitar espacios extra y caracteres no alfanuméricos comunes
+				$skuNorm = preg_replace('/[^A-Za-z0-9_\-]/u', '', $sku);
+				$skuUpper = mb_strtoupper($skuNorm);
+				$cantidadRaw = (string) ($it['cantidad'] ?? '1');
+				$cantidad = floatval(str_replace(',', '.', $cantidadRaw));
+				if ($cantidad <= 0) $cantidad = 1;
+
 				DB::table('elemento_x_entrega')->insert([
 					'entrega_id' => $entregaId,
-					'sku' => (string) ($it['sku'] ?? ''),
-					'cantidad' => (string) ($it['cantidad'] ?? 1),
+					'sku' => $sku,
+					'cantidad' => (string) $cantidad,
 					'created_at' => now(),
 					'updated_at' => now(),
 				]);
+
+				// Intentar actualizar stock en la tabla productos (buscar por sku o por nombre)
+				try {
+					// Intentar búsqueda por varias formas normalizadas
+					$producto = Producto::where('sku', $sku)->first();
+					if (!$producto && $skuNorm !== $sku) {
+						$producto = Producto::where('sku', $skuNorm)->first();
+					}
+					if (!$producto) {
+						$producto = Producto::where('sku', $skuUpper)->first();
+					}
+					if (!$producto) {
+						$producto = Producto::whereRaw('LOWER(sku) = ?', [mb_strtolower($sku)])->first();
+					}
+					if (!$producto) {
+						$producto = Producto::whereRaw('LOWER(name_produc) = ?', [mb_strtolower($sku)])->first();
+					}
+
+					if ($producto) {
+						$current = (float) ($producto->stock_produc ?? 0);
+						$new = max(0, $current - $cantidad);
+						try {
+							$connName = $producto->getConnectionName() ?: config('database.default');
+							$affected = DB::connection($connName)
+								->table($producto->getTable())
+								->where('sku', $producto->sku)
+								->update(['stock_produc' => $new]);
+							Log::info('Stock actualizado por entrega', ['sku_busqueda' => $sku, 'sku_norm' => $skuNorm, 'sku_found' => $producto->sku, 'cantidad_entregada' => $cantidad, 'stock_antes' => $current, 'stock_despues' => $new, 'db_rows_affected' => $affected, 'connection' => $connName]);
+						} catch (\Throwable $e) {
+							Log::warning('Fallo actualizando tabla productos por entrega', ['sku' => $sku, 'error' => $e->getMessage()]);
+						}
+						// Además, intentar restar la cantidad de la tabla `inventarios` en la conexión mysql_third
+						try {
+							$remaining = $cantidad;
+							$invConn = 'mysql_third';
+							$invRows = DB::connection($invConn)->table('inventarios')
+								->where('sku', $producto->sku)
+								->where('estatus', 'disponible')
+								->orderBy('id')
+								->get();
+
+							foreach ($invRows as $invRow) {
+								if ($remaining <= 0) break;
+								$stockInv = (int) $invRow->stock;
+								if ($stockInv <= 0) continue;
+								$toTake = min($stockInv, (int)$remaining);
+								$newInvStock = $stockInv - $toTake;
+								if ($newInvStock > 0) {
+									DB::connection($invConn)->table('inventarios')->where('id', $invRow->id)->update(['stock' => $newInvStock]);
+								} else {
+									DB::connection($invConn)->table('inventarios')->where('id', $invRow->id)->delete();
+										}
+										Log::info('Inventario actualizado por entrega (bd3)', ['sku' => $producto->sku, 'inventario_id' => $invRow->id, 'restado' => $toTake, 'stock_antes' => $stockInv, 'stock_despues' => $newInvStock]);
+										$remaining -= $toTake;
+									}
+
+									if ($remaining > 0) {
+										Log::warning('Entrega excedió stock en inventarios (bd3)', ['sku' => $producto->sku, 'faltante' => $remaining]);
+									}
+								} catch (\Throwable $e) {
+									Log::warning('No se pudo actualizar inventarios en bd3 para entrega', ['sku' => $producto->sku, 'error' => $e->getMessage()]);
+								}
+					} else {
+						Log::warning('Producto no encontrado al intentar descontar stock en entrega', ['sku' => $sku, 'sku_norm' => $skuNorm]);
+					}
+				} catch (\Throwable $e) {
+					Log::warning('No se pudo actualizar stock en productos para entrega', ['sku' => $sku, 'sku_norm' => $skuNorm, 'error' => $e->getMessage()]);
+				}
 			}
 
 			DB::commit();
@@ -148,8 +249,25 @@ class FormularioEntregasController extends Controller
 				}
 			}
 
+			// Si la petición espera JSON (AJAX), devolver mapa de stocks actualizados para que el cliente
+			// pueda refrescar la tabla en la vista sin recargar toda la página.
 			if ($request->wantsJson() || $request->ajax()) {
-				return response()->json(['success' => true, 'message' => 'Entrega registrada correctamente', 'entrega_id' => $entregaId], 200);
+				try {
+					// colectar SKUs afectados
+					$skus = collect($items)->map(fn($it) => trim((string)($it['sku'] ?? '')))->filter()->unique()->values()->all();
+					$updatedStocks = [];
+					if (!empty($skus)) {
+						$prodModel = new Producto();
+						$prodConn = $prodModel->getConnectionName() ?: config('database.default');
+						$rows = DB::connection($prodConn)->table($prodModel->getTable())->whereIn('sku', $skus)->select('sku', 'stock_produc')->get();
+						foreach ($rows as $r) { $updatedStocks[(string)$r->sku] = (int) $r->stock_produc; }
+					}
+				} catch (\Throwable $e) {
+					Log::warning('No se pudo obtener stocks actualizados tras entrega', ['error' => $e->getMessage()]);
+					$updatedStocks = [];
+				}
+
+				return response()->json(['success' => true, 'message' => 'Entrega registrada correctamente', 'entrega_id' => $entregaId, 'updatedStocks' => $updatedStocks], 200);
 			}
 
 			return redirect()->back()->with('status', 'Entrega registrada correctamente');
