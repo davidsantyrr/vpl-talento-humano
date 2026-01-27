@@ -1,4 +1,6 @@
 .matrix-container {
+@import url('/css/_responsive_helpers.css');
+    max-width: 1200px;
     max-width: 1200px;
     margin: 18px auto;
     padding: 0 16px

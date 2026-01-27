@@ -1,3 +1,5 @@
+@import url('/css/_responsive_helpers.css');
+
 /* Navbar modern styles */
 .vigia-navbar {
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -7,9 +9,16 @@
 
 .vigia-navbar.header {
     background-color: #F78008;
-    border-radius: 12px;
-    margin: 12px;
+    /* fixed to the top so it stays in place across pages */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+    /* keep only bottom rounding so it blends into the page */
+    border-radius: 0 0 12px 12px;
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+    z-index: 9999;
 }
 
 .vigia-navbar .navegacion {

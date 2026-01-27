@@ -376,6 +376,7 @@ table tbody td {
 
 @media (max-width:640px) {
     .title {
+@import url('/css/_responsive_helpers.css');
         font-size: 26px;
     }
 
@@ -447,4 +448,13 @@ table tbody td {
         width: calc(100vw - 4rem) !important;
         max-width: calc(100vw - 4rem) !important;
     }
+}
+
+/* General mobile fallbacks for formularioEntregas */
+@media (max-width: 480px) {
+    .container { padding: 0 12px; }
+    .panel, .modal { padding: 12px !important; }
+    .grid { grid-template-columns: 1fr !important; }
+    .table { font-size: 13px; }
+    .btn { width: 100%; display: block; }
 }

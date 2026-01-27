@@ -1,3 +1,6 @@
+
+@import url('/css/_responsive_helpers.css');
+
 /*
 	Estilos base para páginas de gestión (artículos, usuarios, etc.)
 	No sobreescribe Bootstrap; sólo complementa apariencia.
@@ -38,6 +41,34 @@
 	align-items: center;
 	justify-content: space-between;
 	margin-bottom: 12px;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+	.gestion-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+	}
+
+	.gestion-card {
+		padding: 12px;
+		margin: 10px;
+	}
+
+	.table-responsive {
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.table thead th, .table td {
+		white-space: nowrap;
+	}
+
+	.btn, .btn-group .btn {
+		width: 100%;
+		box-sizing: border-box;
+	}
 }
 
 .gestion-toolbar .filters {

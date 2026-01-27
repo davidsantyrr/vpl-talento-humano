@@ -1,3 +1,4 @@
+@import url('/css/_responsive_helpers.css');
 :root{
     --bg:#f5f7fb;
     --card:#ffffff;
@@ -30,6 +31,14 @@ body{
     margin-bottom:4px;
     color:#0b2a66;
     font-weight:600;
+}
+
+@media (max-width: 900px) {
+    .gestion-card { padding: 14px; margin: 12px; }
+    .gestion-card h1 { font-size: 1.4rem; }
+    .gestion-card p { font-size: 0.95rem; }
+    .table-responsive { overflow-x: auto; }
+    .btn { width: 100%; box-sizing: border-box; }
 }
 
 .gestion-card p{

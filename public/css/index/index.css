@@ -1,3 +1,5 @@
+@import url('/css/_responsive_helpers.css');
+
 /* Reset global para evitar márgenes por defecto y asegurar que elementos a ancho completo ocupen todo el espacio */
 html, body {
   margin: 0;
@@ -101,6 +103,14 @@ main {
   transform: translateY(12px);
   opacity: 0;
   animation: floatUp 420ms cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+/* Additional small-screen tweaks */
+@media (max-width: 640px) {
+  .border-solid form { max-width: 100%; padding: 1.25rem; min-height: auto; }
+  .input-group { width: 100%; }
+  .input-group input { width: 100%; }
+  .btn-primary { width: 100%; padding: 12px; }
 }
 
 @keyframes floatUp {

@@ -1,3 +1,5 @@
+@import url('/css/_responsive_helpers.css');
+
 /* public/css/elementoxcargo/producto.css */
 :root {
     --bg: #f7f9fc;
@@ -24,6 +26,14 @@ body {
     max-width: 1200px;
     margin: 18px auto;
     padding: 0 16px
+}
+
+@media (max-width: 900px) {
+    .container { padding: 0 12px; }
+    .product-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    .product-card { padding: 12px; }
+    .product-media { height: auto; max-height: 260px; }
+    .btn { width: 100%; }
 }
 
 /* Header */

@@ -17,6 +17,15 @@ class ElementoPeriodicidadController extends Controller
      */
     public function index(Request $request)
     {
+        // Determinar filtro de rol por defecto desde el usuario en sesión
+        $user = auth()->user();
+        $roleFilter = $request->input('role') ?? null;
+        if (!$roleFilter && $user) {
+            $rolesSerialized = json_encode($user);
+            $rolesClean = strtolower(str_replace(' ', '', $rolesSerialized));
+            if (strpos($rolesClean, 'hseq') !== false) $roleFilter = 'hseq';
+            elseif (strpos($rolesClean, 'talento') !== false || strpos($rolesClean, 'talentohumano') !== false) $roleFilter = 'talento';
+        }
         $year = $request->input('year')
             ? intval($request->input('year'))
             : Carbon::now()->year;
@@ -67,6 +76,15 @@ class ElementoPeriodicidadController extends Controller
 
         // --- REEMPLAZO: obtener asignaciones unificadas ---
         $assignments = $this->buildAssignments();
+        if ($roleFilter) {
+            $rf = strtolower(str_replace(' ', '', $roleFilter));
+            $assignments = array_values(array_filter($assignments, function($a) use ($rf) {
+                $row = $a['periodicidad_row'] ?? null;
+                if (!$row) return false;
+                $r = strtolower(str_replace(' ', '', ($row['rol_periodicidad'] ?? $row['rol'] ?? '')));
+                return $r !== '' && strpos($r, $rf) !== false;
+            }));
+        }
         // --- fin reemplazo ---
 
         $yearStart = Carbon::create($year, 1, 1)->startOfDay();
@@ -79,7 +97,13 @@ class ElementoPeriodicidadController extends Controller
                 $monthsStep = $this->monthsStepFromCode($periodicidadVal ?? null) ?? 1;
                 $lastInfo = $this->getLastEntregaInfoByAssignment($a);
                 $seed = $this->resolveSeedDate($lastInfo['fecha'] ?? null, $a['asg_created_at'] ?? null, $monthsStep);
-                $cantidadEntrega = max(1, (int)($lastInfo['cantidad'] ?? 1));
+                $cantidadEntrega = 1;
+                if (!empty($a['cantidad'])) {
+                    $cantidadEntrega = (int)$a['cantidad'];
+                } elseif (!empty($lastInfo['cantidad'])) {
+                    $cantidadEntrega = (int)$lastInfo['cantidad'];
+                }
+                $cantidadEntrega = max(1, $cantidadEntrega);
 
                 // Si no hay periodicidad definida, no generar una serie mensual.
                 // Solo mostrar la última entrega (si existe) dentro del año.
@@ -324,6 +348,109 @@ class ElementoPeriodicidadController extends Controller
         return response()->json(['success'=>true,'users'=>$users]);
     }
 
+    /**
+     * Construye un listado plano de notificaciones próximas para enviar por correo.
+     * Devuelve un array con elementos: sku, name, next_date, days_remaining, urgency, quantity, users (array) y rol_periodicidad.
+     */
+    public function upcomingNotifications(string $role = null): array
+    {
+        $out = [];
+        $assignments = $this->buildAssignments();
+        $now = Carbon::now()->startOfDay();
+        if ($role) {
+            $rf = strtolower(str_replace(' ', '', $role));
+            $assignments = array_values(array_filter($assignments, function($a) use ($rf) {
+                $row = $a['periodicidad_row'] ?? null;
+                if (!$row) return false;
+                $r = strtolower(str_replace(' ', '', ($row['rol_periodicidad'] ?? $row['rol'] ?? '')));
+                return $r !== '' && strpos($r, $rf) !== false;
+            }));
+        }
+        foreach ($assignments as $a) {
+            try {
+                $periodicidadVal = $a['periodicidad'] ?? null;
+                $monthsStep = $this->monthsStepFromCode($periodicidadVal ?? null) ?: 1;
+                $lastInfo = $this->getLastEntregaInfoByAssignment($a);
+                $seed = $this->resolveSeedDate($lastInfo['fecha'] ?? null, $a['asg_created_at'] ?? null, $monthsStep);
+                $cantidadEntrega = max(1, (int)($lastInfo['cantidad'] ?? 1));
+
+                if (empty($periodicidadVal)) {
+                    if (empty($lastInfo['fecha'])) continue;
+                    $next = Carbon::parse($lastInfo['fecha'])->startOfDay();
+                } else {
+                    $next = $seed->copy()->addMonths($monthsStep);
+                    $iter = 0;
+                    while ($next->lt($now) && $iter < 500) { $next->addMonths($monthsStep); $iter++; }
+                }
+
+                $daysUntilDue = $now->lt($next) ? $now->diffInDays($next) : 0;
+
+                $thr = $this->parsePeriodicidadThresholds($a['periodicidad_row'] ?? null);
+                $urg = 'ok';
+                if ($thr) {
+                    if ($thr['rojo'] !== null && $daysUntilDue <= $thr['rojo']) $urg = 'urgent';
+                    elseif ($thr['amarillo'] !== null && $daysUntilDue <= $thr['amarillo']) $urg = 'soon';
+                    elseif ($thr['verde'] !== null && $daysUntilDue <= $thr['verde']) $urg = 'warning';
+                } else {
+                    $base = $this->thresholdDaysFromMonthsStep($monthsStep);
+                    if ($daysUntilDue <= $base) $urg = 'soon';
+                    elseif ($daysUntilDue <= $base*2) $urg = 'warning';
+                }
+
+                $weekStart = $next->copy()->startOfWeek(Carbon::MONDAY)->toDateString();
+                $req = new \Illuminate\Http\Request(['weekStart' => $weekStart]);
+                $resp = $this->usuariosForSku($req, $a['sku']);
+                $data = [];
+                if ($resp instanceof \Illuminate\Http\JsonResponse) {
+                    $data = json_decode($resp->getContent(), true);
+                }
+                $users = $data['users'] ?? [];
+
+                // Prefer quantity specified in periodicidad row, then sum of assigned users, then last entrega cantidad
+                $periodQty = isset($a['periodicidad_row']['cantidad']) ? (int)$a['periodicidad_row']['cantidad'] : null;
+                if ($periodQty !== null && $periodQty > 0) {
+                    $finalQty = $periodQty;
+                } elseif (!empty($users) && is_array($users)) {
+                    $finalQty = array_sum(array_map(function($u){ return max(1, (int)($u['cantidad'] ?? 1)); }, $users));
+                } else {
+                    $finalQty = $cantidadEntrega;
+                }
+
+                // determine threshold days for current urgency (prefer periodicidad row values)
+                $thresholdDays = null;
+                $thresholdName = null;
+                if ($thr) {
+                    if ($urg === 'urgent') { $thresholdDays = $thr['rojo']; $thresholdName = 'Rojo'; }
+                    elseif ($urg === 'soon') { $thresholdDays = $thr['amarillo']; $thresholdName = 'Amarillo'; }
+                    elseif ($urg === 'warning') { $thresholdDays = $thr['verde']; $thresholdName = 'Verde'; }
+                } else {
+                    $base = $this->thresholdDaysFromMonthsStep($monthsStep);
+                    if ($urg === 'soon') { $thresholdDays = $base; $thresholdName = 'Amarillo'; }
+                    elseif ($urg === 'warning') { $thresholdDays = $base * 2; $thresholdName = 'Verde'; }
+                    elseif ($urg === 'urgent') { $thresholdDays = (int) floor($base/2); $thresholdName = 'Rojo'; }
+                }
+
+                $out[] = [
+                    'sku' => $a['sku'],
+                    'name' => $a['name_produc'] ?? ($a['sku'] ?? null),
+                    'next_date' => $next->toDateString(),
+                    'days_remaining' => $daysUntilDue,
+                    'urgency' => $urg,
+                    'quantity' => $finalQty,
+                    'threshold_days' => $thresholdDays,
+                    'threshold_color' => $thresholdName,
+                    'users' => $users,
+                    'rol_periodicidad' => $a['periodicidad_row']['rol_periodicidad'] ?? ($a['periodicidad_row']['rol'] ?? null),
+                ];
+            } catch (\Throwable $e) {
+                Log::debug('upcomingNotifications item error', ['msg'=>$e->getMessage(), 'sku'=>$a['sku'] ?? null]);
+                continue;
+            }
+        }
+
+        return $out;
+    }
+
     // --- helper: construir lista unificada de asignaciones (elemento_x_usuario + entregas históricas) ---
     private function buildAssignments(): array
     {
@@ -340,6 +467,7 @@ class ElementoPeriodicidadController extends Controller
                 'sku' => $r->sku,
                 'name_produc' => $r->name_produc,
                 'usuarios_entregas_id' => $r->usuarios_entregas_id,
+                'cantidad' => isset($r->cantidad) ? (int)$r->cantidad : null,
                 'numero_documento' => $doc,
                 'asg_created_at' => $r->created_at,
                 'periodicidad' => $periodRow->periodicidad ?? null,

@@ -1,3 +1,5 @@
+@import url('/css/_responsive_helpers.css');
+
 body {
     background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
 }
@@ -116,6 +118,18 @@ th{
 .btn.add {
     background: #111827;
     color: #fff
+}
+
+/* Mobile adjustments */
+@media (max-width: 900px) {
+    .recepcion.container { max-width: 100%; padding: 0 12px; }
+    .grid { grid-template-columns: 1fr; }
+    .panel { padding: 12px; }
+    .panel .section { padding: 12px; }
+    .field input, .field select { width: 100%; }
+    .actions { flex-direction: column; gap: 8px; }
+    .table-responsive { overflow-x: auto; }
+    .btn.add { width: 100%; }
 }
 
 .btn.primary {

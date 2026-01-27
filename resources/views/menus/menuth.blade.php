@@ -1,15 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Menu Principal</title>
-    <link rel="stylesheet" href="{{ asset('css/menus/styleMenu.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
+@push('styles')
+  <link rel="stylesheet" href="{{ asset('css/menus/styleMenu.css') }}">
+@endpush
 
-<body>
+@push('scripts')
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@endpush
+
+@section('content')
     <div class="head">
         <nav>
             <div class="nav-left">
@@ -65,6 +64,7 @@
         </div>
     </div>
 
+    @push('scripts')
     <script>
       (function(){
         const form = document.getElementById('logoutFormMenu');
@@ -104,6 +104,6 @@
         });
       })();
     </script>
-</body>
+    @endpush
 
-</html>
+@endsection

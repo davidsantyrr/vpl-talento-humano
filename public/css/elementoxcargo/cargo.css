@@ -1,3 +1,16 @@
+:root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --primary: #2563eb;
+    --success: #16a34a;
+    --radius: 14px;
+    --shadow: 0 12px 28px rgba(2, 6, 23, 0.08);
+}
+
+@import url('/css/_responsive_helpers.css');
+
 /* Artículos page styles (no Bootstrap) */
 :root {
     --bg: #f4f6fb;

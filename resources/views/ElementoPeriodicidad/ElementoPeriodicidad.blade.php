@@ -19,7 +19,6 @@
         <strong>Leyenda:</strong>
         <span class="badge bg-danger ms-1">Urgente (esta semana)</span>
         <span class="badge bg-warning text-dark ms-1">Próxima semana</span>
-        <span class="badge bg-info text-dark ms-1">En 2 semanas</span>
         <span class="badge bg-success ms-1">OK (más adelante)</span>
         <span class="badge bg-light text-dark ms-1">Sin entregas</span>
     </div>

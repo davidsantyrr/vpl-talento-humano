@@ -16,30 +16,28 @@ body {
     justify-content: center;
     min-height: 100vh;
     margin: 0;
-    /* integrar espacio superior para el header fijo (se añadió margen visual de 10px) */
-    padding: calc(var(--header-height) + 34px) 12px 48px;
+    /* espacio superior igual a la altura del header fijo */
+    padding: calc(var(--header-height)) 12px 48px;
     color: var(--text-dark);
 }
 
 /* Navbar: ahora ocupa todo el ancho superior (fixed) */
 .head {
     position: fixed;
-    top: 10px;
-    /* dejar margen visual superior */
-    left: 10px;
-    /* margen lateral izquierdo */
-    right: 10px;
-    /* margen lateral derecho */
+    top: 0;
+    /* fijar al tope del viewport */
+    left: 0;
+    right: 0;
     width: auto;
     /* no forzar 100% para respetar left/right */
     height: var(--header-height);
     background-color: var(--brand);
-    border-radius: 10px;
+    border-radius: 0 0 10px 10px;
     /* borde redondeado pedido */
     box-shadow: 0 8px 30px rgba(13, 30, 77, 0.12);
     display: flex;
     align-items: center;
-    padding: 0;
+    padding: 0 12px;
     z-index: 9999;
 }
 
@@ -122,20 +120,21 @@ h1.title {
 /* Usar grid para que las cards se expandan y ocupen el espacio disponible */
 .menu {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-    gap: 32px;
+    /* permitir más columnas en pantallas grandes y ser más responsivo en pantallas pequeñas */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
     width: 100%;
-    align-items: stretch;
-    /* estirar las items para igualar altura */
+    align-items: start;
 }
 
 .card {
     width: 100%;
     /* dejar que el grid controle el tamaño */
     max-width: none;
-    background: var(--card-bg);
+    background: transparent;
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: visible;
+    position: relative;
     box-shadow: 0 12px 36px rgba(13, 30, 77, 0.10);
     transition: transform .28s ease, box-shadow .28s ease, border-color .18s ease;
     border: 1px solid rgba(16, 24, 40, 0.04);
@@ -153,21 +152,55 @@ h1.title {
 /* Hacer que la imagen de la card ocupe todo el mismo espacio en cada tarjeta */
 .card__media {
     flex: 0 0 auto;
-    /* tamaño fijo (no crece) */
-    height: 300px;
-    /* altura base consistente */
+    height: 260px;
     overflow: hidden;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 20px rgba(13,30,77,0.06) inset;
+    position: relative;
 }
 
-/* Asegurarse de que la imagen rellene por completo su contenedor */
+/* icon inside the circular white plate */
+.card__icon{
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 12px 30px rgba(13,30,77,0.12);
+}
+.card__icon i{
+    font-size: 44px;
+    color: rgba(9,25,40,0.9);
+}
+
+/* color variants (top panel) */
+.card--blue .card__media{ background: linear-gradient(180deg,#dbe9ff,#c6ddff); }
+.card--lightblue .card__media{ background: linear-gradient(180deg,#cfe9ff,#bfe6ff); }
+.card--peach .card__media{ background: linear-gradient(180deg,#ffe6cf,#ffd6b8); }
+.card--mint .card__media{ background: linear-gradient(180deg,#dff7e9,#c7f0d8); }
+.card--lime .card__media{ background: linear-gradient(180deg,#e6ffe6,#d4ffd4); }
+.card--coral .card__media{ background: linear-gradient(180deg,#ffdede,#ffd1cf); }
+.card--yellow .card__media{ background: linear-gradient(180deg,#fff6cc,#fff2b8); }
+
+/* title color slightly darker to contrast */
+.card__title{ color: rgba(6,22,40,0.92); }
+
+/* Centrar y contener la imagen dentro del espacio disponible; soporta iconos pequeños */
 .card__media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    /* cubrir todo el espacio sin deformar */
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #fff;
+    padding: 18px;
+    box-shadow: 0 12px 30px rgba(13,30,77,0.12);
+    object-fit: contain;
     display: block;
-    transition: transform .6s ease;
+    transition: transform .4s ease;
 }
 
 .card:hover .card__media img {
@@ -175,11 +208,13 @@ h1.title {
 }
 
 .card__body {
-    padding: 18px;
+    padding: 18px 22px 28px 22px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.85));
+    background: #fff;
+    border-radius: 0 0 var(--radius) var(--radius);
+    margin-top: -28px;
     z-index: 2;
 }
 
@@ -201,27 +236,45 @@ h1.title {
 .card__actions {
     display: flex;
     justify-content: center;
-    padding: 16px;
-    border-top: 1px solid rgba(15, 23, 42, 0.04);
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.02), transparent);
+    padding: 18px 12px 26px 12px;
+    background: transparent;
 }
 
 .btn {
     appearance: none;
     border: none;
     cursor: pointer;
-    padding: 10px 26px;
-    border-radius: 999px;
+    padding: 14px 26px;
+    border-radius: 14px;
     background: linear-gradient(90deg, #36d399, #79f2c9);
     color: #04282b;
-    font-weight: 600;
-    box-shadow: 0 8px 26px rgba(52, 211, 153, 0.12);
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(52, 211, 153, 0.12);
     transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
 }
 
 .btn:hover {
     transform: translateY(-3px);
     filter: brightness(.98);
+}
+
+/* make the action button span most of card width inside the white body */
+.card__actions .btn {
+    width: calc(100% - 48px);
+    max-width: 420px;
+}
+
+/* small circular decor in top-right of each card media */
+.card::after{
+    content: '';
+    position: absolute;
+    right: 22px;
+    top: 22px;
+    width: 12px;
+    height: 12px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(13,30,77,0.06);
 }
 
 .btn:focus {
@@ -239,14 +292,14 @@ h1.title {
     }
 
     body {
-        padding-top: calc(var(--header-height) + 26px);
+        padding-top: calc(var(--header-height));
     }
 
     .head {
         height: var(--header-height);
-        top: 10px;
-        left: 10px;
-        right: 10px;
+        top: 0;
+        left: 0;
+        right: 0;
     }
 
     .logoVigia {
@@ -298,14 +351,14 @@ h1.title {
     }
 
     body {
-        padding-top: calc(var(--header-height) + 22px);
+        padding-top: calc(var(--header-height));
     }
 
     .head {
         height: var(--header-height);
-        top: 10px;
-        left: 8px;
-        right: 8px;
+        top: 0;
+        left: 0;
+        right: 0;
     }
 
     .logoVigia {

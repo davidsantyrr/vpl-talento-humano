@@ -1,3 +1,5 @@
+@import url('/css/_responsive_helpers.css');
+
 /* filepath: c:\laragon\www\vpl-talento-humano\public\css\historico\historialUnificado.css */
 :root {
 	--primary: #111f2e;
@@ -93,6 +95,17 @@ body {
 .filters input[type="search"]:focus,
 .filters select:focus {
 	outline: none;
+
+/* Small-screen layout tweaks */
+@media (max-width: 900px) {
+	.historial-container { padding: 0 12px; }
+	.header-top { flex-direction: column; align-items: stretch; gap: 12px; }
+	.filters { flex-direction: column; align-items: stretch; }
+	.filters input[type="search"], .filters select { width: 100%; }
+	.historial-header { padding: 12px; }
+	.table-responsive { overflow-x: auto; }
+	.pagination-wrapper { justify-content: center; }
+}
 	border-color: var(--primary);
 	box-shadow: 0 0 0 3px rgba(17, 31, 46, 0.1);
 }

@@ -1,3 +1,14 @@
+:root {
+    --radius: 16px;
+    --shadow: 0 10px 24px rgba(2, 6, 23, 0.10);
+    --shadow-hover: 0 20px 44px rgba(2, 6, 23, 0.16);
+    --text: #0f172a;
+    --brand: #F78008;
+    --muted: #64748b;
+}
+
+@import url('/css/_responsive_helpers.css');
+
 /* Menú Entregas (UI refinada y buenas prácticas) */
 :root {
     --radius: 16px;
@@ -54,15 +65,14 @@ body {
     display: block
 }
 
-/* Grid de tarjetas (centrado de última fila con flex) */
+/* Grid de tarjetas: usar grid para filas consistentes y altura igualada */
 .cards {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 28px;
     box-sizing: border-box;
     padding-bottom: 28px;
-    /* avoid clipping at the bottom */
+    align-items: stretch;
 }
 
 /* Tarjeta */
@@ -78,9 +88,6 @@ body {
     transition: transform .2s ease, box-shadow .2s ease, filter .16s ease;
     position: relative;
     width: 100%;
-    /* Ensure cards don't exceed column width */
-    flex: 0 1 360px;
-    /* wider cards on desktop */
 }
 
 .card:hover {
@@ -213,7 +220,24 @@ body {
 .card__top .desc {
     margin: 6px 0 0;
     font-size: 13px;
-    max-width: 90%
+    max-width: 100%;
+    color: var(--muted);
+    line-height: 1.3;
+    /* Limit text to 3 lines while keeping a solid fallback */
+    display: -webkit-box;
+    /* stylelint: allow vendor specific -webkit-line-clamp */
+    /* stylelint-disable-next-line property-no-unknown */
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    /* non-standard modern alias (where supported) */
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Ensure consistent height across browsers */
+    max-height: 3.9em; /* 1.3 * 3 lines */
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 /* Indicador sutil */
@@ -238,6 +262,14 @@ body {
     border-top: 1px solid rgba(0, 0, 0, 0.06);
     margin-top: auto;
 }
+
+/* Footer button: keep centered but allow full width on small screens */
+.card__footer .btn {
+    width: 100%;
+    max-width: 320px;
+}
+
+.card__footer .btn .fa, .card__footer .btn svg { margin-right: 6px; }
 
 /* Botón */
 .btn {
