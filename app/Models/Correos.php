@@ -12,5 +12,6 @@ class Correos extends Model
     protected $fillable = [
         'rol',
         'correo',
+        'area',
     ];
 }

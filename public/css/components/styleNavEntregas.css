@@ -1,5 +1,13 @@
 @import url('/css/_responsive_helpers.css');
 
+/* === Nav height variable and body offset === */
+:root{
+    --nav-height: 72px; /* default desktop height - adjust if needed */
+}
+
+/* Ensure page content is pushed below the fixed navbar */
+body{ padding-top: var(--nav-height); }
+
 /* Navbar modern styles */
 .vigia-navbar {
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -18,7 +26,8 @@
     /* keep only bottom rounding so it blends into the page */
     border-radius: 0 0 12px 12px;
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
-    z-index: 9999;
+    /* Keep navbar above normal content but below modal/backdrop (Bootstrap uses 1040/1050) */
+    z-index: 1030;
 }
 
 .vigia-navbar .navegacion {
@@ -174,6 +183,15 @@
     .vigia-navbar .opciones.open {
         display: flex
     }
+}
+
+/* Increase the nav offset on smaller screens where the navbar wraps */
+@media (max-width: 860px) {
+    :root { --nav-height: 110px; }
+}
+
+@media (max-width: 480px) {
+    :root { --nav-height: 140px; }
 }
 
 @media (max-width: 480px) {

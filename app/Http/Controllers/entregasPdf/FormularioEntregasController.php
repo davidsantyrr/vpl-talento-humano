@@ -310,7 +310,43 @@ class FormularioEntregasController extends Controller
 	// API: Obtener nombres de productos por SKUs (usada por el formulario)
 	public function obtenerNombresProductos(Request $request)
 	{
-		// ...copiar lógica de EntregaController::obtenerNombresProductos tal cual...
+		$payload = $request->getContent();
+		$skus = null;
+		try {
+			$data = json_decode($payload, true);
+			if (is_array($data) && isset($data['skus']) && is_array($data['skus'])) {
+				$skus = $data['skus'];
+			} elseif ($request->has('skus') && is_array($request->input('skus'))) {
+				$skus = $request->input('skus');
+			}
+		} catch (\Throwable $e) {
+			$skus = null;
+		}
+
+		if (empty($skus) || !is_array($skus)) {
+			return response()->json([], 200);
+		}
+
+		try {
+			$prodModel = new Producto();
+			$conn = $prodModel->getConnectionName() ?: config('database.default');
+			$table = $prodModel->getTable();
+			$rows = DB::connection($conn)
+				->table($table)
+				->whereIn('sku', $skus)
+				->select('sku', 'name_produc')
+				->get();
+
+			$result = $rows->map(function($r){
+				return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')];
+			})->values();
+
+			return response()->json($result, 200);
+		} catch (\Throwable $e) {
+			Log::warning('obtenerNombresProductos failed', ['error' => $e->getMessage()]);
+			// Return empty array to the client so frontend can fallback to SKU labels
+			return response()->json([], 200);
+		}
 	}
 
 	// Endpoint: logging cliente (migrado desde EntregaController::logComprobanteHit)

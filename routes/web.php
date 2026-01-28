@@ -155,6 +155,7 @@ Route::middleware([VplAuth::class])->group(function(){
 // Ruta para generación de comprobantes (POST) usada por la vista JS (nombre requerido: comprobantes.generar)
 Route::post('comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
 Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
+Route::get('/debug/usados', [ArticulosController::class, 'debugUsados'])->name('debug.usados');
 Route::get('/articulos/export-inventario', [App\Http\Controllers\articulos\ArticulosController::class, 'exportInventario'])->name('articulos.exportInventario');
 Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
 Route::post('/articulos/price', [ArticulosController::class, 'savePrice'])->name('articulos.savePrice');

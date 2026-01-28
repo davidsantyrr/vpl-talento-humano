@@ -24,7 +24,17 @@ class gestionCorreosController extends Controller
         $user = session('auth.user') ?? null;
         $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
 
-        return view('gestiones.gestionCorreos', compact('correos', 'rolesDisponibles', 'selectedRol'));
+        // Cargar áreas para el select (si existen)
+        $areas = [];
+        try {
+            // El modelo Area usa la columna 'nombre_area' en la tabla, mapearla a 'nombre' para la vista
+            $areas = \App\Models\Area::select('id', 'nombre_area as nombre')->orderBy('nombre_area')->get();
+        } catch (\Throwable $_) {
+            // Si no existe el modelo/tabla, continuar sin bloquear la vista
+            $areas = collect([]);
+        }
+
+        return view('gestiones.gestionCorreos', compact('correos', 'rolesDisponibles', 'selectedRol', 'areas'));
     }
 
     public function create()
@@ -38,9 +48,17 @@ class gestionCorreosController extends Controller
         $data = $request->validate([
             'rol' => 'required|string|max:191',
             'correo' => 'required|email|max:191',
+            'area' => 'nullable|string|max:191',
         ]);
 
-        \App\Models\Correos::create($data);
+        // Asegurar sólo las columnas esperadas
+        $create = [
+            'rol' => $data['rol'],
+            'correo' => $data['correo'],
+            'area' => $data['area'] ?? null,
+        ];
+
+        \App\Models\Correos::create($create);
 
         return redirect()->route('gestionCorreos.index')->with('success', 'Correo agregado.');
     }
@@ -102,10 +120,15 @@ class gestionCorreosController extends Controller
         $data = $request->validate([
             'rol' => 'required|string|max:191',
             'correo' => 'required|email|max:191',
+            'area' => 'nullable|string|max:191',
         ]);
-
         $correo = \App\Models\Correos::findOrFail($id);
-        $correo->update($data);
+        $update = [
+            'rol' => $data['rol'],
+            'correo' => $data['correo'],
+            'area' => $data['area'] ?? null,
+        ];
+        $correo->update($update);
 
         return redirect()->route('gestionCorreos.index')->with('success', 'Correo actualizado.');
     }

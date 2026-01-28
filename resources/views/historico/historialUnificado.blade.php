@@ -95,9 +95,11 @@
 											Completado
 										</span>
 									@else
-										<span class="badge {{ $registro->recibido ? 'badge-success' : 'badge-warning' }}">
-											{{ $registro->recibido ? 'Recibido' : 'Pendiente' }}
-										</span>
+										@if($registro->recibido)
+											<span class="badge badge-success">Usado</span>
+										@else
+											<span class="badge badge-warning">Pendiente</span>
+										@endif
 									@endif
 								@else
 									<span class="badge {{ $registro->recibido ? 'badge-success' : 'badge-warning' }}">

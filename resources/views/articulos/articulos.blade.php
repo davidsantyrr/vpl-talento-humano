@@ -17,6 +17,7 @@
     <button class="tab-btn" data-status="prestado">Prestados</button>
     <button class="tab-btn" data-status="perdido">Perdidos</button>
     <button class="tab-btn" data-status="destruido">Destruidos</button>
+    <button class="tab-btn" data-status="usados">Usados</button>
   </div>
 
     <p class="page-subtitle">Gestiona inventario en la BD 3 (bodega, ubicación, estatus y stock) para artículos provenientes de requisición.</p>
@@ -58,6 +59,27 @@
           {!! $rowsHtml !!}
         </tbody>
       </table>
+    </div>
+
+    <div class="usados-wrapper" style="display:none; margin-top: 18px;">
+      <h3>Artículos recibidos (Usados)</h3>
+      <div class="table-wrapper">
+        <table class="tabla-articulos">
+          <thead>
+            <tr>
+                <th>SKU</th>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Cantidad recibida</th>
+                <th>Última recepción</th>
+                <th style="text-align:center;">Acciones</th>
+              </tr>
+          </thead>
+          <tbody>
+            {!! $usadosHtml ?? '' !!}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="paginacion paginacion-compact">
@@ -234,6 +256,84 @@
           savePrice(sku, parseFloat(norm), inp);
         });
         inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') { inp.blur(); } });
+      });
+    });
+  })();
+</script>
+<script>
+  (function(){
+    function switchTab(status){
+      const usadosWrap = document.querySelector('.usados-wrapper');
+      // main list: first .table-wrapper (la principal)
+      const wrappers = document.querySelectorAll('.table-wrapper');
+      const mainWrap = wrappers && wrappers.length ? wrappers[0] : null;
+
+      // mostrar/ocultar secciones
+      if (status === 'usados') {
+        if (mainWrap) mainWrap.style.display = 'none';
+        if (usadosWrap) usadosWrap.style.display = '';
+      } else {
+        if (mainWrap) mainWrap.style.display = '';
+        if (usadosWrap) usadosWrap.style.display = 'none';
+
+        // filtrar filas de la tabla principal por data-estatus
+        try {
+          const tbody = mainWrap.querySelector('tbody');
+          if (tbody) {
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.forEach(r => {
+              const est = (r.getAttribute('data-estatus') || '').toLowerCase();
+              if (!est) { r.style.display = ''; return; }
+              r.style.display = (est === status) ? '' : 'none';
+            });
+          }
+        } catch (e) { console.warn('Error filtrando filas por estatus', e); }
+      }
+
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.getAttribute('data-status')===status));
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      // init: bind tabs and default to 'disponible' if none active
+      document.querySelectorAll('.tab-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){ switchTab(btn.getAttribute('data-status')); });
+      });
+      // trigger currently active tab to apply filter on load
+      const active = document.querySelector('.tab-btn.active');
+      if (active) switchTab(active.getAttribute('data-status'));
+    });
+  })();
+</script>
+<script>
+  (function(){
+    async function loadUsados(){
+      const tbody = document.querySelector('.usados-wrapper tbody');
+      if (!tbody) return;
+      try {
+        const res = await fetch('/debug/usados');
+        if (!res.ok) return;
+        const j = await res.json();
+        if (!j || !Array.isArray(j.rows)) return;
+        tbody.innerHTML = j.rows.map(r => {
+          const sku = r.sku || '';
+          const name = (r.name_produc ?? sku) || sku;
+          const cat = r.categoria_produc ?? '';
+          const qty = r.total_cantidad ?? '';
+          const date = r.last_recepcion_at ?? '';
+          const btn = `<button type="button" class="btn-icon delete" onclick='abrirModalDestruccion(${JSON.stringify(sku)}, ${JSON.stringify(name)}, ${JSON.stringify('')}, ${JSON.stringify('')}, ${JSON.stringify('usado')}, ${Number(qty)})' title="Destruir">`+
+                        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'+
+                        '</button>';
+          return `<tr><td>${sku}</td><td>${name}</td><td>${cat}</td><td>${qty}</td><td>${date}</td><td style="text-align:center;">${btn}</td></tr>`;
+        }).join('');
+      } catch (e) {
+        console.error('Error cargando usados', e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      loadUsados();
+      document.querySelectorAll('.tab-btn').forEach(btn=>{
+        btn.addEventListener('click', function(){ if (btn.getAttribute('data-status') === 'usados') loadUsados(); });
       });
     });
   })();

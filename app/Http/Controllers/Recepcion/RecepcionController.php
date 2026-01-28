@@ -102,8 +102,8 @@ class RecepcionController extends Controller
                 ]);
             }
 
-            // Si es tipo "prestamo" y tiene entrega_id, agregarlo
-            if ($data['tipo'] === 'prestamo' && !empty($data['entrega_id'])) {
+            // Si se proporciona entrega_id (vincular recepción con entrega), agregarlo siempre
+            if (!empty($data['entrega_id'])) {
                 $recepcionData['entregas_id'] = (int) $data['entrega_id'];
             }
 
@@ -124,41 +124,54 @@ class RecepcionController extends Controller
                 throw new \Exception('Debe agregar al menos un elemento a la recepción');
             }
             
+            $insertedItems = [];
             foreach ($items as $it) {
                 if (empty($it['sku'])) continue;
+                $cantidad = isset($it['cantidad']) ? (int)$it['cantidad'] : 1;
                 DB::table('elemento_x_recepcion')->insert([
                     'recepcion_id' => $recepcionId,
                     'sku' => (string) $it['sku'],
-                    'cantidad' => (string) ($it['cantidad'] ?? 1),
+                    'cantidad' => $cantidad,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                $insertedItems[] = ['sku' => (string)$it['sku'], 'cantidad' => $cantidad];
             }
 
-            // Si es tipo "prestamo" y tiene entrega_id, marcar la entrega como recibida
-            // y vincular la recepción con la entrega
-            if ($data['tipo'] === 'prestamo' && !empty($data['entrega_id'])) {
-                // Marcar entrega como recibida y vincularla con esta recepción
-                DB::table('entregas')
-                    ->where('id', $data['entrega_id'])
-                    ->update([
-                        'recibido' => true,
-                        'recepciones_id' => $recepcionId,
-                        'updated_at' => now()
+            Log::info('Elementos insertados en elemento_x_recepcion', ['recepcion_id' => $recepcionId, 'items' => $insertedItems]);
+
+            // Si se proporcionó entrega_id, marcar la entrega como recibida
+            // y vincular la recepción con la entrega (aplica para préstamos y otros tipos)
+            if (!empty($data['entrega_id'])) {
+                try {
+                    DB::table('entregas')
+                        ->where('id', $data['entrega_id'])
+                        ->update([
+                            'recibido' => true,
+                            'recepciones_id' => $recepcionId,
+                            'updated_at' => now()
+                        ]);
+
+                    Log::info('Entrega marcada como recibida y vinculada con recepción', [
+                        'entrega_id' => $data['entrega_id'],
+                        'recepcion_id' => $recepcionId
                     ]);
-                
-                // Marcar esta recepción como entregada (completada)
+                } catch (\Throwable $e) {
+                    Log::error('Error vinculando entrega con recepción', ['entrega_id' => $data['entrega_id'], 'recepcion_id' => $recepcionId, 'err' => $e->getMessage()]);
+                }
+            }
+
+            // Marcar esta recepción como entregada (completada) siempre que haya sido creada
+            try {
                 DB::table('recepciones')
                     ->where('id', $recepcionId)
                     ->update([
                         'entregado' => true,
                         'updated_at' => now()
                     ]);
-                
-                Log::info('Entrega marcada como recibida y vinculada con recepción', [
-                    'entrega_id' => $data['entrega_id'],
-                    'recepcion_id' => $recepcionId
-                ]);
+                Log::info('Recepción marcada como entregada', ['recepcion_id' => $recepcionId]);
+            } catch (\Throwable $e) {
+                Log::error('Error marcando recepción como entregada', ['recepcion_id' => $recepcionId, 'err' => $e->getMessage()]);
             }
 
             // Actualizar inventario según tipo de recepción
@@ -332,55 +345,64 @@ class RecepcionController extends Controller
      */
     private function transferirInventario($sku, $cantidad, $estatusOrigen, $estatusDestino, $ubicacionId)
     {
-        // Buscar inventario origen
-        $inventarioOrigen = DB::connection('mysql_third')
+        // Consumir filas de inventario origen por orden hasta cubrir la cantidad requerida
+        $remaining = (int)$cantidad;
+        $rows = DB::connection('mysql_third')
             ->table('inventarios')
             ->where('sku', $sku)
             ->where('estatus', $estatusOrigen)
-            ->first();
+            ->orderBy('id')
+            ->get();
 
-        if (!$inventarioOrigen || (int)$inventarioOrigen->stock < $cantidad) {
-            throw new \Exception("No hay suficiente stock {$estatusOrigen} para SKU: {$sku}");
+        $totalAvailable = $rows->sum(fn($r) => (int)$r->stock);
+        if ($totalAvailable <= 0) {
+            Log::warning('No hay inventario origen para transferir', ['sku' => $sku, 'estatusOrigen' => $estatusOrigen]);
         }
 
-        // Restar del origen
-        $nuevoStockOrigen = (int)$inventarioOrigen->stock - $cantidad;
-        if ($nuevoStockOrigen > 0) {
-            DB::connection('mysql_third')
-                ->table('inventarios')
-                ->where('id', $inventarioOrigen->id)
-                ->update(['stock' => $nuevoStockOrigen]);
-        } else {
-            // Si llega a 0, eliminar la fila
-            DB::connection('mysql_third')
-                ->table('inventarios')
-                ->where('id', $inventarioOrigen->id)
-                ->delete();
+        foreach ($rows as $row) {
+            if ($remaining <= 0) break;
+            $stockInv = (int)$row->stock;
+            if ($stockInv <= 0) continue;
+            $toTake = min($stockInv, $remaining);
+            $newStock = $stockInv - $toTake;
+            if ($newStock > 0) {
+                DB::connection('mysql_third')->table('inventarios')->where('id', $row->id)->update(['stock' => $newStock]);
+            } else {
+                DB::connection('mysql_third')->table('inventarios')->where('id', $row->id)->delete();
+            }
+            Log::info('Inventario origen consumido', ['sku' => $sku, 'inventario_id' => $row->id, 'consumido' => $toTake, 'stock_antes' => $stockInv, 'stock_despues' => $newStock]);
+            $remaining -= $toTake;
         }
 
-        // Buscar o crear inventario destino
-        $inventarioDestino = DB::connection('mysql_third')
-            ->table('inventarios')
-            ->where('sku', $sku)
-            ->where('estatus', $estatusDestino)
-            ->first();
+        $transferred = (int)$cantidad - max(0, $remaining);
+        if ($remaining > 0) {
+            Log::warning('No se pudo cubrir la cantidad completa en origen durante transferencia', ['sku' => $sku, 'requested' => $cantidad, 'transferred' => $transferred, 'missing' => $remaining]);
+        }
 
-        if ($inventarioDestino) {
-            // Sumar al destino existente
-            DB::connection('mysql_third')
+        // Agregar la cantidad transferida al inventario destino (si es > 0)
+        if ($transferred > 0) {
+            $inventarioDestino = DB::connection('mysql_third')
                 ->table('inventarios')
-                ->where('id', $inventarioDestino->id)
-                ->update(['stock' => (int)$inventarioDestino->stock + $cantidad]);
-        } else {
-            // Crear nuevo registro de destino
-            DB::connection('mysql_third')
-                ->table('inventarios')
-                ->insert([
-                    'sku' => $sku,
-                    'stock' => $cantidad,
-                    'estatus' => $estatusDestino,
-                    'ubicaciones_id' => $ubicacionId
-                ]);
+                ->where('sku', $sku)
+                ->where('estatus', $estatusDestino)
+                ->first();
+
+            if ($inventarioDestino) {
+                DB::connection('mysql_third')
+                    ->table('inventarios')
+                    ->where('id', $inventarioDestino->id)
+                    ->update(['stock' => (int)$inventarioDestino->stock + $transferred]);
+            } else {
+                DB::connection('mysql_third')
+                    ->table('inventarios')
+                    ->insert([
+                        'sku' => $sku,
+                        'stock' => $transferred,
+                        'estatus' => $estatusDestino,
+                        'ubicaciones_id' => $ubicacionId
+                    ]);
+            }
+            Log::info('Inventario destino actualizado por transferencia', ['sku' => $sku, 'transferred' => $transferred, 'estatusDestino' => $estatusDestino]);
         }
     }
 

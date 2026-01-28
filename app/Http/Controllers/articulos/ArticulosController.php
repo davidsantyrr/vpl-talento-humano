@@ -347,7 +347,59 @@ class ArticulosController extends Controller
                         }
                 }
 
-        return view('articulos.articulos', [
+                // Construir lista de "usados": elementos que fueron registrados en recepciones
+                $usadosHtml = '';
+                try {
+                    $usadosRows = DB::table('elemento_x_recepcion as exr')
+                        ->join('recepciones as r', 'exr.recepcion_id', '=', 'r.id')
+                        ->select('exr.sku', DB::raw('SUM(CAST(exr.cantidad AS UNSIGNED)) as total_cantidad'), DB::raw('MAX(r.created_at) as last_recepcion_at'))
+                        ->groupBy('exr.sku')
+                        ->orderBy('last_recepcion_at', 'desc')
+                        ->get();
+
+                    Log::info('ArticulosController: usadosRows fetched', ['count' => $usadosRows->count(), 'sample_skus' => $usadosRows->pluck('sku')->slice(0,10)->all()]);
+
+                    $usadoSkus = $usadosRows->pluck('sku')->map(fn($s) => (string)$s)->all();
+                    $usadoProducts = [];
+                    if (!empty($usadoSkus)) {
+                        try {
+                            $productosUsados = Producto::whereIn('sku', $usadoSkus)->get()->keyBy('sku');
+                            foreach ($usadosRows as $u) {
+                                $sku = (string)$u->sku;
+                                $prod = $productosUsados->get($sku);
+                                $name = $prod ? $prod->name_produc : $sku;
+                                $cat = $prod ? ($prod->categoria_produc ?? '') : '';
+                                $qty = (int) $u->total_cantidad;
+                                $date = $u->last_recepcion_at ? date('Y-m-d H:i', strtotime($u->last_recepcion_at)) : '';
+                                $btnHtml = '<button type="button" class="btn-icon delete" onclick=\'abrirModalDestruccion(' . json_encode($sku) . ', ' . json_encode($name) . ', ' . json_encode('') . ', ' . json_encode('') . ', ' . json_encode('usado') . ', ' . (int)$qty . ')\' title="Destruir">'
+                                    . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
+                                    . '</button>';
+
+                                $usadosHtml .= '<tr data-sku="' . e($sku) . '">'
+                                    . '<td>' . e($sku) . '</td>'
+                                    . '<td>' . e($name) . '</td>'
+                                    . '<td>' . e($cat) . '</td>'
+                                    . '<td>' . e($qty) . '</td>'
+                                    . '<td>' . e($date) . '</td>'
+                                    . '<td style="text-align:center;">' . $btnHtml . '</td>'
+                                    . '</tr>';
+                            }
+                        } catch (\Throwable $_p) {
+                            // Si falla la lectura de productos externos, construir filas mínimas
+                            foreach ($usadosRows as $u) {
+                                $sku = (string)$u->sku;
+                                $qty = (int) $u->total_cantidad;
+                                $date = $u->last_recepcion_at ? date('Y-m-d H:i', strtotime($u->last_recepcion_at)) : '';
+                                $usadosHtml .= '<tr><td>' . e($sku) . '</td><td>' . e($sku) . '</td><td></td><td>' . e($qty) . '</td><td>' . e($date) . '</td></tr>';
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    Log::debug('ArticulosController: error construyendo usados', ['msg' => $e->getMessage()]);
+                    $usadosHtml = '';
+                }
+
+                return view('articulos.articulos', [
             'rowsHtml' => $rowsHtml,
             'paginationHtml' => $this->buildPagination($productos, $perPage, $category),
             'perPage' => $perPage,
@@ -355,6 +407,7 @@ class ArticulosController extends Controller
             'selectedCategory' => $category,
             'status' => session('status'),
             'canExport' => ($isAdmin || $isHseq || $isTalento),
+                    'usadosHtml' => $usadosHtml,
         ]);
     }
 
@@ -568,6 +621,51 @@ class ArticulosController extends Controller
             ->with('status', 'Inventario actualizado');
     }
 
+    /**
+     * DEBUG: retornar JSON con los SKUs "usados" agrupados (para depuración)
+     */
+    public function debugUsados(Request $request)
+    {
+        try {
+            $usadosRows = DB::table('elemento_x_recepcion as exr')
+                ->join('recepciones as r', 'exr.recepcion_id', '=', 'r.id')
+                ->select('exr.sku', DB::raw('SUM(CAST(exr.cantidad AS UNSIGNED)) as total_cantidad'), DB::raw('MAX(r.created_at) as last_recepcion_at'))
+                ->groupBy('exr.sku')
+                ->orderBy('last_recepcion_at', 'desc')
+                ->get();
+
+            $rows = $usadosRows->map(function($r){ return (array)$r; })->all();
+            $skus = array_map(fn($x)=>(string)$x['sku'], $rows);
+            $productsMap = [];
+            if (!empty($skus)) {
+                try {
+                    $prods = Producto::whereIn('sku', $skus)->get()->keyBy('sku');
+                    foreach ($prods as $p) {
+                        $productsMap[(string)$p->sku] = [
+                            'name_produc' => $p->name_produc ?? null,
+                            'categoria_produc' => $p->categoria_produc ?? null
+                        ];
+                    }
+                } catch (\Throwable $_) {
+                    $productsMap = [];
+                }
+            }
+
+            // attach product info
+            $enhanced = array_map(function($r) use ($productsMap) {
+                $sku = (string)$r['sku'];
+                $prod = $productsMap[$sku] ?? null;
+                $r['name_produc'] = $prod['name_produc'] ?? null;
+                $r['categoria_produc'] = $prod['categoria_produc'] ?? null;
+                return $r;
+            }, $rows);
+
+            return response()->json(['count' => count($enhanced), 'rows' => $enhanced], 200);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     // Guardar/actualizar precio en la tabla productoxproveedor (conexion mysql_second)
     public function savePrice(Request $request)
     {
@@ -626,7 +724,8 @@ class ArticulosController extends Controller
                 'sku' => ['required','string'],
                 'bodega' => ['nullable','string','max:255'],
                 'ubicacion' => ['nullable','string','max:255'],
-                'estatus' => ['required','in:disponible,perdido,prestado,destruido'],
+                // permitir 'usado' como origen (proviene de elemento_x_recepcion)
+                'estatus' => ['required','in:disponible,perdido,prestado,destruido,usado'],
                 'cantidad' => ['required','integer','min:1'],
                 'constancia' => ['required','file','mimes:pdf','max:5120'], // máx 5MB
                 'per_page' => ['nullable','integer'],
@@ -648,20 +747,6 @@ class ArticulosController extends Controller
                 return response()->json([
                     'success' => false,
                     'message' => 'El artículo ya está destruido'
-                ], 400);
-            }
-
-            // Buscar inventario origen
-            $inventarioOrigen = DB::connection('mysql_third')
-                ->table('inventarios')
-                ->where('sku', $sku)
-                ->where('estatus', $estatusOrigen)
-                ->first();
-
-            if (!$inventarioOrigen || (int)$inventarioOrigen->stock < $cantidad) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "No hay suficiente stock {$estatusOrigen} para destruir"
                 ], 400);
             }
 
@@ -696,45 +781,143 @@ class ArticulosController extends Controller
                     'message' => 'Debe cargar la constancia de destrucción'
                 ], 400);
             }
+            // Si el origen es 'usado', consumir desde elemento_x_recepcion (no existe fila en inventarios)
+            if ($estatusOrigen === 'usado') {
+                // Normalizar SKU y calcular cantidad total registrada como 'usado' (elemento_x_recepcion)
+                $sku = trim((string)$sku);
+                $exrRowsAll = DB::table('elemento_x_recepcion')->where('sku', $sku)->get();
+                $totalUsado = 0;
+                $exrDebug = [];
+                foreach ($exrRowsAll as $er) {
+                    $arr = (array)$er;
+                    $rawQty = isset($arr['cantidad']) ? (string)$arr['cantidad'] : '0';
+                    // limpiar y extraer número entero
+                    $clean = preg_replace('/[^0-9\-\.]/', '', $rawQty);
+                    $num = is_numeric($clean) ? (int) floor((float)$clean) : 0;
+                    $totalUsado += $num;
+                    $exrDebug[] = ['id' => $arr['id'] ?? null, 'cantidad_raw' => $rawQty, 'cantidad_parsed' => $num];
+                }
 
-            // Restar del inventario origen
-            $nuevoStockOrigen = (int)$inventarioOrigen->stock - $cantidad;
-            if ($nuevoStockOrigen > 0) {
-                DB::connection('mysql_third')
-                    ->table('inventarios')
-                    ->where('id', $inventarioOrigen->id)
-                    ->update(['stock' => $nuevoStockOrigen]);
-            } else {
-                // Si llega a 0, eliminar la fila
-                DB::connection('mysql_third')
-                    ->table('inventarios')
-                    ->where('id', $inventarioOrigen->id)
-                    ->delete();
-            }
+                Log::info('ArticulosController: destruir solicitado desde usado', ['sku'=>$sku, 'solicitado'=>$cantidad, 'disponible_usado'=>$totalUsado, 'rows'=>$exrDebug]);
 
-            // Buscar o crear inventario destruido
-            $inventarioDestruido = DB::connection('mysql_third')
-                ->table('inventarios')
-                ->where('sku', $sku)
-                ->where('estatus', 'destruido')
-                ->first();
+                if ($totalUsado <= 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "No hay stock usado disponible para destruir"
+                    ], 400);
+                }
 
-            if ($inventarioDestruido) {
-                // Sumar al existente
-                DB::connection('mysql_third')
+                // Si el usuario solicitó más que lo disponible, capear la cantidad
+                if ($totalUsado < $cantidad) {
+                    Log::info('ArticulosController: cantidad solicitada mayor que disponible, ajustando al disponible', ['sku'=>$sku, 'solicitado'=>$cantidad, 'ajustado'=>$totalUsado]);
+                    $cantidad = $totalUsado;
+                }
+
+                $remaining = $cantidad;
+                $exrRows = DB::table('elemento_x_recepcion')->where('sku', $sku)->orderBy('id', 'desc')->get();
+                foreach ($exrRows as $er) {
+                    if ($remaining <= 0) break;
+                    $rowQty = (int)($er->cantidad ?? 0);
+                    if ($rowQty <= 0) continue;
+                    if ($rowQty > $remaining) {
+                        DB::table('elemento_x_recepcion')->where('id', $er->id)->update(['cantidad' => $rowQty - $remaining]);
+                        $consumed = $remaining;
+                        $remaining = 0;
+                        break;
+                    } else {
+                        DB::table('elemento_x_recepcion')->where('id', $er->id)->delete();
+                        $remaining -= $rowQty;
+                    }
+                }
+                if ($remaining > 0) {
+                    return response()->json(['success' => false, 'message' => 'No hay suficiente stock usado para destruir'], 400);
+                }
+
+                // Determinar una ubicacion representativa: tomar la primera fila de inventarios si existe
+                $firstInv = DB::connection('mysql_third')->table('inventarios')->where('sku', $sku)->first();
+                $getDefaultUbicId = function() {
+                    $row = DB::connection('mysql_third')->table('ubicaciones')
+                        ->where('bodega', '')
+                        ->where('ubicacion', '')
+                        ->first();
+                    if ($row) return (int) $row->id;
+                    return (int) DB::connection('mysql_third')->table('ubicaciones')->insertGetId([
+                        'bodega' => '', 'ubicacion' => '', 'created_at' => now(), 'updated_at' => now()
+                    ]);
+                };
+                $useUbicId = $firstInv->ubicaciones_id ?? $getDefaultUbicId();
+
+                // Buscar o crear inventario destruido
+                $inventarioDestruido = DB::connection('mysql_third')
                     ->table('inventarios')
-                    ->where('id', $inventarioDestruido->id)
-                    ->update(['stock' => (int)$inventarioDestruido->stock + $cantidad]);
-            } else {
-                // Crear nuevo registro
-                DB::connection('mysql_third')
-                    ->table('inventarios')
-                    ->insert([
+                    ->where('sku', $sku)
+                    ->where('estatus', 'destruido')
+                    ->first();
+
+                if ($inventarioDestruido) {
+                    DB::connection('mysql_third')->table('inventarios')->where('id', $inventarioDestruido->id)->update(['stock' => (int)$inventarioDestruido->stock + $cantidad]);
+                } else {
+                    DB::connection('mysql_third')->table('inventarios')->insert([
                         'sku' => $sku,
                         'stock' => $cantidad,
                         'estatus' => 'destruido',
-                        'ubicaciones_id' => $inventarioOrigen->ubicaciones_id ?? 1
+                        'ubicaciones_id' => $useUbicId
                     ]);
+                }
+            } else {
+                // Buscar inventario origen
+                $inventarioOrigen = DB::connection('mysql_third')
+                    ->table('inventarios')
+                    ->where('sku', $sku)
+                    ->where('estatus', $estatusOrigen)
+                    ->first();
+
+                if (!$inventarioOrigen || (int)$inventarioOrigen->stock < $cantidad) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "No hay suficiente stock {$estatusOrigen} para destruir"
+                    ], 400);
+                }
+
+                // Restar del inventario origen
+                $nuevoStockOrigen = (int)$inventarioOrigen->stock - $cantidad;
+                if ($nuevoStockOrigen > 0) {
+                    DB::connection('mysql_third')
+                        ->table('inventarios')
+                        ->where('id', $inventarioOrigen->id)
+                        ->update(['stock' => $nuevoStockOrigen]);
+                } else {
+                    // Si llega a 0, eliminar la fila
+                    DB::connection('mysql_third')
+                        ->table('inventarios')
+                        ->where('id', $inventarioOrigen->id)
+                        ->delete();
+                }
+
+                // Buscar o crear inventario destruido
+                $inventarioDestruido = DB::connection('mysql_third')
+                    ->table('inventarios')
+                    ->where('sku', $sku)
+                    ->where('estatus', 'destruido')
+                    ->first();
+
+                if ($inventarioDestruido) {
+                    // Sumar al existente
+                    DB::connection('mysql_third')
+                        ->table('inventarios')
+                        ->where('id', $inventarioDestruido->id)
+                        ->update(['stock' => (int)$inventarioDestruido->stock + $cantidad]);
+                } else {
+                    // Crear nuevo registro
+                    DB::connection('mysql_third')
+                        ->table('inventarios')
+                        ->insert([
+                            'sku' => $sku,
+                            'stock' => $cantidad,
+                            'estatus' => 'destruido',
+                            'ubicaciones_id' => $inventarioOrigen->ubicaciones_id ?? 1
+                        ]);
+                }
             }
 
             // Registrar la destrucción en una tabla de log (opcional pero recomendado)

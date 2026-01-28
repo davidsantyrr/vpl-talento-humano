@@ -33,6 +33,13 @@
                                 <option value="{{ $rol }}" {{ old('rol') == $rol ? 'selected' : '' }}>{{ $rol }}</option>
                             @endforeach
                         </select>
+                        <select name="area" id="area" class="form-select d-none" required>
+                            <option value="">-- Seleccione un área --</option>
+                            @foreach($areas as $area)
+                                <option value="{{ $area->nombre }}" {{ old('area') == $area->nombre ? 'selected' : '' }}>{{ $area->nombre }}</option>
+                            @endforeach
+
+                        </select>
                         @error('rol') <div class="text-danger small">{{ $message }}</div> @enderror
                         <small class="text-muted">Los roles provienen de las periodicidades configuradas</small>
                     </div>
@@ -82,12 +89,42 @@
                 </script>
                 @endpush
 
+                <script>
+                (function(){
+                    const rolSelect = document.getElementById('rol');
+                    const areaSelect = document.getElementById('area');
+                    const areasCount = {{ isset($areas) ? $areas->count() : 0 }};
+                    if (!rolSelect || !areaSelect) return;
+
+                    function updateAreaVisibility(){
+                        const v = (rolSelect.value || '').toLowerCase();
+                        // Si hay áreas, mostrar el select por defecto; si el rol está vacío lo mostramos.
+                        // Si quieres lógica más estricta, ajustar la lista de keywords abajo.
+                        const roleSuggestsArea = (v && (v.includes('area') || v.includes('talento') || v.includes('coordinador') || v.includes('compras')));
+                        const shouldShow = areasCount > 0 && (v === '' || roleSuggestsArea);
+                        if (shouldShow) {
+                            areaSelect.classList.remove('d-none');
+                            areaSelect.required = true;
+                        } else {
+                            areaSelect.classList.add('d-none');
+                            areaSelect.required = false;
+                            areaSelect.value = '';
+                        }
+                    }
+
+                    // Init on load and on change
+                    document.addEventListener('DOMContentLoaded', updateAreaVisibility);
+                    rolSelect.addEventListener('change', updateAreaVisibility);
+                })();
+                </script>
+
                 {{-- Tabla de correos existentes --}}
                 <div class="table-responsive mt-4">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Rol</th>
+                                <th>Área</th>
                                 <th>Correo</th>
                                 <th>Creado</th>
                                 <th>Acciones</th>
@@ -97,10 +134,11 @@
                             @forelse($correos as $c)
                                 <tr>
                                     <td>{{ $c->rol }}</td>
+                                    <td>{{ $c->area }}</td>
                                     <td>{{ $c->correo }}</td>
                                     <td>{{ optional($c->created_at)->toDateTimeString() }}</td>
                                     <td class="text-nowrap">
-                                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-correo" data-id="{{ $c->id }}" data-rol="{{ $c->rol }}" data-correo="{{ $c->correo }}">Editar</button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary btn-edit-correo" data-id="{{ $c->id }}" data-rol="{{ $c->rol }}" data-area="{{ $c->area }}" data-correo="{{ $c->correo }}">Editar</button>
                                         <form method="POST" action="{{ route('gestionCorreos.destroy', $c->id) }}" style="display:inline-block" onsubmit="return confirm('Eliminar este correo?');">
                                             @csrf
                                             @method('DELETE')
@@ -148,6 +186,15 @@
                                                         </select>
                                                     </div>
                                                     <div class="mb-3">
+                                                        <label for="editArea" class="form-label">Área</label>
+                                                        <select name="area" id="editArea" class="form-select">
+                                                            <option value="">-- Seleccione un área --</option>
+                                                            @foreach($areas as $area)
+                                                                <option value="{{ $area->nombre }}">{{ $area->nombre }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    </div>
+                                                    <div class="mb-3">
                                                         <label for="editCorreo" class="form-label">Correo</label>
                                                         <input type="email" id="editCorreo" name="correo" class="form-control" required maxlength="191">
                                                     </div>
@@ -179,15 +226,22 @@
         const editRol = document.getElementById('editRol');
         const editCorreo = document.getElementById('editCorreo');
 
-        document.querySelectorAll('.btn-edit-correo').forEach(btn => {
+                document.querySelectorAll('.btn-edit-correo').forEach(btn => {
             btn.addEventListener('click', function(e){
                 const id = this.dataset.id;
                 const rol = this.dataset.rol || '';
                 const correo = this.dataset.correo || '';
+                const area = this.dataset.area || '';
                 if (editCorreo) editCorreo.value = correo;
                 if (editRol) {
                     for (let i=0;i<editRol.options.length;i++){
                         if (editRol.options[i].value === rol){ editRol.selectedIndex = i; break; }
+                    }
+                }
+                const editArea = document.getElementById('editArea');
+                if (editArea) {
+                    for (let i=0;i<editArea.options.length;i++){
+                        if (editArea.options[i].value === area){ editArea.selectedIndex = i; break; }
                     }
                 }
                 if (form) form.action = '/gestionCorreos/' + id;

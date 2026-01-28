@@ -282,18 +282,23 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(15,23,42,0.2);
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(15,23,42,0.08);
   border-radius: 10px;
   background: #fff;
   color: #0f172a;
-  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease;
 }
-.actions .btn-icon:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(2,6,23,0.10); background: #f8fafc; }
-.actions .btn-icon.edit { color: #2563eb; border-color: rgba(37,99,235,0.35); }
-.actions .btn-icon.delete { color: #dc2626; border-color: rgba(220,38,38,0.35); }
-.actions .btn-icon.location { color: #059669; border-color: rgba(5,150,105,0.35); }
+.actions .btn-icon:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(2,6,23,0.12); background: #f8fafc; }
+.actions .btn-icon.edit { color: #2563eb; border-color: rgba(37,99,235,0.18); }
+.actions .btn-icon.delete {
+  color: #fff;
+  background: #dc2626;
+  border-color: rgba(220,38,38,0.35);
+}
+.actions .btn-icon.delete:hover { background: #b91c1c; transform: translateY(-2px); box-shadow: 0 10px 22px rgba(185,28,28,0.12); }
+.actions .btn-icon.location { color: #059669; border-color: rgba(5,150,105,0.18); }
 .actions .btn-icon svg { pointer-events: none; }
 
 /* SweetAlert modal customization */

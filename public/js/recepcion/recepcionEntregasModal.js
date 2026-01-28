@@ -189,10 +189,20 @@
 
             let productosMap = {};
             if (resp.ok) {
-                const data = await resp.json();
-                data.forEach(p => {
-                    productosMap[p.sku] = p.name_produc;
-                });
+                const ctype = (resp.headers.get('content-type') || '').toLowerCase();
+                if (ctype.includes('application/json')) {
+                    const data = await resp.json();
+                    if (Array.isArray(data)) {
+                        data.forEach(p => { if (p && p.sku) productosMap[p.sku] = p.name_produc || p.name || p.nombre || p.sku; });
+                    }
+                } else {
+                    // server returned HTML or empty response: log for debugging and fallback
+                    const text = await resp.text();
+                    console.error('productos/nombres returned non-JSON response:', { status: resp.status, body: text });
+                }
+            } else {
+                const text = await resp.text().catch(()=>'');
+                console.error('productos/nombres request failed', { status: resp.status, body: text });
             }
 
             items = entrega.elementos.map(e => ({
