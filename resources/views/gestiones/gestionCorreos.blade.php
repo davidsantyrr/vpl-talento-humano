@@ -17,39 +17,45 @@
                 {{-- Formulario para agregar nuevo correo --}}
                 <form method="POST" action="{{ route('gestionCorreos.store') }}" class="row g-3 align-items-end">
                     @csrf
-                    <div class="col-md-4">
+                    @php
+                        $fixedRoles = [
+                            'Administrador','Autorizador Visitas','Autorizador Agendamientos','Supervisor Agendamientos',
+                            'Autorizador AQL','Developer Vigia','Coordinador','Area de compras','Admin requisicion',
+                            'Gerente financiero','Director contable','Gerente talento humano','Gerente operaciones',
+                            'Director de proyectos','Talento_Humano','HSEQ','AdminEntregas'
+                        ];
+                    @endphp
+
+                    <div class="col-md-3">
                         <label class="form-label">Rol</label>
-                        @php
-                            $fixedRoles = [
-                                'Administrador','Autorizador Visitas','Autorizador Agendamientos','Supervisor Agendamientos',
-                                'Autorizador AQL','Developer Vigia','Coordinador','Area de compras','Admin requisicion',
-                                'Gerente financiero','Director contable','Gerente talento humano','Gerente operaciones',
-                                'Director de proyectos','Talento_Humano','HSEQ','AdminEntregas'
-                            ];
-                        @endphp
                         <select name="rol" id="rol" class="form-select" required>
                             <option value="">-- Seleccione un rol --</option>
                             @foreach($fixedRoles as $rol)
                                 <option value="{{ $rol }}" {{ old('rol') == $rol ? 'selected' : '' }}>{{ $rol }}</option>
                             @endforeach
                         </select>
+                        @error('rol') <div class="text-danger small">{{ $message }}</div> @enderror
+                        
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Área</label>
                         <select name="area" id="area" class="form-select d-none" required>
                             <option value="">-- Seleccione un área --</option>
                             @foreach($areas as $area)
                                 <option value="{{ $area->nombre }}" {{ old('area') == $area->nombre ? 'selected' : '' }}>{{ $area->nombre }}</option>
                             @endforeach
-
                         </select>
-                        @error('rol') <div class="text-danger small">{{ $message }}</div> @enderror
-                        <small class="text-muted">Los roles provienen de las periodicidades configuradas</small>
                     </div>
+
                     <div class="col-md-4">
                         <label class="form-label">Correo</label>
                         <input type="email" name="correo" class="form-control" value="{{ old('correo') }}" required maxlength="191">
                         @error('correo') <div class="text-danger small">{{ $message }}</div> @enderror
                     </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-primary">Agregar correo</button>
+
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Agregar correo</button>
                     </div>
                 </form>
 

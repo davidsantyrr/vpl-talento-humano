@@ -19,12 +19,23 @@
             <p>Administra los usuarios registrados en el sistema</p>
         </div>
 
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <form class="d-flex me-2" method="GET" action="{{ route('gestionUsuario.index') }}">
+                <input name="q" value="{{ isset($q) ? $q : request('q') }}" class="form-control form-control-sm me-2" placeholder="Buscar por nombre o documento" />
+                <button class="btn btn-sm btn-outline-primary" type="submit">Buscar</button>
+                <a href="{{ route('gestionUsuario.index') }}" class="btn btn-sm btn-outline-secondary ms-2">Limpiar</a>
+            </form>
+
             <button class="btn btn-primary"
                     data-bs-toggle="modal"
                     data-bs-target="#modalUsuario">
                 + Agregar nuevo usuario
             </button>
+
+            <a href="{{ route('gestionUsuario.template') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-download"></i>
+                Descargar plantilla
+            </a>
 
             <button class="btn btn-secondary"
                     data-bs-toggle="modal"
@@ -60,6 +71,12 @@
                     <li>{{ $err }}</li>
                 @endforeach
             </ul>
+        </div>
+    @endif
+
+    @if(isset($q) && $q !== '' && $usuarios->isEmpty())
+        <div class="alert alert-info mt-3">
+            <strong>Usuario no existente:</strong> No se encontró ningún usuario para "{{ $q }}".
         </div>
     @endif
 

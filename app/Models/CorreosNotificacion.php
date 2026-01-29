@@ -14,5 +14,6 @@ class CorreosNotificacion extends Model
     protected $fillable = [
         'rol',
         'correo',
+        'area',
     ];
 }

@@ -11,23 +11,43 @@ use App\Models\Producto;
 use App\Models\ElementoXUsuario;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\UsuariosImport;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Cell\DataValidation;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\NamedRange;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use App\Models\Cargo;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class gestionUsuarioController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $usuarios   = Usuarios::orderBy('id', 'desc')->get();
+        $q = trim((string) $request->query('q', ''));
+
         $operations = SubArea::orderBy('operationName')->get();
         $areas      = Area::orderBy('nombre_area')->get();
         $productos  = Producto::orderBy('name_produc')->get(['sku','name_produc']);
 
+        if ($q !== '') {
+            $usuarios = Usuarios::where('numero_documento', $q)
+                ->orWhere('nombres', 'like', "%{$q}%")
+                ->orWhere('apellidos', 'like', "%{$q}%")
+                ->orderBy('id', 'desc')
+                ->get();
+        } else {
+            $usuarios = Usuarios::orderBy('id', 'desc')->get();
+        }
+
         return view('gestiones.gestionUsuarios', compact(
-        'usuarios',
-        'operations',
-        'areas',
-        'productos'
-    ));
-}
+            'usuarios',
+            'operations',
+            'areas',
+            'productos',
+            'q'
+        ));
+    }
 
     public function store(Request $request)
     {
@@ -42,60 +62,66 @@ class gestionUsuarioController extends Controller
         'area_id'=> 'required|exists:area,id',
 ]);
 
-        Usuarios::create([
-            'nombres' => $request->input('nombres'),
-            'apellidos' => $request->input('apellidos'),
-            'tipo_documento' => $request->input('tipo_documento'),
-            'numero_documento' => $request->input('numero_documento'),
-            'email' => $request->input('email'),
-            'fecha_ingreso' => $request->input('fecha_ingreso'),
-            'operacion_id' => $request->input('operacion_id'),
-            'area_id' => $request->input('area_id'),
-        ]);
+        // VALIDACIONES
+        $maxRows = 200;
 
-        return redirect()->route('gestionUsuario.index')->with('success', 'Usuario creado exitosamente.');
-    }
+        // Calcular tamaños de listas
+        $typesCount = max(1, count($types));
+        $opsCount = max(1, count($operationsPairs));
+        $areasCount = max(1, count($areasPairs));
+        $cargosCount = max(1, count($cargosPairs));
 
-    /**
-     * Asignar un producto (SKU) a un usuario.
-     * Persiste en tabla elemento_x_usuario.
-     */
-    public function asignarProducto(Request $request, $id)
-    {
-        $request->validate([
-            'sku' => 'required|string',
-        ]);
+        for ($row = 2; $row <= $maxRows; $row++) {
 
-        $usuario = Usuarios::findOrFail($id);
-        $producto = Producto::where('sku', $request->input('sku'))->firstOrFail();
+            // TIPO DOCUMENTO (C)
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_LIST);
+            $v->setAllowBlank(true);
+            $v->setFormula1('=Lists!$A$1:$A$' . $typesCount);
+            $v->setShowDropDown(true);
+            $sheet->getCell("C{$row}")->setDataValidation($v);
 
-        // Evitar duplicados: mismo usuario + SKU
-        $existe = ElementoXUsuario::where('usuarios_entregas_id', $usuario->id)
-            ->where('sku', $producto->sku)
-            ->exists();
+            // OPERACIÓN (G)
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_LIST);
+            $v->setAllowBlank(true);
+            $v->setFormula1('=Lists!$B$1:$B$' . $opsCount);
+            $v->setShowDropDown(true);
+            $sheet->getCell("G{$row}")->setDataValidation($v);
 
-        if (!$existe) {
-            $registro = ElementoXUsuario::create([
-                'usuarios_entregas_id' => $usuario->id,
-                'sku' => $producto->sku,
-                'name_produc' => $producto->name_produc,
-            ]);
-        } else {
-            $registro = ElementoXUsuario::where('usuarios_entregas_id', $usuario->id)
-                ->where('sku', $producto->sku)
-                ->first();
+            // ÁREA (H)
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_LIST);
+            $v->setAllowBlank(true);
+            $v->setFormula1('=Lists!$D$1:$D$' . $areasCount);
+            $v->setShowDropDown(true);
+            $sheet->getCell("H{$row}")->setDataValidation($v);
+
+            // CARGO (I)
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_LIST);
+            $v->setAllowBlank(true);
+            $v->setFormula1('=Lists!$F$1:$F$' . $cargosCount);
+            $v->setShowDropDown(true);
+            $sheet->getCell("I{$row}")->setDataValidation($v);
+
+            // EMAIL VALIDACIÓN
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_CUSTOM);
+            $v->setFormula1('=AND(LEN(E'.$row.')>3,ISNUMBER(SEARCH("@",E'.$row.')) )');
+            $sheet->getCell("E{$row}")->setDataValidation($v);
+
+            // FECHA VALIDACIÓN
+            $v = new DataValidation();
+            $v->setType(DataValidation::TYPE_CUSTOM);
+            $v->setFormula1('=ISNUMBER(F'.$row.')');
+            $sheet->getCell("F{$row}")->setDataValidation($v);
+
+            // VLOOKUP IDs
+            $sheet->setCellValue("J{$row}", '=IFERROR(VLOOKUP(G'.$row.',Lists!$B$1:$C$'.$opsCount.',2,FALSE),"")');
+            $sheet->setCellValue("K{$row}", '=IFERROR(VLOOKUP(H'.$row.',Lists!$D$1:$E$'.$areasCount.',2,FALSE),"")');
+            $sheet->setCellValue("L{$row}", '=IFERROR(VLOOKUP(I'.$row.',Lists!$F$1:$G$'.$cargosCount.',2,FALSE),"")');
         }
-
-        return response()->json([
-            'ok' => true,
-            'message' => $existe ? 'Ya estaba asignado' : 'Producto asignado',
-            'data' => [
-                'usuario_id' => $usuario->id,
-                'sku' => $producto->sku,
-                'name_produc' => $producto->name_produc,
-                'id' => $registro->id,
-            ],
-        ]);
     }
 
     /**
@@ -137,6 +163,15 @@ class gestionUsuarioController extends Controller
         'operations',
         'areas'
     ));
+    }
+
+    /**
+     * Mostrar un usuario (compatibilidad con resource routes).
+     * Reusa la lógica de edit para abrir la vista con el usuario cargado.
+     */
+    public function show($id)
+    {
+        return $this->edit($id);
     }
 
     public function update(Request $request, $id)
@@ -209,6 +244,223 @@ class gestionUsuarioController extends Controller
             ->with('success', $msg)
             ->with('import_errors', $summary['errors']);
     }
+
+    /**
+     * Descargar plantilla XLSX para importación de usuarios con validaciones.
+     */
+public function downloadTemplate()
+{
+    $spreadsheet = new Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+    $sheet->setTitle('PlantillaUsuarios');
+
+    // ================= HEADERS =================
+    $headers = [
+        'Nombres', 'Apellidos', 'Tipo documento', 'N° documento',
+        'Email', 'Fecha ingreso (YYYY-MM-DD)',
+        'Operación (ID o nombre)', 'Área (ID o nombre)', 'Cargo (ID o nombre)'
+    ];
+
+    foreach ($headers as $col => $h) {
+        $sheet->setCellValueByColumnAndRow($col + 1, 1, $h);
+    }
+
+    // Columnas ocultas para IDs
+    $sheet->setCellValue('J1', 'Operación ID');
+    $sheet->setCellValue('K1', 'Área ID');
+    $sheet->setCellValue('L1', 'Cargo ID');
+
+    // ================= FILA EJEMPLO =================
+    $example = [
+        'Juan', 'Pérez', 'Cédula de Ciudadanía', '12345678',
+        'juan.perez@ejemplo.com', date('Y-m-d'),
+        'Administración', 'Finanzas', 'Coordinador'
+    ];
+
+    foreach ($example as $col => $v) {
+        $sheet->setCellValueByColumnAndRow($col + 1, 2, $v);
+    }
+
+    // ================= CREAR HOJA LISTS =================
+    $lists = $spreadsheet->createSheet();
+    $lists->setTitle('Lists');
+
+    // TIPOS DOCUMENTO
+    $types = ['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte'];
+    foreach ($types as $r => $t) {
+        $lists->setCellValueByColumnAndRow(1, $r + 1, $t);
+    }
+
+    // OPERACIONES
+    $operationsPairs = SubArea::orderBy('operationName')->pluck('operationName', 'id')->toArray();
+    $r = 1;
+    foreach ($operationsPairs as $id => $opName) {
+        $lists->setCellValue("B{$r}", $opName);
+        $lists->setCellValue("C{$r}", $id);
+        $r++;
+    }
+
+    // ÁREAS
+    $areasPairs = Area::orderBy('nombre_area')->pluck('nombre_area', 'id')->toArray();
+    $r = 1;
+    foreach ($areasPairs as $id => $areaName) {
+        $lists->setCellValue("D{$r}", $areaName);
+        $lists->setCellValue("E{$r}", $id);
+        $r++;
+    }
+
+    // CARGOS
+    $cargosPairs = Cargo::orderBy('nombre')->pluck('nombre', 'id')->toArray();
+    $r = 1;
+    foreach ($cargosPairs as $id => $cargoName) {
+        $lists->setCellValue("F{$r}", $cargoName);
+        $lists->setCellValue("G{$r}", $id);
+        $r++;
+    }
+
+    // ================= NAMED RANGES =================
+    $spreadsheet->addNamedRange(new NamedRange('TipoDocs', $lists, '$A$1:$A$' . max(1, count($types))));
+    $spreadsheet->addNamedRange(new NamedRange('OperacionesList', $lists, '$B$1:$B$' . max(1, count($operationsPairs))));
+    $spreadsheet->addNamedRange(new NamedRange('AreasList', $lists, '$D$1:$D$' . max(1, count($areasPairs))));
+    $spreadsheet->addNamedRange(new NamedRange('CargosList', $lists, '$F$1:$F$' . max(1, count($cargosPairs))));
+
+    // ================= VALIDACIONES =================
+    $maxRows = 300;
+
+    for ($row = 2; $row <= $maxRows; $row++) {
+
+        // ================= TIPO DOCUMENTO =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_LIST);
+    $v->setAllowBlank(false);
+    $v->setFormula1('=TipoDocs');
+    $v->setShowDropDown(true);
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Dato inválido');
+    $v->setError('Seleccione un tipo de documento de la lista.');
+    $sheet->getCell("C{$row}")->setDataValidation(clone $v);
+
+    // ================= DOCUMENTO SOLO NÚMEROS =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_CUSTOM);
+    $v->setAllowBlank(false);
+    $v->setFormula1("=AND(D{$row}<>\"\",ISNUMBER(D{$row}*1))");
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Documento inválido');
+    $v->setError('Solo se permiten números. No letras.');
+    $sheet->getCell("D{$row}")->setDataValidation(clone $v);
+
+    // ================= EMAIL REAL =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_CUSTOM);
+    $v->setAllowBlank(false);
+    $v->setFormula1("=AND(E{$row}<>\"\",ISNUMBER(SEARCH(\"@\",E{$row})),ISNUMBER(SEARCH(\".\",E{$row})))");
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Correo inválido');
+    $v->setError('Ingrese un correo válido. Ej: usuario@correo.com');
+    $sheet->getCell("E{$row}")->setDataValidation(clone $v);
+
+    // ================= FECHA REAL =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_CUSTOM);
+    $v->setAllowBlank(false);
+    $v->setFormula1("=AND(F{$row}<>\"\",ISNUMBER(F{$row}))");
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Fecha inválida');
+    $v->setError('Debe ingresar una fecha válida. No texto.');
+    $sheet->getCell("F{$row}")->setDataValidation(clone $v);
+
+    // ================= OPERACIÓN =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_LIST);
+    $v->setAllowBlank(false);
+    $v->setFormula1('=OperacionesList');
+    $v->setShowDropDown(true);
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Selección obligatoria');
+    $v->setError('Debe seleccionar una operación.');
+    $sheet->getCell("G{$row}")->setDataValidation(clone $v);
+
+    // ================= ÁREA =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_LIST);
+    $v->setAllowBlank(false);
+    $v->setFormula1('=AreasList');
+    $v->setShowDropDown(true);
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Selección obligatoria');
+    $v->setError('Debe seleccionar un área.');
+    $sheet->getCell("H{$row}")->setDataValidation(clone $v);
+
+    // ================= CARGO =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_LIST);
+    $v->setAllowBlank(false);
+    $v->setFormula1('=CargosList');
+    $v->setShowDropDown(true);
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Selección obligatoria');
+    $v->setError('Debe seleccionar un cargo.');
+    $sheet->getCell("I{$row}")->setDataValidation(clone $v);
+}
+
+        // ================= VLOOKUP IDs =================
+        $sheet->setCellValue("J{$row}", '=IFERROR(VLOOKUP(G'.$row.',Lists!$B$1:$C$'.count($operationsPairs).',2,FALSE),"")');
+        $sheet->setCellValue("K{$row}", '=IFERROR(VLOOKUP(H'.$row.',Lists!$D$1:$E$'.count($areasPairs).',2,FALSE),"")');
+        $sheet->setCellValue("L{$row}", '=IFERROR(VLOOKUP(I'.$row.',Lists!$F$1:$G$'.count($cargosPairs).',2,FALSE),"")');
+
+    // ================= FORMATO DE COLUMNAS =================
+    $sheet->getStyle("D2:D{$maxRows}")
+        ->getNumberFormat()
+        ->setFormatCode(NumberFormat::FORMAT_NUMBER);
+
+    $sheet->getStyle("F2:F{$maxRows}")
+        ->getNumberFormat()
+        ->setFormatCode(NumberFormat::FORMAT_DATE_YYYYMMDD);
+
+    // ================= ESTILO =================
+    $sheet->freezePane('A2');
+    $sheet->getStyle('A1:L1')->getFont()->setBold(true);
+
+    // ================= OCULTAR IDs =================
+    $sheet->getColumnDimension('J')->setVisible(false);
+    $sheet->getColumnDimension('K')->setVisible(false);
+    $sheet->getColumnDimension('L')->setVisible(false);
+
+    // ================= PROTEGER HOJA =================
+    // ================= PERMITIR EDICIÓN EN COLUMNAS USUARIAS =================
+$sheet->getStyle("A2:I{$maxRows}")
+    ->getProtection()
+    ->setLocked(false);
+
+// ================= BLOQUEAR SOLO COLUMNAS DE IDS =================
+$sheet->getStyle("J2:L{$maxRows}")
+    ->getProtection()
+    ->setLocked(true);
+
+// ================= ACTIVAR PROTECCIÓN SOLO PARA IDS =================
+$sheet->getProtection()->setSheet(true);
+$sheet->getProtection()->setPassword('1234');
+
+
+    // ================= EXPORTAR =================
+    $writer = new Xlsx($spreadsheet);
+    $fileName = 'Plantilla_Usuarios.xlsx';
+
+    header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    header("Content-Disposition: attachment; filename=\"$fileName\"");
+    $writer->save("php://output");
+    exit;
+}
+
+
 
     /**
      * Buscar usuario por número de documento (AJAX)

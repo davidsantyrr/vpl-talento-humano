@@ -89,6 +89,9 @@ Route::middleware([VplAuth::class])->group(function () {
     
     
 
+// Descargar plantilla de importación de usuarios (ruta específica antes del resource)
+Route::get('/gestionUsuario/template', [GestionUsuarioController::class, 'downloadTemplate'])->name('gestionUsuario.template');
+
 Route::resource('gestionUsuario', GestionUsuarioController::class);
 
 // Importar usuarios desde Excel
