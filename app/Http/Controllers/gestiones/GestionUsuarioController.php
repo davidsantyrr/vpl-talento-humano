@@ -256,9 +256,9 @@ public function downloadTemplate()
 
     // ================= HEADERS =================
     $headers = [
-        'Nombres', 'Apellidos', 'Tipo documento', 'N° documento',
-        'Email', 'Fecha ingreso (YYYY-MM-DD)',
-        'Operación (ID o nombre)', 'Área (ID o nombre)', 'Cargo (ID o nombre)'
+        'Nombres', 'Apellidos', 'Tipo_documento', 'numero_documento',
+        'Email', 'fecha_ingreso',
+        'operacion', 'area', 'cargo'
     ];
 
     foreach ($headers as $col => $h) {
@@ -448,6 +448,8 @@ $sheet->getStyle("J2:L{$maxRows}")
 // ================= ACTIVAR PROTECCIÓN SOLO PARA IDS =================
 $sheet->getProtection()->setSheet(true);
 $sheet->getProtection()->setPassword('1234');
+$lists->getProtection()->setSheet(true);
+$lists->getProtection()->setPassword('1234');
 
 
     // ================= EXPORTAR =================

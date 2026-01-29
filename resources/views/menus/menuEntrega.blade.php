@@ -53,8 +53,8 @@
           <h3>Recepción de elementos</h3>
           <p class="desc">Registra reemplazos de elementos entregados</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-orange"
-            aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('entregas.buscar') }}" class="btn btn-orange"
+          aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
       </article>
 
       <!-- Realizar entrega -->
@@ -66,8 +66,8 @@
           <h3>Realizar entrega</h3>
           <p class="desc">Procesa nuevas entregas de elementos a usuarios</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-green"
-            aria-label="Ingresar a Realizar entrega">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('formularioEntregas') }}" class="btn btn-green"
+          aria-label="Ingresar a Realizar entrega">Ingresar</a></div>
       </article>
 
       <!-- Histórico de entregas -->
@@ -79,8 +79,8 @@
           <h3>Histórico de entregas</h3>
           <p class="desc">Consulta y gestiona el registro de entregas realizadas</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-red"
-            aria-label="Ingresar a Histórico de entregas">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('entregas.index') }}" class="btn btn-red"
+          aria-label="Ingresar a Histórico de entregas">Ingresar</a></div>
       </article>
 
       <!-- Configuración de notificación -->
@@ -92,8 +92,8 @@
           <h3>Configuración de notificación</h3>
           <p class="desc">Define alertas y avisos automáticos para el inventario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-yellow"
-            aria-label="Ingresar a Configuración de notificación">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('gestionNotificacionesInventario.index') }}" class="btn btn-yellow"
+          aria-label="Ingresar a Configuración de notificación">Ingresar</a></div>
       </article>
 
       <!-- Consultar elementos por usuario -->
@@ -105,8 +105,8 @@
           <h3>Consultar elementos por usuario</h3>
           <p class="desc">Busca rápidamente los elementos asignados a un usuario</p>
         </div>
-        <div class="card__footer"><a href="#" class="btn btn-purple"
-            aria-label="Ingresar a Consultar elementos por usuario">Ingresar</a></div>
+        <div class="card__footer"><a href="{{ route('consultaElementoUsuario.consulta') }}" class="btn btn-purple"
+          aria-label="Ingresar a Consultar elementos por usuario">Ingresar</a></div>
       </article>
 
       <!-- Configurar elementos por cargo -->

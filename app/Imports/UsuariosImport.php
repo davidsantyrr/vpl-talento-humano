@@ -118,6 +118,16 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                 }
             }
 
+            // ignorar filas completamente vacías (sin columnas relevantes)
+            $allEmpty = true;
+            foreach ([$nombres, $apellidos, $tipo_documento, $numero_documento, $email, $fecha_ingreso, $operacion, $area, $cargo] as $v) {
+                if ($v !== null && trim((string)$v) !== '') { $allEmpty = false; break; }
+            }
+            if ($allEmpty) {
+                // fila vacía: no contar como error ni como salto
+                continue;
+            }
+
             // validar campos requeridos
             $missing = [];
             if (!$nombres) $missing[] = 'nombres';
