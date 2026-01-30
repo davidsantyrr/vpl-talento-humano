@@ -240,6 +240,20 @@ class RecepcionController extends Controller
     {
         $numero = $request->query('numero');
         try {
+            // Determinar rol del usuario en sesión (primer rol)
+            $authUser = session('auth.user');
+            $primerRol = null;
+            if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
+                $first = $authUser['roles'][0] ?? null;
+                if (is_array($first) && isset($first['roles'])) { $primerRol = $first['roles']; }
+                elseif (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
+                elseif (is_string($first)) { $primerRol = $first; }
+            } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles) && !empty($authUser->roles)) {
+                $first = $authUser->roles[0] ?? null;
+                if (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
+                elseif (is_string($first)) { $primerRol = $first; }
+            }
+
             $query = DB::table('entregas')
                 ->join('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
                 ->select([
@@ -255,6 +269,11 @@ class RecepcionController extends Controller
                 ->where('entregas.recibido', false) // Solo entregas no recibidas
                 ->whereNull('entregas.deleted_at')
                 ->orderBy('entregas.created_at', 'desc');
+
+            // Filtrar por rol de sesión si está disponible
+            if (!empty($primerRol)) {
+                $query->where('entregas.rol_entrega', $primerRol);
+            }
 
             if ($numero) {
                 $query->where('entregas.numero_documento', 'like', "%{$numero}%");

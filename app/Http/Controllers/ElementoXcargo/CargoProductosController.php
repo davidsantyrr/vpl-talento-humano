@@ -24,10 +24,76 @@ class CargoProductosController extends Controller
 
         $allProducts = Producto::select('sku', 'name_produc')->orderBy('name_produc')->get();
 
-        $asignaciones = CargoProducto::with(['cargo','subArea'])
-            ->orderByDesc('id')
-            ->paginate($perPage, ['*'], 'page')
-            ->appends(['per_page' => $perPage]);
+        // Filtrar asignaciones por rol del usuario en sesión
+        // 1) Intentar filtrar por cargos cuyo nombre coincide con el rol
+        $authUser = session('auth.user');
+        $roleNames = [];
+        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
+            foreach ($authUser['roles'] as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
+                if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+            }
+        } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
+            foreach ($authUser->roles as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
+                if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
+            }
+        }
+        $roleNames = array_values(array_filter(array_unique($roleNames)));
+        $cargoIdsForRoles = [];
+        if (!empty($roleNames)) {
+            $cargoIdsForRoles = \DB::table('cargos')
+                ->where(function($q) use ($roleNames) {
+                    foreach ($roleNames as $i => $rn) {
+                        if ($i === 0) $q->whereRaw('LOWER(nombre) = ?', [$rn]);
+                        else $q->orWhereRaw('LOWER(nombre) = ?', [$rn]);
+                    }
+                })
+                ->pluck('id')
+                ->toArray();
+        }
+
+        // 2) Construir filtros de categoría de productos según rol (HSEQ vs Talento Humano)
+        $categoryFilters = [];
+        foreach ($roleNames as $rn) {
+            if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+            }
+            if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+            }
+        }
+        $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
+
+        // Si hay filtros de categoría, limitar asignaciones a SKUs cuyo `categoria_produc` coincida
+        $allowedSkus = null;
+        if (!empty($categoryFilters)) {
+            try {
+                $prodModel = new Producto();
+                $conn = $prodModel->getConnectionName() ?: config('database.default');
+                $table = $prodModel->getTable();
+                $catQuery = \DB::connection($conn)->table($table)->select('sku');
+                $catQuery->where(function($qc) use ($categoryFilters){
+                    foreach ($categoryFilters as $i => $term) {
+                        $like = '%'.$term.'%';
+                        if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+                        else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+                    }
+                });
+                $allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+            } catch (\Throwable $e) {
+                $allowedSkus = null; // si falla, no aplicar filtro por categoría
+            }
+        }
+
+        $asignQuery = CargoProducto::with(['cargo','subArea'])->orderByDesc('id');
+        if (!empty($cargoIdsForRoles)) { $asignQuery->whereIn('cargo_id', $cargoIdsForRoles); }
+        if (is_array($allowedSkus) && !empty($allowedSkus)) { $asignQuery->whereIn('sku', $allowedSkus); }
+        if ($cargoId) { $asignQuery->where('cargo_id', $cargoId); }
+        if ($subAreaId) { $asignQuery->where('sub_area_id', $subAreaId); }
+        $asignaciones = $asignQuery->paginate($perPage, ['*'], 'page')->appends(['per_page' => $perPage]);
 
         return view('elementoxcargo.productos', compact('cargos', 'subAreas', 'cargoId', 'subAreaId', 'asignaciones', 'perPage', 'allProducts'));
     }
@@ -40,10 +106,35 @@ class CargoProductosController extends Controller
             'sku' => ['required', 'string'],
         ]);
 
-        $name = Producto::where('sku', $data['sku'])->value('name_produc');
+        $prod = Producto::where('sku', $data['sku'])->first();
+        $name = $prod ? $prod->name_produc : null;
         if (!$name) {
             return back()->with('errorMessage', 'Producto no encontrado');
         }
+
+        // Validar categoría del producto contra el rol en sesión (opcional estricto)
+        try {
+            $authUser = session('auth.user');
+            $roleNames = [];
+            if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
+                foreach ($authUser['roles'] as $r) { if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; } if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; } if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; } }
+            } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
+                foreach ($authUser->roles as $r) { if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; } if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; } if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; } }
+            }
+            $filters = [];
+            foreach ($roleNames as $rn) {
+                if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.hseq', '')))); }
+                if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.talento', '')))); }
+            }
+            $filters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $filters))));
+            if (!empty($filters) && $prod && !empty($prod->categoria_produc)) {
+                $cat = mb_strtolower($prod->categoria_produc);
+                $ok = false; foreach ($filters as $term) { if (strpos($cat, $term) !== false) { $ok = true; break; } }
+                if (!$ok) {
+                    return back()->with('errorMessage', 'El producto no pertenece a la categoría permitida para su rol');
+                }
+            }
+        } catch (\Throwable $e) { /* ignore */ }
 
         CargoProducto::updateOrCreate(
             ['cargo_id' => (int) $data['cargo_id'], 'sub_area_id' => (int) $data['sub_area_id'], 'sku' => $data['sku']],
@@ -63,7 +154,63 @@ class CargoProductosController extends Controller
     {
         $cargos = Cargo::orderBy('nombre')->get();
         $subAreas = SubArea::orderBy('operationName')->get();
-        $asignaciones = CargoProducto::select('cargo_id','sub_area_id','sku','name_produc')->get();
+
+        // Determinar filtros por rol (categorías permitidas)
+        $authUser = session('auth.user');
+        $roleNames = [];
+        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
+            foreach ($authUser['roles'] as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
+                if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+            }
+        } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
+            foreach ($authUser->roles as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
+                if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
+            }
+        }
+        $roleNames = array_values(array_filter(array_unique($roleNames)));
+
+        $categoryFilters = [];
+        foreach ($roleNames as $rn) {
+            if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+            }
+            if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+            }
+        }
+        $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
+
+        // Si hay filtros de categoría, obtener SKUs permitidos y filtrar asignaciones
+        $allowedSkus = null;
+        if (!empty($categoryFilters)) {
+            try {
+                $prodModel = new Producto();
+                $conn = $prodModel->getConnectionName() ?: config('database.default');
+                $table = $prodModel->getTable();
+                $catQuery = \DB::connection($conn)->table($table)->select('sku');
+                $catQuery->where(function($qc) use ($categoryFilters){
+                    foreach ($categoryFilters as $i => $term) {
+                        $like = '%'.$term.'%';
+                        if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+                        else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+                    }
+                });
+                $allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+            } catch (\Throwable $e) {
+                $allowedSkus = null;
+            }
+        }
+
+        $asignQuery = CargoProducto::select('cargo_id','sub_area_id','sku','name_produc');
+        if (is_array($allowedSkus) && !empty($allowedSkus)) {
+            $asignQuery->whereIn('sku', $allowedSkus);
+        }
+        $asignaciones = $asignQuery->get();
+
         // Construir mapa [sub_area_id][cargo_id] => array de productos
         $map = [];
         foreach ($asignaciones as $a) {

@@ -194,11 +194,28 @@
       subInput?.addEventListener('input', function(){ renderSubAreas(filterSub(this.value)); });
       document.addEventListener('click', function(e){ if(!subDropdown.contains(e.target) && e.target!==subInput){ subDropdown.setAttribute('aria-hidden','true'); } });
 
-      // productos dropdown
-      const all = @json($allProducts->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]));
+      // productos dropdown (desde API role-filtrada)
       const input = document.getElementById('skuInput');
       const hidden = document.getElementById('skuHidden');
       const dropdown = document.getElementById('productDropdown');
+
+      async function fetchCargoProductos(cargoId, subAreaId, q){
+        try{
+          let url = `${window.location.origin}/cargo-productos`;
+          const params = new URLSearchParams();
+          if (cargoId) params.append('cargo_id', cargoId);
+          if (subAreaId) params.append('sub_area_id', subAreaId);
+          if (q) params.append('q', String(q).trim().toLowerCase());
+          if (params.toString()) url += '?' + params.toString();
+          const resp = await fetch(url);
+          if (!resp.ok) return [];
+          const data = await resp.json();
+          return Array.isArray(data) ? data.map(d => ({ sku: d.sku, name: d.name_produc })) : [];
+        } catch(e){ console.error('cargo-productos fetch failed', e); return []; }
+      }
+
+      function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
       function renderList(list){
         dropdown.innerHTML = '';
         list.forEach((it)=>{
@@ -209,10 +226,26 @@
         });
         dropdown.setAttribute('aria-hidden', list.length ? 'false' : 'true');
       }
-      function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-      function filterAll(term){ const t = term.trim().toLowerCase(); if(!t) return all.slice(); return all.filter(a => a.sku.toLowerCase().includes(t) || a.name.toLowerCase().includes(t)); }
-      input?.addEventListener('focus', function(){ renderList(filterAll(this.value)); });
-      input?.addEventListener('input', function(){ renderList(filterAll(this.value)); hidden.value = ''; });
+
+      function filterList(list, term){ const t = term.trim().toLowerCase(); if(!t) return list.slice(); return list.filter(a => a.sku.toLowerCase().includes(t) || a.name.toLowerCase().includes(t)); }
+
+      async function loadAndRender(){
+        const cargoId = document.getElementById('cargoHidden')?.value || '';
+        const subAreaId = document.getElementById('subAreaHidden')?.value || '';
+        const term = input.value || '';
+        const items = await fetchCargoProductos(cargoId, subAreaId, term);
+        renderList(items);
+      }
+
+      input?.addEventListener('focus', function(){ loadAndRender(); });
+      input?.addEventListener('input', async function(){
+        const cargoId = document.getElementById('cargoHidden')?.value || '';
+        const subAreaId = document.getElementById('subAreaHidden')?.value || '';
+        const items = await fetchCargoProductos(cargoId, subAreaId, this.value);
+        // Fallback client-side filter in case backend returned broader set
+        renderList(filterList(items, this.value));
+        hidden.value = '';
+      });
       document.addEventListener('click', function(e){ if(!dropdown.contains(e.target) && e.target!==input){ dropdown.setAttribute('aria-hidden','true'); } });
     })();
     </script>

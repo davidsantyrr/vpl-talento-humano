@@ -156,12 +156,14 @@ class gestionUsuarioController extends Controller
         $usuarios    = Usuarios::orderBy('id', 'desc')->get();
         $operations  = SubArea::orderBy('operationName')->get();
         $areas       = Area::orderBy('nombre_area')->get();
+        $productos   = Producto::orderBy('name_produc')->get(['sku','name_produc']);
 
         return view('gestiones.gestionUsuarios', compact(
         'usuarios',
         'editUsuario',
         'operations',
-        'areas'
+        'areas',
+        'productos'
     ));
     }
 

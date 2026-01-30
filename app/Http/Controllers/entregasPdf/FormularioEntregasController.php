@@ -286,11 +286,89 @@ class FormularioEntregasController extends Controller
 	{
 		$cargoId = (int) $request->query('cargo_id');
 		$subAreaId = (int) $request->query('sub_area_id');
+		$q = trim(mb_strtolower((string) $request->query('q', '')));
 		try {
-			$query = DB::table('cargo_productos')->select(['sku', 'name_produc']);
+			// Rol en sesión -> categorías permitidas según config('vpl.role_filters')
+			$authUser = session('auth.user');
+			$roleNames = [];
+			if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
+				foreach ($authUser['roles'] as $r) {
+					if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+					if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
+					if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+				}
+			} elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
+				foreach ($authUser->roles as $r) {
+					if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+					if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
+					if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
+				}
+			}
+			$roleNames = array_values(array_filter(array_unique($roleNames)));
+
+			// Mapear roles conocidos -> filtros de categoría
+			$categoryFilters = [];
+			foreach ($roleNames as $rn) {
+				// heurística simple: si contiene 'hseq' -> usar filtros hseq; si contiene 'talento'/'humano'/'th' -> usar filtros talento
+				if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+				}
+				if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+				}
+			}
+			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
+            
+			// Si hay término de búsqueda, consultar el catálogo completo de productos por nombre/SKU
+			if ($q !== '') {
+				$prodModel = new Producto();
+				$conn = $prodModel->getConnectionName() ?: config('database.default');
+				$table = $prodModel->getTable();
+				$catalog = DB::connection($conn)->table($table)->select('sku','name_produc','categoria_produc');
+				$catalog->where(function($qq) use ($q){
+					$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
+					   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
+				});
+				if (!empty($categoryFilters)) {
+					$catalog->where(function($qc) use ($categoryFilters){
+						foreach ($categoryFilters as $i => $term) {
+							$like = '%'.$term.'%';
+							if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+							else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+						}
+					});
+				}
+				$rows = $catalog->orderBy('name_produc')->limit(50)->get();
+				$data = collect($rows)->map(function($r){ return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; })
+					->filter(fn($x) => !empty($x['sku']))->values();
+				return response()->json($data, 200);
+			}
+
+			// Sin término de búsqueda: devolver asignaciones existentes del cargo/subárea, filtradas por categoría del rol
+			$query = DB::table('cargo_productos')->select(['sku','name_produc','cargo_id','sub_area_id']);
 			if ($cargoId) { $query->where('cargo_id', $cargoId); }
 			if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
 			$rows = $query->orderBy('name_produc')->get();
+
+			if (!empty($categoryFilters) && $rows->count() > 0) {
+				$prodModel = new Producto();
+				$conn = $prodModel->getConnectionName() ?: config('database.default');
+				$table = $prodModel->getTable();
+				$skus = $rows->pluck('sku')->filter()->unique()->values()->all();
+				if (!empty($skus)) {
+					$prodRows = DB::connection($conn)->table($table)->whereIn('sku', $skus)->select('sku','categoria_produc')->get();
+					$catMap = [];
+					foreach ($prodRows as $pr) { $catMap[(string)$pr->sku] = mb_strtolower((string)($pr->categoria_produc ?? '')); }
+					$rows = $rows->filter(function($r) use ($catMap, $categoryFilters){
+						$cat = $catMap[(string)$r->sku] ?? '';
+						foreach ($categoryFilters as $term) { if ($term !== '' && strpos($cat, $term) !== false) return true; }
+						return false;
+					})->values();
+				} else {
+					$rows = collect();
+				}
+			}
+
 			$data = $rows->map(function ($r) {
 				return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
 			})->filter(fn($x) => !empty($x['sku']))->values();
