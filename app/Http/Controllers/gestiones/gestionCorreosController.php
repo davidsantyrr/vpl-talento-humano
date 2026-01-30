@@ -10,19 +10,32 @@ class gestionCorreosController extends Controller
 {
     public function index()
     {
-        // Cargar correos (paginado para la vista)
-        $correos = \App\Models\Correos::paginate(10);
-
-        // Obtener roles disponibles desde periodicidad (columna rol_periodicidad)
+        // Roles disponibles para mapear vista
         $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
             ->toArray();
 
-        // Intentar detectar rol del usuario en sesión y mapear a uno de los rolesDisponibles
+        // Detectar rol del usuario y filtrar correos por ese rol
         $user = session('auth.user') ?? null;
         $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
+        $correosQuery = \App\Models\Correos::query();
+        if ($selectedRol) {
+            $correosQuery->whereRaw('LOWER(rol) LIKE ?', ['%'.mb_strtolower($selectedRol).'%']);
+        } else {
+            // Fallback por palabras clave del rol en sesión (hseq vs talento humano)
+            $vals = $this->collectRoleStrings($user);
+            $hitHseq = false; $hitTalento = false;
+            foreach ($vals as $v) {
+                $nv = mb_strtolower($v);
+                if (strpos($nv,'hseq')!==false || strpos($nv,'seguridad')!==false) $hitHseq = true;
+                if (strpos($nv,'talento')!==false || strpos($nv,'humano')!==false || $nv==='th') $hitTalento = true;
+            }
+            if ($hitHseq)      { $correosQuery->whereRaw('LOWER(rol) LIKE ?', ['%hseq%']); }
+            elseif ($hitTalento){ $correosQuery->whereRaw('LOWER(rol) LIKE ?', ['%talento%']); }
+        }
+        $correos = $correosQuery->paginate(10);
 
         // Cargar áreas para el select (si existen)
         $areas = [];
@@ -50,10 +63,26 @@ class gestionCorreosController extends Controller
             'correo' => 'required|email|max:191',
             'area' => 'nullable|string|max:191',
         ]);
+        // Determinar rol permitido desde sesión y/o periodicidad
+        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+            ->where('rol_periodicidad', '!=', '')
+            ->distinct()
+            ->pluck('rol_periodicidad')
+            ->toArray();
+        $user = session('auth.user') ?? null;
+        $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
+        if (!$selectedRol) {
+            // Fallback: forzar HSEQ o Talento_Humano según sesión
+            $vals = $this->collectRoleStrings($user);
+            $norm = implode(' ', $vals);
+            $norm = mb_strtolower($norm);
+            if (strpos($norm,'hseq')!==false || strpos($norm,'seguridad')!==false) $selectedRol = 'HSEQ';
+            elseif (strpos($norm,'talento')!==false || strpos($norm,'humano')!==false || strpos($norm,' th ')!==false) $selectedRol = 'Talento_Humano';
+        }
 
-        // Asegurar sólo las columnas esperadas
+        // Asegurar creación bajo el rol del usuario actual (ignorar rol enviado si difiere)
         $create = [
-            'rol' => $data['rol'],
+            'rol' => $selectedRol ?: $data['rol'],
             'correo' => $data['correo'],
             'area' => $data['area'] ?? null,
         ];
@@ -123,8 +152,28 @@ class gestionCorreosController extends Controller
             'area' => 'nullable|string|max:191',
         ]);
         $correo = \App\Models\Correos::findOrFail($id);
+        // Verificar que el usuario sólo edite correos de su rol
+        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+            ->where('rol_periodicidad', '!=', '')
+            ->distinct()
+            ->pluck('rol_periodicidad')
+            ->toArray();
+        $user = session('auth.user') ?? null;
+        $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
+        $allowed = $selectedRol ? mb_strtolower($selectedRol) : null;
+        if (!$allowed) {
+            $vals = $this->collectRoleStrings($user);
+            $norm = implode(' ', $vals); $norm = mb_strtolower($norm);
+            if (strpos($norm,'hseq')!==false || strpos($norm,'seguridad')!==false) $allowed = 'hseq';
+            elseif (strpos($norm,'talento')!==false || strpos($norm,'humano')!==false || strpos($norm,' th ')!==false) $allowed = 'talento';
+        }
+        if ($allowed && strpos(mb_strtolower($correo->rol), $allowed) === false) {
+            return redirect()->route('gestionCorreos.index')->with('error', 'No puede editar correos de otro rol');
+        }
+
         $update = [
-            'rol' => $data['rol'],
+            // Mantener el rol del usuario, ignorando cambios hacia otro rol
+            'rol' => $selectedRol ?: $correo->rol,
             'correo' => $data['correo'],
             'area' => $data['area'] ?? null,
         ];
@@ -136,6 +185,25 @@ class gestionCorreosController extends Controller
     public function destroy($id)
     {
         $correo = \App\Models\Correos::findOrFail($id);
+        // Solo permitir borrar correos del propio rol
+        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+            ->where('rol_periodicidad', '!=', '')
+            ->distinct()
+            ->pluck('rol_periodicidad')
+            ->toArray();
+        $user = session('auth.user') ?? null;
+        $selectedRol = $this->detectRoleForView($user, $rolesDisponibles);
+        $allowed = $selectedRol ? mb_strtolower($selectedRol) : null;
+        if (!$allowed) {
+            $vals = $this->collectRoleStrings($user);
+            $norm = implode(' ', $vals); $norm = mb_strtolower($norm);
+            if (strpos($norm,'hseq')!==false || strpos($norm,'seguridad')!==false) $allowed = 'hseq';
+            elseif (strpos($norm,'talento')!==false || strpos($norm,'humano')!==false || strpos($norm,' th ')!==false) $allowed = 'talento';
+        }
+        if ($allowed && strpos(mb_strtolower($correo->rol), $allowed) === false) {
+            return redirect()->route('gestionCorreos.index')->with('error', 'No puede eliminar correos de otro rol');
+        }
+
         $correo->delete();
 
         return redirect()->route('gestionCorreos.index')->with('success', 'Correo eliminado.');

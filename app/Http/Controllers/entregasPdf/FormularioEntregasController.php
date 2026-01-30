@@ -82,6 +82,70 @@ class FormularioEntregasController extends Controller
 			elseif (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
 		}
 
+		// Validación de stock disponible por SKU (no permitir entrega si stock es 0 o insuficiente)
+		try {
+			$itemsRaw = json_decode($data['elementos'] ?? '[]', true) ?: [];
+			$sumBySku = [];
+			foreach ($itemsRaw as $it) {
+				$skuIn = trim((string)($it['sku'] ?? ''));
+				$cantidadRaw = (string) ($it['cantidad'] ?? '1');
+				$cantidad = floatval(str_replace(',', '.', $cantidadRaw));
+				if ($cantidad <= 0) $cantidad = 1;
+				if ($skuIn === '') continue;
+				$sumBySku[$skuIn] = ($sumBySku[$skuIn] ?? 0) + $cantidad;
+			}
+
+			$errors = [];
+			foreach ($sumBySku as $skuKey => $requested) {
+				// normalizar variantes del SKU para encontrar el producto
+				$skuNorm = preg_replace('/[^A-Za-z0-9_\-]/u', '', $skuKey);
+				$skuUpper = mb_strtoupper($skuNorm);
+				$producto = Producto::where('sku', $skuKey)->first();
+				if (!$producto && $skuNorm !== $skuKey) { $producto = Producto::where('sku', $skuNorm)->first(); }
+				if (!$producto) { $producto = Producto::where('sku', $skuUpper)->first(); }
+				if (!$producto) { $producto = Producto::whereRaw('LOWER(sku) = ?', [mb_strtolower($skuKey)])->first(); }
+				if (!$producto) { $producto = Producto::whereRaw('LOWER(name_produc) = ?', [mb_strtolower($skuKey)])->first(); }
+
+				if (!$producto) {
+					$errors[] = "Producto no encontrado para SKU '$skuKey'";
+					continue;
+				}
+
+				// Disponibilidad: tomar el mayor entre productos.stock_produc y el sumatorio en bd3 (inventarios estatus 'disponible')
+				$prodAvailable = (float)($producto->stock_produc ?? 0);
+				$invAvailable = 0;
+				try {
+					$invConn = 'mysql_third';
+					$lookupSku = $producto ? (string)$producto->sku : (string)$skuNorm;
+					$invAvailable = (int) DB::connection($invConn)
+						->table('inventarios')
+						->where('sku', $lookupSku)
+						->where('estatus', 'disponible')
+						->sum('stock');
+				} catch (\Throwable $e) { $invAvailable = 0; }
+
+				$available = max($prodAvailable, (float)$invAvailable);
+				if ($available <= 0) {
+					$errors[] = "Stock 0 para SKU '{$producto->sku}'";
+				} elseif ($available < $requested) {
+					$errors[] = "Stock insuficiente para SKU '{$producto->sku}' (disponible: {$available}, solicitado: {$requested})";
+				}
+			}
+
+			if (!empty($errors)) {
+				$msg = 'No se puede registrar la entrega: ' . implode('; ', $errors);
+				if ($request->wantsJson() || $request->ajax()) {
+					return response()->json(['success' => false, 'message' => $msg], 422);
+				}
+				return redirect()->back()->with('error', $msg);
+			}
+		} catch (\Throwable $e) {
+			if ($request->wantsJson() || $request->ajax()) {
+				return response()->json(['success' => false, 'message' => 'Error validando stock: ' . $e->getMessage()], 500);
+			}
+			return redirect()->back()->with('error', 'Error validando stock: ' . $e->getMessage());
+		}
+
 		DB::beginTransaction();
 		try {
 			// Determinar rol_entrega preferiblemente a partir del destinatario (cargo),

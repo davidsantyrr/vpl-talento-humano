@@ -10,33 +10,43 @@ class gestionPeriodicidad extends Controller
 {
 	public function index()
 	{
-		// Obtener el rol principal del usuario autenticado
+		// Obtener rol del usuario en sesión y normalizarlo
 		$user = session('auth.user');
 		$rolUsuario = null;
-		
-		Log::info('🔍 DEBUG index() - Usuario en sesión:', [
-			'user_exists' => !is_null($user),
-			'user_data' => $user
-		]);
-		
 		if ($user && isset($user['roles']) && is_array($user['roles']) && count($user['roles']) > 0) {
-			// Extraer texto del rol principal como string
-			$rolUsuario = isset($user['roles'][0]['roles']) ? (string) $user['roles'][0]['roles'] : null;
-			$rolUsuario = trim((string) $rolUsuario) === '' ? null : $rolUsuario;
-			Log::info('✅ Rol extraído en index():', [
-				'rol' => $rolUsuario,
-				'primer_rol_completo' => $user['roles'][0]
-			]);
-		} else {
-			Log::warning('⚠️ No se pudo extraer el rol del usuario en index()');
+			$rawRol = $user['roles'][0]['roles'] ?? ($user['roles'][0]['name'] ?? null);
+			$rolUsuario = is_scalar($rawRol) ? trim((string)$rawRol) : null;
 		}
 
-		// Cargar todas las periodicidades sin filtrar por rol (para testing)
-		// Más adelante puedes activar el filtro por rol
-		$periodicidades = \App\Models\periodicidad::paginate(10);
+		// Filtrar periodicidades por rol_periodicidad (solo las del rol)
+		$query = \App\Models\periodicidad::query();
+		if (!empty($rolUsuario)) {
+			$query->whereRaw('LOWER(rol_periodicidad) LIKE ?', ['%'.strtolower($rolUsuario).'%']);
+		}
+		$periodicidades = $query->paginate(10);
 
-		// Cargar productos para el select (mostrar sku + nombre)
-		$productos = \App\Models\Producto::select('sku','name_produc')->orderBy('name_produc')->get();
+		// Cargar productos para el select, filtrando por categoría según rol (HSEQ/EPP vs Dotación)
+		$prodQuery = \App\Models\Producto::select('sku','name_produc')->orderBy('name_produc');
+		$filtros = [];
+		$normRol = strtolower(str_replace(' ', '', (string)$rolUsuario));
+		if ($normRol !== '') {
+			if (strpos($normRol, 'hseq') !== false || strpos($normRol, 'seguridad') !== false) {
+				$filtros = array_map('trim', explode(',', config('vpl.role_filters.hseq', '')));
+			} elseif (strpos($normRol, 'talento') !== false || strpos($normRol, 'humano') !== false || $normRol === 'th') {
+				$filtros = array_map('trim', explode(',', config('vpl.role_filters.talento', '')));
+			}
+		}
+		$filtros = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $filtros))));
+		if (!empty($filtros)) {
+			$prodQuery->where(function($q) use ($filtros){
+				foreach ($filtros as $i => $term) {
+					$like = '%'.$term.'%';
+					if ($i === 0) $q->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+					else $q->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+				}
+			});
+		}
+		$productos = $prodQuery->get();
 
 		return view('gestiones.gestionPeriodicidad', compact('periodicidades','productos', 'rolUsuario'));
 	}

@@ -17,14 +17,16 @@ class ElementoPeriodicidadController extends Controller
      */
     public function index(Request $request)
     {
-        // Determinar filtro de rol por defecto desde el usuario en sesión
-        $user = auth()->user();
+        // Determinar filtro de rol por defecto desde sesión (HSEQ vs Talento)
         $roleFilter = $request->input('role') ?? null;
-        if (!$roleFilter && $user) {
-            $rolesSerialized = json_encode($user);
-            $rolesClean = strtolower(str_replace(' ', '', $rolesSerialized));
-            if (strpos($rolesClean, 'hseq') !== false) $roleFilter = 'hseq';
-            elseif (strpos($rolesClean, 'talento') !== false || strpos($rolesClean, 'talentohumano') !== false) $roleFilter = 'talento';
+        if (!$roleFilter) {
+            $sess = session('auth.user');
+            if (is_array($sess) && isset($sess['roles']) && is_array($sess['roles']) && !empty($sess['roles'])) {
+                $raw = $sess['roles'][0]['roles'] ?? ($sess['roles'][0]['name'] ?? null);
+                $norm = strtolower(str_replace(' ', '', (string)$raw));
+                if (strpos($norm, 'hseq') !== false || strpos($norm, 'seguridad') !== false) $roleFilter = 'hseq';
+                elseif (strpos($norm, 'talento') !== false || strpos($norm, 'humano') !== false || $norm === 'th') $roleFilter = 'talento';
+            }
         }
         $year = $request->input('year')
             ? intval($request->input('year'))
@@ -75,7 +77,7 @@ class ElementoPeriodicidadController extends Controller
         }
 
         // --- REEMPLAZO: obtener asignaciones unificadas ---
-        $assignments = $this->buildAssignments();
+        $assignments = $this->buildAssignments($roleFilter);
         if ($roleFilter) {
             $rf = strtolower(str_replace(' ', '', $roleFilter));
             $assignments = array_values(array_filter($assignments, function($a) use ($rf) {
@@ -257,7 +259,15 @@ class ElementoPeriodicidadController extends Controller
         $start = Carbon::parse($weekStart)->startOfDay();
         $end   = $start->copy()->addDays(6)->endOfDay();
 
-        $assignments = $this->buildAssignments();
+        $roleFilter = null;
+        $sess = session('auth.user');
+        if (is_array($sess) && isset($sess['roles']) && is_array($sess['roles']) && !empty($sess['roles'])) {
+            $raw = $sess['roles'][0]['roles'] ?? ($sess['roles'][0]['name'] ?? null);
+            $norm = strtolower(str_replace(' ', '', (string)$raw));
+            if (strpos($norm, 'hseq') !== false || strpos($norm, 'seguridad') !== false) $roleFilter = 'hseq';
+            elseif (strpos($norm, 'talento') !== false || strpos($norm, 'humano') !== false || $norm === 'th') $roleFilter = 'talento';
+        }
+        $assignments = $this->buildAssignments($roleFilter);
         $products = [];
         foreach ($assignments as $a) {
             try {
@@ -304,7 +314,15 @@ class ElementoPeriodicidadController extends Controller
         $weekEnd   = $weekStart ? $weekStart->copy()->addDays(6)->endOfDay() : null;
         if (!$weekStart) return response()->json(['success'=>false,'message'=>'weekStart required'],400);
 
-        $assignments = $this->buildAssignments();
+        $roleFilter = null;
+        $sess = session('auth.user');
+        if (is_array($sess) && isset($sess['roles']) && is_array($sess['roles']) && !empty($sess['roles'])) {
+            $raw = $sess['roles'][0]['roles'] ?? ($sess['roles'][0]['name'] ?? null);
+            $norm = strtolower(str_replace(' ', '', (string)$raw));
+            if (strpos($norm, 'hseq') !== false || strpos($norm, 'seguridad') !== false) $roleFilter = 'hseq';
+            elseif (strpos($norm, 'talento') !== false || strpos($norm, 'humano') !== false || $norm === 'th') $roleFilter = 'talento';
+        }
+        $assignments = $this->buildAssignments($roleFilter);
         $users = [];
         foreach ($assignments as $a) {
             if ($a['sku'] !== $sku) continue;
@@ -452,7 +470,7 @@ class ElementoPeriodicidadController extends Controller
     }
 
     // --- helper: construir lista unificada de asignaciones (elemento_x_usuario + entregas históricas) ---
-    private function buildAssignments(): array
+    private function buildAssignments($roleFilter = null): array
     {
         $pairs = [];
 
@@ -460,7 +478,12 @@ class ElementoPeriodicidadController extends Controller
         $asigs = DB::table('elemento_x_usuario')->select('sku','name_produc','usuarios_entregas_id','created_at')->get();
         foreach ($asigs as $r) {
             if (empty($r->usuarios_entregas_id)) continue;
-            $periodRow = DB::table('periodicidad')->where('sku',$r->sku)->first();
+            $prQuery = DB::table('periodicidad')->where('sku',$r->sku);
+            if ($roleFilter) {
+                $rf = strtolower(str_replace(' ', '', $roleFilter));
+                $prQuery->whereRaw('LOWER(REPLACE(rol_periodicidad, " ", "")) LIKE ?', ['%'.$rf.'%']);
+            }
+            $periodRow = $prQuery->first();
             $doc = DB::table('usuarios_entregas')->where('id',$r->usuarios_entregas_id)->value('numero_documento');
             $key = $r->sku . '|' . ($r->usuarios_entregas_id ?: $doc ?: '0');
             $pairs[$key] = [
@@ -496,7 +519,12 @@ class ElementoPeriodicidadController extends Controller
             $doc = $hasDoc ? ($r->numero_documento ?? null) : null;
             if (!$uid && !$doc) continue;
 
-            $periodRow = DB::table('periodicidad')->where('sku', $r->sku)->first();
+            $prQuery = DB::table('periodicidad')->where('sku', $r->sku);
+            if ($roleFilter) {
+                $rf = strtolower(str_replace(' ', '', $roleFilter));
+                $prQuery->whereRaw('LOWER(REPLACE(rol_periodicidad, " ", "")) LIKE ?', ['%'.$rf.'%']);
+            }
+            $periodRow = $prQuery->first();
             if (!$uid && $doc) { // intentar resolver id por documento
                 $uid = DB::table('usuarios_entregas')->where('numero_documento',$doc)->value('id');
             }
