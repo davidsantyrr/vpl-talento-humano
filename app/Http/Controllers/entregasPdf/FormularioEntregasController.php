@@ -61,6 +61,7 @@ class FormularioEntregasController extends Controller
 			'recepcion_id' => ['nullable','integer','exists:recepciones,id'],
 			'firma' => ['nullable','string'],
 			'comprobante_path' => ['nullable','string'],
+			'recordatorio_devolucion_at' => ['nullable','date'],
 			'enviar_a_gestion_correos' => ['nullable','boolean'],
 		]);
 
@@ -187,6 +188,15 @@ class FormularioEntregasController extends Controller
 				'created_at' => now(),
 				'updated_at' => now(),
 			];
+
+			// Adjuntar recordatorio si viene y si es un préstamo
+			if (!empty($data['recordatorio_devolucion_at']) && in_array(mb_strtolower($data['tipo']), ['prestamo','préstamo'])) {
+				try {
+					$entregaData['recordatorio_devolucion_at'] = \Carbon\Carbon::parse($data['recordatorio_devolucion_at']);
+				} catch (\Throwable $e) {
+					// ignorar parse fallido, dejar nulo
+				}
+			}
 
 			// Normalizar comprobante_path si viene desde la generación de PDF cliente
 			$comprobantePath = $request->input('comprobante_path') ?? ($data['comprobante_path'] ?? null);
@@ -369,16 +379,19 @@ class FormularioEntregasController extends Controller
 				}
 			}
 			$roleNames = array_values(array_filter(array_unique($roleNames)));
+			$isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
 
 			// Mapear roles conocidos -> filtros de categoría
 			$categoryFilters = [];
-			foreach ($roleNames as $rn) {
-				// heurística simple: si contiene 'hseq' -> usar filtros hseq; si contiene 'talento'/'humano'/'th' -> usar filtros talento
-				if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
-					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
-				}
-				if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
-					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+			if (!$isAdmin) {
+				foreach ($roleNames as $rn) {
+					// heurística simple: si contiene 'hseq' -> usar filtros hseq; si contiene 'talento'/'humano'/'th' -> usar filtros talento
+					if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+						$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+					}
+					if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+						$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+					}
 				}
 			}
 			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));

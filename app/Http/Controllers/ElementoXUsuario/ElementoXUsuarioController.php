@@ -33,8 +33,13 @@ class elementoXusuarioController extends Controller
             }
         }
         $roleNames = array_values(array_filter(array_unique($roleNames)));
+        $isAdmin = false;
+        foreach ($roleNames as $rn) {
+            $rnc = str_replace(' ', '', $rn);
+            if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; }
+        }
         $cargoIds = [];
-        if (!empty($roleNames)) {
+        if (!empty($roleNames) && !$isAdmin) {
             $cargoIds = \DB::table('cargos')
                 ->where(function($q) use ($roleNames){
                     foreach ($roleNames as $i => $rn) {
@@ -95,6 +100,37 @@ class elementoXusuarioController extends Controller
         $periodWeeks = $period ? (int) $period->periodicidad : 1;
 
         $tocaEntrega = $periodWeeks > 0 ? ($week % $periodWeeks === 0) : true;
+
+        // Construir cargoIds con el mismo criterio del index (y respetar admin)
+        $authUser = session('auth.user');
+        $roleNames = [];
+        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
+            foreach ($authUser['roles'] as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
+                if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+            }
+        } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
+            foreach ($authUser->roles as $r) {
+                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
+                if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
+                if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
+            }
+        }
+        $roleNames = array_values(array_filter(array_unique($roleNames)));
+        $isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
+        $cargoIds = [];
+        if (!empty($roleNames) && !$isAdmin) {
+            $cargoIds = \DB::table('cargos')
+                ->where(function($q) use ($roleNames){
+                    foreach ($roleNames as $i => $rn) {
+                        if ($i === 0) $q->whereRaw('LOWER(nombre) = ?', [$rn]);
+                        else $q->orWhereRaw('LOWER(nombre) = ?', [$rn]);
+                    }
+                })
+                ->pluck('id')
+                ->toArray();
+        }
 
         $asignacionesQuery = ElementoXUsuario::join('usuarios_entregas', 'elemento_x_usuario.usuarios_entregas_id', '=', 'usuarios_entregas.id')
             ->where('elemento_x_usuario.sku', $sku)

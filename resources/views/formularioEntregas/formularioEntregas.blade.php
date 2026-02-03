@@ -67,6 +67,11 @@
                         <input type="hidden" id="cargoIdHidden" name="cargo_id" value="">
                         <small class="text-muted">Solo informativo, se autocompleta con el cargo del usuario.</small>
                     </div>
+                    <div class="field span-2" id="field-recordatorio" style="display:none;">
+                        <label>Fecha de notificación para devolución (solo préstamos)</label>
+                        <input type="date" name="recordatorio_devolucion_at" id="recordatorioDevolucionAt">
+                        <small class="text-muted">Recibirás un recordatorio en esta fecha para gestionar la devolución del préstamo.</small>
+                    </div>
                 </div>
                 <div class="actions">
                     <button type="button" class="btn add" id="btnAnadirElemento" onclick="abrirModal()">Añadir elemento</button>
@@ -227,6 +232,18 @@
   window.__TH_AJAX_SUBMIT__ = true;
 </script>
 <script>
+// Mostrar/ocultar campo de recordatorio según tipo
+document.addEventListener('DOMContentLoaded', function(){
+    const tipo = document.getElementById('tipoSelect');
+    const fieldRec = document.getElementById('field-recordatorio');
+    function toggleRec(){
+        const v = (tipo?.value || '').toLowerCase();
+        fieldRec.style.display = (v === 'prestamo' || v === 'préstamo') ? '' : 'none';
+    }
+    tipo && tipo.addEventListener('change', toggleRec);
+    toggleRec();
+});
+
 // Interceptar submit para generar comprobante con la plantilla y firma
 document.addEventListener('DOMContentLoaded', function(){
   const form = document.getElementById('entregasForm');

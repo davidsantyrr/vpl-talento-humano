@@ -10,6 +10,7 @@ use App\Models\Producto;
 use App\Models\CorreosNotificacion;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\InventarioBajo;
+use App\Jobs\EnviarCorreoInventarioBajo;
 
 class GestionNotificacionesInventarioController extends Controller
 {
@@ -432,9 +433,8 @@ class GestionNotificacionesInventarioController extends Controller
                 $nombre = (string) ($producto->name_produc ?? $producto->name ?? $n->elemento);
                 // enviar sólo si no se ha notificado aún
                 if (!$n->notified) {
-                    $m = new InventarioBajo($n->elemento, $producto->sku, $stockActual, $umbral);
-                    $m->nombre = $nombre;
-                    Mail::to($emails)->send($m);
+                    // Despachar como Job en cola (requiere configurar y ejecutar el worker de colas)
+                    EnviarCorreoInventarioBajo::dispatch($emails, (string)$n->elemento, (string)$producto->sku, (int)$stockActual, (int)$umbral, (string)$nombre);
                     $n->notified = true;
                     $n->last_notified_at = now();
                     $n->save();

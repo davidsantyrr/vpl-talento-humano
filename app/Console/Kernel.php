@@ -11,6 +11,8 @@ class Kernel extends ConsoleKernel
     {
         // Ejecutar el chequeo de periodicidades cada hora
         $schedule->command('notify:periodicidad')->hourly();
+        // Enviar recordatorios de devolución de préstamos todos los días a las 08:00
+        $schedule->command('entregas:recordatorios-devolucion')->dailyAt('08:00');
     }
 
     protected function commands(): void

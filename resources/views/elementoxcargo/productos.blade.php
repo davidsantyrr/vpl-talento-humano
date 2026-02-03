@@ -13,7 +13,7 @@
         <a href="{{ route('elementoxcargo.productos.matriz') }}" class="btn primary">Ver matriz</a>
     </div>
 
-    <form method="POST" action="{{ route('elementoxcargo.productos.store') }}">
+    <form id="assignForm" method="POST" action="{{ route('elementoxcargo.productos.store') }}">
         @csrf
         <input type="hidden" name="cargo_id" id="cargoHidden" value="{{ $cargoId }}">
         <div class="controls-row">
@@ -247,6 +247,26 @@
         hidden.value = '';
       });
       document.addEventListener('click', function(e){ if(!dropdown.contains(e.target) && e.target!==input){ dropdown.setAttribute('aria-hidden','true'); } });
+
+      // Al enviar: si no se seleccionó del dropdown, usar el texto escrito como SKU
+      const form = document.getElementById('assignForm');
+      form?.addEventListener('submit', function(e){
+        const hiddenVal = (hidden.value || '').trim();
+        let typed = (input.value || '').trim();
+        if (!hiddenVal && typed) {
+          // Si viene en formato "SKU — Nombre", tomar lo anterior a "—"
+          const partsDash = typed.split('—');
+          if (partsDash.length > 1) typed = partsDash[0].trim();
+          // También limpiar paréntesis o sufijos comunes
+          typed = typed.split('(')[0].trim();
+          // Asignar al hidden para cumplir validación del backend
+          hidden.value = typed;
+        }
+        if (!hidden.value || hidden.value.trim() === '') {
+          e.preventDefault();
+          showToast('warning', 'Seleccione un elemento o escriba el SKU');
+        }
+      });
     })();
     </script>
 </div>

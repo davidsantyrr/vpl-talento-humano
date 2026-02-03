@@ -42,8 +42,13 @@ class CargoProductosController extends Controller
             }
         }
         $roleNames = array_values(array_filter(array_unique($roleNames)));
+        $isAdmin = false;
+        foreach ($roleNames as $rn) {
+            $rnc = str_replace(' ', '', $rn);
+            if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; }
+        }
         $cargoIdsForRoles = [];
-        if (!empty($roleNames)) {
+        if (!empty($roleNames) && !$isAdmin) {
             $cargoIdsForRoles = \DB::table('cargos')
                 ->where(function($q) use ($roleNames) {
                     foreach ($roleNames as $i => $rn) {
@@ -57,12 +62,14 @@ class CargoProductosController extends Controller
 
         // 2) Construir filtros de categoría de productos según rol (HSEQ vs Talento Humano)
         $categoryFilters = [];
-        foreach ($roleNames as $rn) {
-            if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
-                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
-            }
-            if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
-                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+        if (!$isAdmin) {
+            foreach ($roleNames as $rn) {
+                if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+                    $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+                }
+                if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+                    $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+                }
             }
         }
         $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
@@ -107,10 +114,7 @@ class CargoProductosController extends Controller
         ]);
 
         $prod = Producto::where('sku', $data['sku'])->first();
-        $name = $prod ? $prod->name_produc : null;
-        if (!$name) {
-            return back()->with('errorMessage', 'Producto no encontrado');
-        }
+        $name = $prod ? $prod->name_produc : (string) $data['sku'];
 
         // Validar categoría del producto contra el rol en sesión (opcional estricto)
         try {
@@ -122,9 +126,12 @@ class CargoProductosController extends Controller
                 foreach ($authUser->roles as $r) { if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; } if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; } if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; } }
             }
             $filters = [];
-            foreach ($roleNames as $rn) {
-                if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.hseq', '')))); }
-                if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.talento', '')))); }
+            $isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
+            if (!$isAdmin) {
+                foreach ($roleNames as $rn) {
+                    if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.hseq', '')))); }
+                    if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') { $filters = array_merge($filters, array_map('trim', explode(',', config('vpl.role_filters.talento', '')))); }
+                }
             }
             $filters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $filters))));
             if (!empty($filters) && $prod && !empty($prod->categoria_produc)) {
@@ -172,14 +179,17 @@ class CargoProductosController extends Controller
             }
         }
         $roleNames = array_values(array_filter(array_unique($roleNames)));
+        $isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
 
         $categoryFilters = [];
-        foreach ($roleNames as $rn) {
-            if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
-                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
-            }
-            if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
-                $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+        if (!$isAdmin) {
+            foreach ($roleNames as $rn) {
+                if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+                    $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+                }
+                if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+                    $categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
+                }
             }
         }
         $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
