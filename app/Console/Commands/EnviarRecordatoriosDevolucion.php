@@ -37,7 +37,7 @@ class EnviarRecordatoriosDevolucion extends Command
                 $names = [];
                 if (!empty($skus)) {
                     try {
-                        $prodModel = new \\App\\Models\\Producto();
+                        $prodModel = new \App\Models\Producto();
                         $conn = $prodModel->getConnectionName() ?: config('database.default');
                         $prodRows = DB::connection($conn)
                             ->table($prodModel->getTable())
@@ -45,7 +45,7 @@ class EnviarRecordatoriosDevolucion extends Command
                             ->select('sku','name_produc')
                             ->get();
                         foreach ($prodRows as $pr) { $names[(string)$pr->sku] = (string)($pr->name_produc ?? ''); }
-                    } catch (\\Throwable $ex) {
+                    } catch (\Throwable $ex) {
                         $names = [];
                     }
                 }
