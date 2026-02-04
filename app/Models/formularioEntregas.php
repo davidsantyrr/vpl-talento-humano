@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\SubArea;
 
-class Entrega extends Model
+class FormularioEntregas extends Model
 {
     use HasFactory;
 

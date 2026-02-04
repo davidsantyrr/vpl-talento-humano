@@ -142,7 +142,7 @@ Route::get('/formularioEntregas', [EntregaController::class, 'create'])
 Route::resource('gestionCorreos', gestionCorreosController::class);
 // AJAX: lookup user by email to auto-select role when creating a correo
 Route::get('/gestionCorreos/lookup-user', [gestionCorreosController::class, 'lookupUser'])->name('gestionCorreos.lookupUser');
-Route::resource('elementoXusuario', App\Http\Controllers\elementoXusuario\elementoXusuarioController::class);
+Route::resource('elementoXusuario', ElementoXUsuarioController::class);
 
 
 // Registrar endpoint POST para logging desde cliente y mapear al método del controlador

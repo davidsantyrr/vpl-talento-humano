@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\elementoXusuario;
+namespace App\Http\Controllers\ElementoXUsuario;
 
 use App\Http\Controllers\Controller;
 use App\Models\ElementoXUsuario;
@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-class elementoXusuarioController extends Controller
+class ElementoXUsuarioController extends Controller
 {
     // Lista elementos y cantidad de entregas por semana
     public function index(Request $request)

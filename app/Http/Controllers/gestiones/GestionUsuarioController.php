@@ -20,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use App\Models\Cargo;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class gestionUsuarioController extends Controller
+class GestionUsuarioController extends Controller
 {
     public function index(Request $request)
     {
