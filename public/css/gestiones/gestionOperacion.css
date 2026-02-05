@@ -1,0 +1,125 @@
+@import url('/css/_responsive_helpers.css');
+
+/* Mejora de diseño para Gestión de Operación */
+:root{
+	--bg:#f5f7fb;
+	--card:#ffffff;
+	--primary:#0d6efd;
+	--muted:#6c757d;
+	--danger:#dc3545;
+	--radius:8px;
+}
+
+body{
+	background:var(--bg);
+	font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+	color:#223;
+	font-size:18px; /* tamaño base aumentado */
+	line-height:1.5;
+}
+
+/* Contenedor principal (puedes añadir la clase .gestion-card al wrapper) */
+.gestion-card{
+	max-width:1200px;
+	margin:32px auto;
+	padding:32px; /* más espacio interior */
+	background:var(--card);
+	border-radius:var(--radius);
+	box-shadow:0 8px 24px rgba(15,15,15,0.08);
+}
+.btn.btn-primary{
+    font-size: 1.1rem;
+    background-color: #0d6efd;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 7px 10px;
+}
+
+.gestion-card h1,
+h1{
+	font-size:2rem; /* título más grande */
+	margin:0 0 12px 0;
+	color:#0b2a66;
+}
+
+.gestion-card p,
+p{ color:var(--muted); margin-bottom:18px; font-size:1.05rem; }
+
+/* Botón principal */
+a.btn.btn-primary{
+	background:linear-gradient(180deg,var(--primary),#0056d6);
+	border:none;
+	box-shadow:0 6px 14px rgba(13,110,253,0.14);
+	border-radius:8px;
+	padding:12px 18px; /* botones más grandes */
+	font-size:1rem;
+	color:#fff;
+}
+
+/* Tabla más legible */
+.table{
+	width:100%;
+	border-collapse:separate;
+	border-spacing:0;
+	background:transparent;
+}
+.table thead th{
+	background:linear-gradient(180deg,#f8fafc,#f1f5f9);
+	color:#12263f;
+	font-weight:600;
+	padding:14px 16px;
+	border-bottom:1px solid #e9eef6;
+	text-align:left;
+}
+.table tbody td{
+	padding:14px 16px;
+	border-bottom:1px solid #f1f5f9;
+	vertical-align:middle;
+}
+.table tbody tr:nth-child(odd){ background:#ffffff; }
+.table tbody tr:nth-child(even){ background:#fbfdff; }
+.table tbody tr:hover{ background:#eef6ff; }
+
+.table, .table th, .table td{ font-size:1.02rem; }
+
+.action-buttons a{ margin-right:8px; }
+.btn-sm.btn-warning{ background:#ffc107; border-color:#ffc107; color:#000; padding:8px 10px; font-size:.95rem; }
+.btn-sm.btn-danger{ background:var(--danger); border-color:var(--danger); color:#fff; padding:8px 10px; font-size:.95rem; }
+
+/* Responsive: diseño en tarjetas para móvil */
+@media (max-width:768px){
+	.gestion-card{ padding:20px; margin:12px; }
+	.table thead{ display:none; }
+	.table tbody td{ display:block; padding:12px 14px; }
+	.table tbody tr{ display:block; margin-bottom:14px; border-radius:10px; box-shadow:0 8px 20px rgba(15,15,15,0.05); overflow:hidden; }
+	.table tbody td::before{ content:attr(data-label); display:block; font-weight:700; color:#495057; margin-bottom:8px; font-size:1rem; }
+	.action-buttons{ display:flex; gap:10px; margin-top:10px; }
+	.table, .table th, .table td{ font-size:1.05rem; }
+}
+
+/* Pequeños ajustes visuales adicionales */
+a.btn:hover{ transform:translateY(-1px); transition:all .18s ease; }
+
+/* Inputs y formularios más grandes */
+input.form-control, textarea.form-control{
+	padding:10px 12px;
+	font-size:1rem;
+	border-radius:6px;
+}
+
+/* Forzar layout inline del formulario de creación (input + botón lado a lado) */
+.gestion-card form .row.g-2{
+	display:flex;
+	gap:12px;
+	align-items:center;
+}
+.gestion-card form .row.g-2 > .col-auto{ flex: 0 0 auto; }
+.gestion-card form .row.g-2 > .col-auto[style],
+.gestion-card form .row.g-2 > .col-auto.flex-fill{ flex:1 1 auto; }
+
+@media (max-width:600px){
+	.gestion-card form .row.g-2{ flex-direction:column; }
+	.gestion-card form .row.g-2 > .col-auto{ width:100%; }
+}
+

@@ -1,0 +1,604 @@
+:root {
+    --radius: 16px;
+    --shadow: 0 10px 24px rgba(2, 6, 23, 0.10);
+    --shadow-hover: 0 20px 44px rgba(2, 6, 23, 0.16);
+    --text: #0f172a;
+    --brand: #F78008;
+    --muted: #64748b;
+}
+
+@import url('/css/_responsive_helpers.css');
+
+/* Menú Entregas (UI refinada y buenas prácticas) */
+:root {
+    --radius: 16px;
+    --shadow: 0 10px 24px rgba(2, 6, 23, 0.10);
+    --shadow-hover: 0 20px 44px rgba(2, 6, 23, 0.16);
+    --text: #0f172a;
+    --brand: #F78008;
+    --muted: #64748b;
+}
+
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0
+}
+
+body {
+    /* Fondo sutil y centrado del contenido */
+    background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
+    font-family: 'Poppins', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color: var(--text);
+    line-height: 1.5;
+}
+
+/* Encabezado de página */
+.page-head {
+    max-width: 1200px;
+    margin: 12px auto 10px auto;
+    padding: 0 16px;
+    text-align: center;
+}
+
+.page-head h1 {
+    margin: 0 0 6px 0;
+    font-size: 28px;
+    font-weight: 800;
+    color: #111827
+}
+
+.page-head p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 10px 24px;
+    display: block
+}
+
+/* Grid de tarjetas: usar grid para filas consistentes y altura igualada */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 28px;
+    box-sizing: border-box;
+    padding-bottom: 28px;
+    align-items: stretch;
+}
+
+/* Tarjeta */
+.card {
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+    height: 100%;
+    transition: transform .2s ease, box-shadow .2s ease, filter .16s ease;
+    position: relative;
+    width: 100%;
+}
+
+.card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-hover);
+    filter: brightness(1)
+}
+
+.card:focus-within {
+    outline: 2px solid rgba(79, 70, 229, 0.25);
+    outline-offset: 2px
+}
+
+/* Parte superior flexible */
+.card__top {
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    padding: 14px 16px 12px;
+    text-align: center;
+    flex: 1 1 auto;
+}
+
+.icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+    transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+}
+
+/* Animaciones accesibles para iconos */
+.card:hover .icon {
+    transform: scale(1.08) rotate(2deg);
+    filter: brightness(1.05);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+}
+
+.card:hover .icon i,
+.card:hover .icon svg {
+    animation: wobble 480ms ease
+}
+
+@keyframes wobble {
+    0% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    25% {
+        transform: translateY(-2px) rotate(-2deg);
+    }
+
+    50% {
+        transform: translateY(1px) rotate(2deg);
+    }
+
+    75% {
+        transform: translateY(-1px) rotate(-1deg);
+    }
+
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+}
+
+/* Tamaño de iconos Font Awesome */
+.icon i {
+    font-size: 46px;
+    line-height: 1;
+    display: block
+}
+
+.icon svg {
+    width: 52px;
+    height: 52px;
+    display: block;
+    stroke: currentColor;
+    stroke-width: 1.6
+}
+
+/* Colores por tarjeta (icono) */
+.c-indigo .icon {
+    color: #1e3a8a
+}
+
+.c-blue .icon {
+    color: #0a2840
+}
+
+.c-orange .icon {
+    color: #5a3200
+}
+
+.c-green .icon {
+    color: #0a2e20
+}
+
+.c-red .icon {
+    color: #621010
+}
+
+.c-yellow .icon {
+    color: #3d3c00
+}
+
+.c-purple .icon {
+    color: #2b1850
+}
+
+.c-cyan .icon {
+    color: #073b46
+}
+
+.card__top h3 {
+    font-size: 18px;
+    font-weight: 800;
+    text-align: center;
+    margin: 6px 0 0
+}
+
+.card__top .desc {
+    margin: 6px 0 0;
+    font-size: 13px;
+    max-width: 100%;
+    color: var(--muted);
+    line-height: 1.3;
+    /* Limit text to 3 lines while keeping a solid fallback */
+    display: -webkit-box;
+    /* stylelint: allow vendor specific -webkit-line-clamp */
+    /* stylelint-disable-next-line property-no-unknown */
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    /* non-standard modern alias (where supported) */
+    line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* Ensure consistent height across browsers */
+    max-height: 3.9em; /* 1.3 * 3 lines */
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+/* Indicador sutil */
+.card::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.08)
+}
+
+/* Footer del botón */
+.card__footer {
+    background: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    margin-top: auto;
+}
+
+/* Footer button: keep centered but allow full width on small screens */
+.card__footer .btn {
+    width: 100%;
+    max-width: 320px;
+}
+
+.card__footer .btn .fa, .card__footer .btn svg { margin-right: 6px; }
+
+/* Botón */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+    text-decoration: none;
+    border: none;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.10);
+    transition: transform .14s ease, box-shadow .14s ease, filter .14s ease, background .14s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 26px rgba(0, 0, 0, 0.14);
+    filter: brightness(1.02)
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12)
+}
+
+.btn:focus-visible {
+    outline: 3px solid rgba(80, 140, 255, 0.28);
+    outline-offset: 2px
+}
+
+/* Botones pastel (coinciden con header) */
+.btn-indigo {
+    background: #c7d2fe;
+    color: #1e3a8a
+}
+
+.btn-indigo:hover {
+    background: #a5b4fc
+}
+
+.btn-blue {
+    background: #9ec5ff;
+    color: #0b1b33
+}
+
+.btn-blue:hover {
+    background: #86b8ff
+}
+
+.btn-orange {
+    background: #ffd8a8;
+    color: #4a3005
+}
+
+.btn-orange:hover {
+    background: #ffc987
+}
+
+.btn-green {
+    background: #a8e8c5;
+    color: #073322
+}
+
+.btn-green:hover {
+    background: #93dfb6
+}
+
+.btn-red {
+    background: #ffb3b3;
+    color: #4a0e0e
+}
+
+.btn-red:hover {
+    background: #ff9e9e
+}
+
+.btn-yellow {
+    background: #fff3a3;
+    color: #2b2a00
+}
+
+.btn-yellow:hover {
+    background: #ffe87a
+}
+
+.btn-purple {
+    background: #d5c1ff;
+    color: #24144a
+}
+
+.btn-purple:hover {
+    background: #cbb2ff
+}
+
+.btn-cyan {
+    background: #b5f1fb;
+    color: #05323c
+}
+
+.btn-cyan:hover {
+    background: #a0e8f7
+}
+
+/* Headers pastel por tarjeta */
+.c-indigo .card__top {
+    background: #c7d2fe
+}
+
+.c-indigo .card__top h3,
+.c-indigo .card__top .desc {
+    color: #1e3a8a
+}
+
+.c-indigo .icon {
+    background: rgba(238, 242, 255, 0.9)
+}
+
+.c-blue .card__top {
+    background: #9ec5ff
+}
+
+.c-blue .card__top h3,
+.c-blue .card__top .desc {
+    color: #0b1b33
+}
+
+.c-blue .icon {
+    background: rgba(233, 244, 255, 0.85)
+}
+
+.c-orange .card__top {
+    background: #ffd8a8
+}
+
+.c-orange .card__top h3,
+.c-orange .card__top .desc {
+    color: #4a3005
+}
+
+.c-orange .icon {
+    background: rgba(255, 238, 220, 0.85)
+}
+
+.c-green .card__top {
+    background: #a8e8c5
+}
+
+.c-green .card__top h3,
+.c-green .card__top .desc {
+    color: #073322
+}
+
+.c-green .icon {
+    background: rgba(225, 248, 236, 0.9)
+}
+
+.c-red .card__top {
+    background: #ffb3b3
+}
+
+.c-red .card__top h3,
+.c-red .card__top .desc {
+    color: #4a0e0e
+}
+
+.c-red .icon {
+    background: rgba(255, 235, 235, 0.9)
+}
+
+.c-yellow .card__top {
+    background: #fff3a3
+}
+
+.c-yellow .card__top h3,
+.c-yellow .card__top .desc {
+    color: #2b2a00
+}
+
+.c-yellow .icon {
+    background: rgba(255, 255, 220, 0.9)
+}
+
+.c-purple .card__top {
+    background: #d5c1ff
+}
+
+.c-purple .card__top h3,
+.c-purple .card__top .desc {
+    color: #24144a
+}
+
+.c-purple .icon {
+    background: rgba(245, 238, 255, 0.9)
+}
+
+.c-cyan .card__top {
+    background: #b5f1fb
+}
+
+.c-cyan .card__top h3,
+.c-cyan .card__top .desc {
+    color: #05323c
+}
+
+.c-cyan .icon {
+    background: rgba(232, 250, 255, 0.9)
+}
+
+/* Additional color variants for Gestiones view */
+.c-pink .card__top {
+    background: #ffd3d6; /* soft pink */
+}
+.c-pink .card__top h3,
+.c-pink .card__top .desc { color: #5b1316; }
+.c-pink .icon { color: #7a0f12; background: rgba(255, 245, 246, 0.9); }
+
+.c-peach .card__top { background: #fedec4; }
+.c-peach .card__top h3, .c-peach .card__top .desc { color: #5b360a; }
+.c-peach .icon { color: #7a4a05; background: rgba(255, 250, 244, 0.9); }
+
+.c-white .card__top { background: #ffffff; }
+.c-white .card__top h3, .c-white .card__top .desc { color: #0f172a; }
+.c-white .icon { color: #0b1b33; background: rgba(255,255,255,0.95); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+/* Neutral/dark variant used en algunas tarjetas de gestiones */
+.c-black .card__top { background: #ffffff; }
+.c-black .card__top h3, .c-black .card__top .desc { color: #0f172a; }
+.c-black .icon { color: #0b1b33; background: rgba(255,255,255,0.95); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+
+/* Navy blue custom variant used por la tarjeta 'Gestiones' */
+.c-navy-blue .card__top {
+    background: #04203a; /* fondo oscuro azul marino */
+}
+
+.c-navy-blue .card__top h3,
+.c-navy-blue .card__top .desc {
+    color: #e6f3ff; /* texto claro */
+}
+
+.c-navy-blue .icon {
+    color: #8fc9ff; /* icono azulado */
+    background: rgba(10, 30, 50, 0.85);
+}
+
+/* Botón navy para el footer */
+.btn-navy-blue {
+    background: #0b2540;
+    color: #ffffff;
+}
+.btn-navy-blue:hover {
+    background: #123154;
+}
+
+/* Hover glow sutil */
+.card:hover {
+    box-shadow: var(--shadow-hover)
+}
+
+.card:hover .card__top {
+    filter: saturate(1.04)
+}
+
+/* Preferencias de movimiento reducido */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation: none !important;
+        transition: none !important
+    }
+}
+
+@media (max-width:1200px) {
+    .container {
+        max-width: 1200px;
+        padding: 10px 20px
+    }
+}
+
+@media (max-width:820px) {
+
+    .page-head,
+    .container {
+        max-width: 96%;
+    }
+
+    .cards {
+        justify-content: center;
+        gap: 24px;
+        padding-bottom: 24px
+    }
+
+    .card {
+        flex: 1 1 calc(50% - 24px);
+        min-width: 280px;
+    }
+
+    /* two columns fit, full rows */
+}
+
+@media (max-width:520px) {
+    .page-head {
+        padding: 0 12px
+    }
+
+    .card__top {
+        min-height: 140px
+    }
+
+    .icon {
+        width: 72px;
+        height: 72px
+    }
+
+    .icon i {
+        font-size: 36px
+    }
+
+    .card {
+        flex-basis: 100%;
+    }
+
+    /* full width on small screens */
+}
+
+/* Prevent horizontal overflow on small screens */
+html,
+body {
+    overflow-x: hidden;
+}

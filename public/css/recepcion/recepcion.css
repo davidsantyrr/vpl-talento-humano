@@ -1,0 +1,661 @@
+@import url('/css/_responsive_helpers.css');
+
+body {
+    background: radial-gradient(circle at 20% 20%, #edf2f7 0%, #e2e8f0 40%, #dbe2ea 100%);
+}
+
+th{
+    margin-right: -50px;
+}
+
+.recepcion.container {
+    max-width: 980px;
+    margin: 18px auto;
+    padding: 0 16px
+}
+
+.title {
+    font-size: 32px;
+    font-weight: 800;
+    text-align: center;
+    margin: 0 0 16px
+}
+
+.panel {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 16px;
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.08);
+    padding: 18px
+}
+
+.panel .section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(2, 6, 23, 0.06);
+}
+
+.panel .section+.section {
+    margin-top: 12px;
+}
+
+.alert.success {
+    background: #e6f4ea;
+    color: #054d2e;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 10px
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 10px
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px
+}
+
+.field input,
+.field select {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(2, 6, 23, 0.12);
+    background: #fff
+}
+
+.field input:focus,
+.field select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.field label::after {
+    content: ' *';
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.field .small {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.field .text-muted {
+    color: #6c757d;
+}
+
+.field .mt-1 {
+    margin-top: 4px;
+}
+
+.field.span-2 {
+    grid-column: span 2
+}
+
+.actions {
+    display: flex;
+    justify-content: center;
+    margin: 12px 0;
+    gap: 10px;
+    flex-wrap: wrap
+}
+
+.btn {
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer
+}
+
+.btn.add {
+    background: #111827;
+    color: #fff
+}
+
+/* Mobile adjustments */
+@media (max-width: 900px) {
+    .recepcion.container { max-width: 100%; padding: 0 12px; }
+    .grid { grid-template-columns: 1fr; }
+    .panel { padding: 12px; }
+    .panel .section { padding: 12px; }
+    .field input, .field select { width: 100%; }
+    .actions { flex-direction: column; gap: 8px; }
+    .table-responsive { overflow-x: auto; }
+    .btn.add { width: 100%; }
+}
+
+.btn.primary {
+    background: #111f2e;
+    color: #fff
+}
+
+.table-wrapper {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.08);
+    overflow: auto;
+    margin-top: 10px
+}
+
+.tabla-items {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 520px
+}
+
+.tabla-items thead th {
+    background: #0b1b2b;
+    color: #fff;
+    padding: 12px;
+    font-weight: 700
+}
+
+.tabla-items tbody td {
+    padding: 12px;
+    border-top: 1px solid rgba(2, 6, 23, 0.06)
+}
+
+.firma {
+    margin-top: 14px
+}
+
+.firma-pad {
+    background: #f3f4f6;
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px
+}
+
+.firma-pad canvas {
+    display: block;
+    width: 100%;
+    max-width: 680px;
+    height: auto;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(2, 6, 23, 0.06)
+}
+
+.firma-tools {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap
+}
+
+/* =========================
+    MODAL PERSONALIZADA
+========================= */
+.modal {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+    background: linear-gradient(180deg, rgba(0,0,0,0.65), rgba(0,0,0,0.45));
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease;
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal > div {
+    background: #fff;
+    width: 1000px;
+    max-width: 95%;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+    max-height: calc(100vh - 60px);
+    overflow: auto;
+    box-sizing: border-box;
+}
+
+.modal h1 {
+    font-size: 28px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 0;
+}
+
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 12px;
+    margin-bottom: 16px;
+    text-align: left;
+    width: 100%;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.modal-field label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin: 0 0 4px 0;
+    display: block;
+    text-align: left;
+}
+
+.modal-field input,
+.modal-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 0;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+.modal-list {
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-width: 260px;
+    max-width: 420px;
+    max-height: 40vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+    padding: 6px;
+    z-index: 2147483647;
+}
+
+.modal-list-item {
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.modal-list-item:hover {
+    background: #f3f4ff;
+}
+
+.modal-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.modal-table thead {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.modal-table tbody {
+    display: block;
+    max-height: 140px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.modal-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.modal-table thead th {
+    background: #0b1b2b;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+}
+
+.modal-table tbody td {
+    padding: 10px;
+    border-top: 1px solid #eef2f7;
+}
+
+/* Estilos para la modal de productos */
+.sw-tall .swal2-html-container {
+    max-height: 75vh;
+    overflow: auto;
+    padding: 10px;
+}
+
+.sw-tall .swal2-popup {
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+.sw-tall .swal2-title {
+    margin-bottom: 1.5rem;
+    padding: 20px;
+}
+
+.sw-grid {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 12px;
+    margin-bottom: 16px;
+    text-align: left;
+    width: 100%;
+}
+
+.sw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sw-field label {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+    margin: 0 0 4px 0;
+    display: block;
+    text-align: left;
+}
+
+.sw-field input,
+.sw-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    margin: 0;
+}
+
+.sw-field input:focus,
+.sw-field select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.sw-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.sw-actions button {
+    padding: 10px 20px;
+    font-weight: 600;
+}
+
+.sw-list {
+    position: fixed;
+    left: 0;
+    top: 0;
+    min-width: 260px;
+    max-width: 420px;
+    max-height: 40vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, .18);
+    padding: 6px;
+    z-index: 2147483647
+}
+
+.sw-item {
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.2
+}
+
+.sw-item:hover {
+    background: #f3f4ff
+}
+
+.sw-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.sw-table thead {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.sw-table tbody {
+    display: block;
+    max-height: 140px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.sw-table tbody tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+.sw-table thead th {
+    background: #0b1b2b;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+}
+
+.sw-table tbody td {
+    padding: 10px;
+    border-top: 1px solid #eef2f7
+}
+
+@media (max-width:900px) {
+    .recepcion.container {
+        padding: 0 12px
+    }
+
+    .grid {
+        grid-template-columns: 1fr
+    }
+
+    .field.span-2 {
+        grid-column: span 1
+    }
+
+    .btn {
+        width: 100%;
+        max-width: 380px
+    }
+}
+
+@media (max-width:640px) {
+    .title {
+        font-size: 26px
+    }
+
+    .panel {
+        padding: 12px
+    }
+
+    .panel .section {
+        padding: 12px
+    }
+
+    .tabla-items {
+        min-width: 100%
+    }
+
+    .modal > div {
+        width: calc(100vw - 2rem) !important;
+        max-width: 100%;
+        padding: 1.5rem 1rem;
+        margin: 1rem;
+        box-sizing: border-box;
+    }
+
+    .modal h1 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .modal-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .modal-field {
+        width: 100%;
+    }
+
+    .modal-field label {
+        font-size: 13px;
+    }
+
+    .modal-field input,
+    .modal-field select {
+        width: 100%;
+        max-width: 100%;
+        font-size: 14px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .modal-actions button {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .modal-table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+    }
+
+    .modal-list {
+        left: 1rem !important;
+        right: 1rem !important;
+        width: calc(100vw - 4rem) !important;
+        max-width: calc(100vw - 4rem) !important;
+    }
+
+    /* Modal responsive */
+    .sw-tall .swal2-popup {
+        width: calc(100vw - 2rem) !important;
+        max-width: 100%;
+        padding: 1.5rem 1rem;
+        margin: 1rem;
+        box-sizing: border-box;
+    }
+
+    .sw-tall .swal2-html-container {
+        padding: 0.5rem;
+        overflow-x: hidden;
+        width: 100%;
+    }
+
+    .sw-tall .swal2-title {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .sw-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .sw-field {
+        width: 100%;
+    }
+
+    .sw-field label {
+        font-size: 13px;
+    }
+
+    .sw-field input,
+    .sw-field select {
+        width: 100%;
+        max-width: 100%;
+        font-size: 14px;
+    }
+
+    .sw-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .sw-actions button {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .sw-table {
+        width: 100%;
+        display: block;
+        overflow-x: auto;
+    }
+
+    .sw-list {
+        left: 1rem !important;
+        right: 1rem !important;
+        width: calc(100vw - 4rem) !important;
+        max-width: calc(100vw - 4rem) !important;
+    }
+}

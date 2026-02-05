@@ -1,0 +1,402 @@
+:root {
+    --card-bg: #ffffff;
+    --accent-1: linear-gradient(135deg, #b3ffd9, #97ffc3);
+    --muted: #6b6b6b;
+    --radius: 12px;
+    --brand: #F78008;
+    --text-dark: #0f172a;
+    --header-height: 80px;
+    /* altura por defecto del header */
+}
+
+body {
+    background: linear-gradient(180deg, #f0f2f5, #e6e9ee);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    /* espacio superior igual a la altura del header fijo */
+    padding: calc(var(--header-height)) 12px 48px;
+    color: var(--text-dark);
+}
+
+/* Navbar: ahora ocupa todo el ancho superior (fixed) */
+.head {
+    position: fixed;
+    top: 0;
+    /* fijar al tope del viewport */
+    left: 0;
+    right: 0;
+    width: auto;
+    /* no forzar 100% para respetar left/right */
+    height: var(--header-height);
+    background-color: var(--brand);
+    border-radius: 0 0 10px 10px;
+    /* borde redondeado pedido */
+    box-shadow: 0 8px 30px rgba(13, 30, 77, 0.12);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    z-index: 9999;
+}
+
+/* Centrar el contenido del nav dentro del header con full-width */
+.head nav {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: none;
+    /* permitir ocupar todo el ancho */
+    margin: 0px;
+    padding: 0 24px;
+    /* espacio lateral dentro del header */
+    gap: 14px;
+    justify-content: space-between;
+    /* distribuir a los extremos */
+}
+
+.head .nav-left,
+.head .nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+.head .nav-center {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* título centrado */
+}
+
+.logoVigia {
+    height: 56px;
+    width: auto;
+    border-radius: 8px;
+}
+
+h1.title {
+    color: white;
+    font-size: 20px;
+    margin: 0;
+    font-weight: 700;
+}
+
+.logout-btn {
+    background: #191970;
+    /* azul medianoche */
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 6px 18px rgba(25, 25, 112, 0.12);
+    transition: background 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.logout-btn:hover {
+    background: #141e57;
+    /* un tono más oscuro al pasar el cursor */
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px rgba(15, 16, 63, 0.16);
+}
+
+.logout-btn:focus {
+    outline: 2px solid rgba(25, 25, 112, 0.18);
+    outline-offset: 2px;
+}
+
+/* Layout for cards */
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Usar grid para que las cards se expandan y ocupen el espacio disponible */
+.menu {
+    display: grid;
+    /* permitir más columnas en pantallas grandes y ser más responsivo en pantallas pequeñas */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+    width: 100%;
+    align-items: start;
+}
+
+.card {
+    width: 100%;
+    /* dejar que el grid controle el tamaño */
+    max-width: none;
+    background: transparent;
+    border-radius: var(--radius);
+    overflow: visible;
+    position: relative;
+    box-shadow: 0 12px 36px rgba(13, 30, 77, 0.10);
+    transition: transform .28s ease, box-shadow .28s ease, border-color .18s ease;
+    border: 1px solid rgba(16, 24, 40, 0.04);
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    /* eliminar min-height fija para permitir igualado por grid */
+}
+
+.card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 28px 80px rgba(13, 30, 77, 0.18);
+}
+
+/* Hacer que la imagen de la card ocupe todo el mismo espacio en cada tarjeta */
+.card__media {
+    flex: 0 0 auto;
+    height: 260px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    box-shadow: 0 8px 20px rgba(13,30,77,0.06) inset;
+    position: relative;
+}
+
+/* icon inside the circular white plate */
+.card__icon{
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 12px 30px rgba(13,30,77,0.12);
+}
+.card__icon i{
+    font-size: 44px;
+    color: rgba(9,25,40,0.9);
+}
+
+/* color variants (top panel) */
+.card--blue .card__media{ background: linear-gradient(180deg,#dbe9ff,#c6ddff); }
+.card--lightblue .card__media{ background: linear-gradient(180deg,#cfe9ff,#bfe6ff); }
+.card--peach .card__media{ background: linear-gradient(180deg,#ffe6cf,#ffd6b8); }
+.card--mint .card__media{ background: linear-gradient(180deg,#dff7e9,#c7f0d8); }
+.card--lime .card__media{ background: linear-gradient(180deg,#e6ffe6,#d4ffd4); }
+.card--coral .card__media{ background: linear-gradient(180deg,#ffdede,#ffd1cf); }
+.card--yellow .card__media{ background: linear-gradient(180deg,#fff6cc,#fff2b8); }
+
+/* title color slightly darker to contrast */
+.card__title{ color: rgba(6,22,40,0.92); }
+
+/* Centrar y contener la imagen dentro del espacio disponible; soporta iconos pequeños */
+.card__media img {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: #fff;
+    padding: 18px;
+    box-shadow: 0 12px 30px rgba(13,30,77,0.12);
+    object-fit: contain;
+    display: block;
+    transition: transform .4s ease;
+}
+
+.card:hover .card__media img {
+    transform: scale(1.04);
+}
+
+.card__body {
+    padding: 18px 22px 28px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fff;
+    border-radius: 0 0 var(--radius) var(--radius);
+    margin-top: -28px;
+    z-index: 2;
+}
+
+.card__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-dark);
+    letter-spacing: .2px;
+}
+
+.card__subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.card__actions {
+    display: flex;
+    justify-content: center;
+    padding: 18px 12px 26px 12px;
+    background: transparent;
+}
+
+.btn {
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    padding: 14px 26px;
+    border-radius: 14px;
+    background: linear-gradient(90deg, #36d399, #79f2c9);
+    color: #04282b;
+    font-weight: 700;
+    box-shadow: 0 10px 30px rgba(52, 211, 153, 0.12);
+    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    filter: brightness(.98);
+}
+
+/* make the action button span most of card width inside the white body */
+.card__actions .btn {
+    width: calc(100% - 48px);
+    max-width: 420px;
+}
+
+/* small circular decor in top-right of each card media */
+.card::after{
+    content: '';
+    position: absolute;
+    right: 22px;
+    top: 22px;
+    width: 12px;
+    height: 12px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(13,30,77,0.06);
+}
+
+.btn:focus {
+    outline: 3px solid rgba(50, 200, 150, 0.18);
+    outline-offset: 3px;
+}
+
+/* SweetAlert always on top of navbar */
+.swal2-container { z-index: 100000 !important; }
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    :root {
+        --header-height: 66px;
+    }
+
+    body {
+        padding-top: calc(var(--header-height));
+    }
+
+    .head {
+        height: var(--header-height);
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .logoVigia {
+        height: 44px;
+    }
+
+    h1.title {
+        font-size: 18px;
+    }
+
+    .menu {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .card {
+        min-height: auto;
+        /* no forzar */
+    }
+
+    .card__media {
+        height: 260px;
+        /* altura consistente en tablet */
+    }
+
+    /* Navbar responsive: ocultar el título para dejar solo logo y botón */
+    .head .nav-center {
+        display: none;
+    }
+
+    /* Alinear logo a la izquierda y botón a la derecha con más espacio */
+    .head nav {
+        padding: 0 16px;
+        justify-content: space-between;
+    }
+
+    .head .nav-left {
+        margin-right: auto;
+    }
+
+    .head .nav-right {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 520px) {
+    :root {
+        --header-height: 64px;
+    }
+
+    body {
+        padding-top: calc(var(--header-height));
+    }
+
+    .head {
+        height: var(--header-height);
+        top: 0;
+        left: 0;
+        right: 0;
+    }
+
+    .logoVigia {
+        height: 40px;
+    }
+
+    h1.title {
+        font-size: 16px;
+    }
+
+    .menu {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .card {
+        min-height: auto;
+    }
+
+    .card__media {
+        height: 180px;
+    }
+}
+
+/* Ajustes para pantallas grandes: tarjetas más altas y media más destacada */
+@media (min-width: 1200px) {
+    .menu {
+        grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+        gap: 48px;
+    }
+
+    .card {
+        min-height: auto;
+        /* no forzar, imagen fija determina altura */
+    }
+
+    .card__media {
+        height: 380px;
+        /* mayor altura en escritorio grande */
+    }
+}

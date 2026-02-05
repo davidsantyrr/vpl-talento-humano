@@ -1,0 +1,40 @@
+/*
+  Helper CSS común para mejorar la responsividad de todas las vistas.
+  Inclúyelo mediante: @import url('/css/_responsive_helpers.css');
+*/
+
+img, svg, video, iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Formularios y controles ocupen ancho completo en pantallas pequeñas */
+@media (max-width: 768px) {
+  input, textarea, select, button {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Ajustes para tarjetas y grids comunes */
+  .menu, .cards, .grid {
+    grid-template-columns: 1fr !important;
+    display: block !important;
+  }
+
+  .card__media, .hero-media {
+    height: auto !important;
+    max-height: 260px;
+  }
+}
