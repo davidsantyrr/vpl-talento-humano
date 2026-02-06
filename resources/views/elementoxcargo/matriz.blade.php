@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/elementoxcargo/matriz.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/elementoxcargo/matriz.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente />

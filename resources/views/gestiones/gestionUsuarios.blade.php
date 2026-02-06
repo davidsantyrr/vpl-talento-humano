@@ -3,7 +3,7 @@
 @section('title', 'Gestión de Usuarios')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionUsuario.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionUsuario.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 @endpush
 
@@ -267,7 +267,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
  
 @if(isset($editUsuario))
 <script>

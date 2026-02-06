@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Historial de Entregas')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/historico/historialUnificado.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/historico/historialUnificado.css') }}">
 @endpush
 
 @section('content')

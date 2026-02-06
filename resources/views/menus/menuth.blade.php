@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @push('styles')
-  <link rel="stylesheet" href="{{ asset('css/menus/styleMenu.css') }}">
+  <link rel="stylesheet" href="{{ secure_asset('css/menus/styleMenu.css') }}">
 @endpush
 
 @push('scripts')
@@ -12,7 +12,7 @@
     <div class="head">
         <nav>
             <div class="nav-left">
-                <img src="{{ asset('img/logo.png') }}" alt="Logo" class="logoVigia">
+                <img src="{{ secure_asset('img/logo.png') }}" alt="Logo" class="logoVigia">
             </div>
             <div class="nav-center">
                 <h1 class="title">Menu Principal</h1>

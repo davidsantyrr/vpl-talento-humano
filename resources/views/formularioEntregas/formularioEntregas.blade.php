@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Formulario de Entregas')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/formularioEntregas.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/formularioEntregas.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>

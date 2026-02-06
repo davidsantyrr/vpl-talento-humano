@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestión de Artículos')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionArticulos.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionArticulos.css') }}">
 @endpush
 
 @section('content')

@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menú de Entregas</title>
-  <link rel="stylesheet" href="{{ asset('css/menus/menuEntrega.css') }}">
+  <link rel="stylesheet" href="{{ secure_asset('css/menus/menuEntrega.css') }}">
   <!-- Font Awesome 6 (reliable CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/all.min.css">
 </head>

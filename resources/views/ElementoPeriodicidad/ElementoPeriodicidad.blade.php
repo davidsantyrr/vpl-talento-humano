@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Calendario anual de entregas periódicas')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/elementoPeriodicidad/elementoPeriodicidad.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/elementoPeriodicidad/elementoPeriodicidad.css') }}">
 @endpush
 
 @section('content')

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title','Historial de Entregas y Recepciones')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/historico/historialUnificado.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/historico/historialUnificado.css') }}">
 @endpush
 
 @section('content')
@@ -343,7 +343,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/historial/historial.js') }}?v={{ time() }}"></script>
+<script src="{{ secure_asset('js/historial/historial.js') }}?v={{ time() }}"></script>
 <script>
 	// Mostrar toast de sesión si existe
 	@if(session('status'))

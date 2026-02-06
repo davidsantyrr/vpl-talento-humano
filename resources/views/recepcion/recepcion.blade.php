@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/recepcion/recepcion.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/recepcion/recepcion.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente />
@@ -202,10 +202,10 @@
   // Flag global: evitar listeners externos de submit
   window.__TH_AJAX_SUBMIT__ = true;
 </script>
-<script src="{{ asset('js/recepcion/recepcion.js') }}"></script>
-<script src="{{ asset('js/recepcion/recepcionLookup.js') }}"></script>
-<script src="{{ asset('js/recepcion/recepcionModal.js') }}"></script>
-<script src="{{ asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
+<script src="{{ secure_asset('js/recepcion/recepcion.js') }}"></script>
+<script src="{{ secure_asset('js/recepcion/recepcionLookup.js') }}"></script>
+<script src="{{ secure_asset('js/recepcion/recepcionModal.js') }}"></script>
+<script src="{{ secure_asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   const canvas = document.getElementById('firmaCanvas');
