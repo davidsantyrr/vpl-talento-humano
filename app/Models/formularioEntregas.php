@@ -10,9 +10,6 @@ class FormularioEntregas extends Model
 {
     use HasFactory;
 
-    /*
-     * Campos que se pueden asignar masivamente
-     */
     protected $fillable = [
         'nombre',
         'apellidos',
@@ -25,19 +22,12 @@ class FormularioEntregas extends Model
         'comprobante_path',
     ];
 
-    /**
-     * Casts automáticos
-     */
     protected $casts = [
-        'elementos' => 'array', // JSON → array automáticamente
+        'elementos' => 'array',
     ];
 
-    /**
-     * Relación: una entrega pertenece a una operación
-     */
     public function operacion()
     {
         return $this->belongsTo(SubArea::class, 'operacion_id');
     }
-
 }
