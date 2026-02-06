@@ -22,7 +22,7 @@
 
   <main>
     <div class="border-solid">
-      <form method="POST" action="{{ route('login') }}">
+      <form method="POST" action="{{ secure_url('/login') }}">
         @csrf
 
         <h1>Inicio de sesion</h1>
