@@ -226,7 +226,7 @@
         allProducts: @json(($allProducts ?? collect())->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))
     };
 </script>
-<script src="{{ asset('js/formularioEntregas.js') }}"></script>
+<script src="{{ secure_asset('js/formularioEntregas.js') }}"></script>
 <script>
   // Flag global para evitar listeners de submit externos
   window.__TH_AJAX_SUBMIT__ = true;

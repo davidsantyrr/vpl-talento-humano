@@ -2,8 +2,8 @@
 <div class="header vigia-navbar" role="banner">
   <nav class="navegacion" aria-label="Navegación principal">
     <div class="nav-left">
-      <a href="{{ url('/') }}" class="brand">
-        <img src="{{ asset('img/Logo.png') }}" alt="Logo" class="logoVigia">
+      <a href="/" class="brand">
+        <img src="{{ secure_asset('img/Logo.png') }}" alt="Logo" class="logoVigia">
       </a>
     </div>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
@@ -19,7 +19,7 @@
       {{ $slot ?? '' }}
     </div>
     <div class="nav-actions">
-      <form id="logoutForm" action="{{ route('logout') }}" method="POST">
+      <form id="logoutForm" action="/logout" method="POST">
         @csrf
         <button class="cerrarSesion" type="submit">Cerrar sesión</button>
       </form>
@@ -27,7 +27,7 @@
   </nav>
 </div>
 
-<link rel="stylesheet" href="{{ asset('css/components/styleNavEntregas.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/components/styleNavEntregas.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   (function(){

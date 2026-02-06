@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestion de Areas')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionArea.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionArea.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>
@@ -73,7 +73,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
 @endpush
 
 @endsection

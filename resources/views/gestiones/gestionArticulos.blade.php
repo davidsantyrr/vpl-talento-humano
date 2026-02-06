@@ -144,7 +144,7 @@
 </div>
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function(){
         var btnToggle = document.getElementById('btnToggleAdd');

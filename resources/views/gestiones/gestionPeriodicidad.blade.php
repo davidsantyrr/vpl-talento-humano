@@ -245,5 +245,5 @@
         </div>
     </div>
 </div>
-<script src="{{ asset('js/periodicidad/periodicidad.js') }}"></script>
+<script src="{{ secure_asset('js/periodicidad/periodicidad.js') }}"></script>
 @endpush

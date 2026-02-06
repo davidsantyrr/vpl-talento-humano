@@ -1,7 +1,7 @@
 @php($status = session('status'))
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/articulos/articulos.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/articulos/articulos.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente />
@@ -219,9 +219,9 @@
   };
 </script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/articulo/articulo.js') }}"></script>
-<script src="{{ asset('js/articulo/destruccion.js') }}?v={{ time() }}"></script>
-<script src="{{ asset('js/articulo/constancias.js') }}?v={{ time() }}"></script>
+<script src="{{ secure_asset('js/articulo/articulo.js') }}"></script>
+<script src="{{ secure_asset('js/articulo/destruccion.js') }}?v={{ time() }}"></script>
+<script src="{{ secure_asset('js/articulo/constancias.js') }}?v={{ time() }}"></script>
 <script>
   (function(){
     const token = window.ArticulosPageConfig.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

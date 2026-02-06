@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
-  <link rel="stylesheet" href="{{ asset('css/components/styleSidebar.css') }}">
+  <link rel="stylesheet" href="{{ secure_asset('css/components/styleSidebar.css') }}">
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
 
@@ -23,7 +23,7 @@
       <i class="fas fa-bars"></i>
     </label>
     <div class="nav-left">
-      <img src="{{ asset('img/logoVigia.jpeg') }}" alt="Logo" class="nav-logo">
+      <img src="{{ secure_asset('img/logoVigia.jpeg') }}" alt="Logo" class="nav-logo">
     </div>
     <div class="nav-right">
       <i class="fas fa-bell" aria-hidden="true"></i>
