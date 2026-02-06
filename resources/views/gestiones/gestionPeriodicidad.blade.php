@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestión de Periodicidades')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionPeriodicidad.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionPeriodicidad.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>
@@ -245,5 +245,5 @@
         </div>
     </div>
 </div>
-<script src="{{ asset('js/periodicidad/periodicidad.js') }}"></script>
+<script src="{{ secure_asset('js/periodicidad/periodicidad.js') }}"></script>
 @endpush

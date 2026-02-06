@@ -3,7 +3,7 @@
 @section('title', 'Gestión de Centros de Costo')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionCentroCostos.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionCentroCostos.css') }}">
 @endpush
 
 @section('content')
@@ -92,6 +92,6 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
 @endpush
 @endsection

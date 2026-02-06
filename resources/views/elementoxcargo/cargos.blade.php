@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/elementoxcargo/cargo.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/elementoxcargo/cargo.css') }}">
 <style>
     .cargo-page .actions {
         display: flex;

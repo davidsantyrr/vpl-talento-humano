@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestión de Operación')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionOperacion.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionOperacion.css') }}">
 @endpush
 
 @section('content')
@@ -76,7 +76,7 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
 @endpush
 
 @endsection

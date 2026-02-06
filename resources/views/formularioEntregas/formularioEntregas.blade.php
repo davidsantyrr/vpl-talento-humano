@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Formulario de Entregas')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/formularioEntregas.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/formularioEntregas.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>
@@ -226,7 +226,7 @@
         allProducts: @json(($allProducts ?? collect())->map(fn($p)=>['sku'=>$p->sku,'name'=>$p->name_produc]))
     };
 </script>
-<script src="{{ asset('js/formularioEntregas.js') }}"></script>
+<script src="{{ secure_asset('js/formularioEntregas.js') }}"></script>
 <script>
   // Flag global para evitar listeners de submit externos
   window.__TH_AJAX_SUBMIT__ = true;

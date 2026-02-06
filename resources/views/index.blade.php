@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('css/index/index.css') }}">
+  <link rel="stylesheet" href="{{ secure_asset('css/index/index.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <!-- Config API VPL_CORE -->
   <meta name="vpl-core-base" content="{{ env('VPL_CORE_URL', 'https://vpl-nexus-core-test-testing.up.railway.app') }}">
@@ -22,7 +22,7 @@
 
   <main>
     <div class="border-solid">
-      <form method="POST" action="{{ route('login') }}">
+      <form method="POST" action="{{ secure_url('/login') }}">
         @csrf
 
         <h1>Inicio de sesion</h1>

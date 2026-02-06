@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Consulta de Elementos por Usuario')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/consultaElementoUsuario/consultaElementoUsuario.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/consultaElementoUsuario/consultaElementoUsuario.css') }}">
 <style>
 /* botones compactos con misma altura */
 .compact-btn {

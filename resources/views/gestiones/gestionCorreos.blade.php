@@ -2,7 +2,7 @@
 
 @section('title', 'Gestión de Correos')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionCorreos.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionCorreos.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>

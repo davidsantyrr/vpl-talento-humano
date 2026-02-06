@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestión de Artículos')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/gestiones/gestionArticulos.css') }}">
+<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionArticulos.css') }}">
 @endpush
 
 @section('content')
@@ -144,7 +144,7 @@
 </div>
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="{{ asset('js/alertas.js') }}"></script>
+<script src="{{ secure_asset('js/alertas.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function(){
         var btnToggle = document.getElementById('btnToggleAdd');
