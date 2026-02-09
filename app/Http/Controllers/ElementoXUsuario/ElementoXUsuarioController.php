@@ -5,7 +5,7 @@ namespace App\Http\Controllers\ElementoXUsuario;
 use App\Http\Controllers\Controller;
 use App\Models\ElementoXUsuario;
 use App\Models\ElementoXEntrega;
-use App\Models\periodicidad;
+use App\Models\Periodicidad;
 use App\Models\Usuarios;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +64,7 @@ class ElementoXUsuarioController extends Controller
             $sku = $item->sku;
             $nombre = $item->name_produc;
 
-            $period = periodicidad::where('sku', $sku)->first();
+            $period = Periodicidad::where('sku', $sku)->first();
             $periodWeeks = $period ? (int) $period->periodicidad : null;
 
             $cantidadTotal = (float) ElementoXEntrega::where('sku', $sku)->sum(DB::raw('CAST(cantidad AS DECIMAL(10,2))'));
@@ -96,7 +96,7 @@ class ElementoXUsuarioController extends Controller
         $dt = $date ? Carbon::parse($date) : Carbon::now();
         $week = (int) $dt->weekOfYear;
 
-        $period = periodicidad::where('sku', $sku)->first();
+        $period = Periodicidad::where('sku', $sku)->first();
         $periodWeeks = $period ? (int) $period->periodicidad : 1;
 
         $tocaEntrega = $periodWeeks > 0 ? ($week % $periodWeeks === 0) : true;

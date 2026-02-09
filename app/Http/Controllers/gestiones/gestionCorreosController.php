@@ -11,7 +11,7 @@ class gestionCorreosController extends Controller
     public function index()
     {
         // Roles disponibles para mapear vista
-        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+        $rolesDisponibles = \App\Models\Periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
@@ -64,7 +64,7 @@ class gestionCorreosController extends Controller
             'area' => 'nullable|string|max:191',
         ]);
         // Determinar rol permitido desde sesión y/o periodicidad
-        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+        $rolesDisponibles = \App\Models\Periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
@@ -110,7 +110,7 @@ class gestionCorreosController extends Controller
         }
 
         // Obtener roles disponibles
-        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+        $rolesDisponibles = \App\Models\Periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
@@ -153,7 +153,7 @@ class gestionCorreosController extends Controller
         ]);
         $correo = \App\Models\Correos::findOrFail($id);
         // Verificar que el usuario sólo edite correos de su rol
-        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+        $rolesDisponibles = \App\Models\Periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')
@@ -186,7 +186,7 @@ class gestionCorreosController extends Controller
     {
         $correo = \App\Models\Correos::findOrFail($id);
         // Solo permitir borrar correos del propio rol
-        $rolesDisponibles = \App\Models\periodicidad::whereNotNull('rol_periodicidad')
+        $rolesDisponibles = \App\Models\Periodicidad::whereNotNull('rol_periodicidad')
             ->where('rol_periodicidad', '!=', '')
             ->distinct()
             ->pluck('rol_periodicidad')

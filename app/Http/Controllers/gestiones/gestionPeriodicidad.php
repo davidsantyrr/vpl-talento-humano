@@ -19,7 +19,7 @@ class gestionPeriodicidad extends Controller
 		}
 
 		// Filtrar periodicidades por rol_periodicidad (solo las del rol)
-		$query = \App\Models\periodicidad::query();
+		$query = \App\Models\Periodicidad::query();
 		if (!empty($rolUsuario)) {
 			$query->whereRaw('LOWER(rol_periodicidad) LIKE ?', ['%'.strtolower($rolUsuario).'%']);
 		}
@@ -77,7 +77,7 @@ class gestionPeriodicidad extends Controller
 			}
 
 			// Evitar duplicados por SKU + ROL_PERIODICIDAD
-			$existente = \App\Models\periodicidad::where('sku', $data['sku'])
+			$existente = \App\Models\Periodicidad::where('sku', $data['sku'])
 				->where('rol_periodicidad', $rolUsuario)
 				->first();
 				
@@ -86,7 +86,7 @@ class gestionPeriodicidad extends Controller
 			}
 
 			// Crear registro con rol_periodicidad
-			\App\Models\periodicidad::create([
+			\App\Models\Periodicidad::create([
 				'sku' => $data['sku'],
 				'nombre' => $data['nombre'],
 				'rol_periodicidad' => $rolUsuario, // ← USAR rol_periodicidad
@@ -114,7 +114,7 @@ class gestionPeriodicidad extends Controller
 		$verdes = $request->input('verde', []);
 
 		foreach ($periods as $id => $p) {
-			$model = \App\Models\periodicidad::find($id);
+			$model = \App\Models\Periodicidad::find($id);
 			if ($model) {
 				$model->periodicidad = $p;
 				$model->aviso_rojo = isset($rojos[$id]) ? (string)intval($rojos[$id]) : null;
@@ -126,7 +126,7 @@ class gestionPeriodicidad extends Controller
 
 		// También actualizar registros que no cambiaron periodicidad (si llegan sin 'periodicidad' por estar disabled)
 		foreach ($rojos as $id => $v) {
-			$model = \App\Models\periodicidad::find($id);
+			$model = \App\Models\Periodicidad::find($id);
 			if ($model) {
 				$model->aviso_rojo = (string)intval($v);
 				if (isset($amarillos[$id])) $model->aviso_amarillo = (string)intval($amarillos[$id]);
@@ -140,7 +140,7 @@ class gestionPeriodicidad extends Controller
 
 	public function destroy($id)
 	{
-		$model = \App\Models\periodicidad::find($id);
+		$model = \App\Models\Periodicidad::find($id);
 		if ($model) {
 			$model->delete();
 			return redirect()->route('gestionPeriodicidad.index')->with('success', 'Elemento eliminado.');
@@ -166,7 +166,7 @@ class gestionPeriodicidad extends Controller
 	 */
 	public function edit($id)
 	{
-		$model = \App\Models\periodicidad::find($id);
+		$model = \App\Models\Periodicidad::find($id);
 		if (!$model) {
 			return redirect()->route('gestionPeriodicidad.index')->with('success', 'Elemento no encontrado.');
 		}
