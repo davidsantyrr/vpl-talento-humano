@@ -192,7 +192,7 @@ class FormularioEntregasController extends Controller
 			// Adjuntar recordatorio si viene y si es un préstamo
 			if (!empty($data['recordatorio_devolucion_at']) && in_array(mb_strtolower($data['tipo']), ['prestamo','préstamo'])) {
 				try {
-					$entregaData['recordatorio_devolucion_at'] = \Carbon\Carbon::parse($data['recordatorio_devolucion_at']);
+					$entregaData['recordatorio_devolucion_at'] = \Carbon\Carbon::parse($data['recordatorio_devolucion_at'])->toDateTimeString();
 				} catch (\Throwable $e) {
 					// ignorar parse fallido, dejar nulo
 				}
