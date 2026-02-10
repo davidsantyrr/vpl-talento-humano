@@ -9,8 +9,8 @@ class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
     {
-        // Ejecutar el chequeo de periodicidades cada hora
-        $schedule->command('notify:periodicidad')->hourly();
+        // Ejecutar el chequeo de periodicidades cada minuto
+        $schedule->command('notify:periodicidad')->everyMinute()->withoutOverlapping();
         // Enviar recordatorios de devolución de préstamos — modo prueba: cada minuto
         $schedule->command('entregas:recordatorios-devolucion')->everyMinute()->withoutOverlapping();
     }
