@@ -204,9 +204,9 @@
 </script>
 <script>
   // Rutas expuestas para JS (usar rutas relativas para evitar problemas de basepath/APP_URL)
-  window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar', [], false) }}";
-  window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find', [], false) }}";
-  window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres', [], false) }}";
+  window.RUTA_ENTREGAS_BUSCAR = "{{ ltrim(route('entregas.buscar', [], false), '/') }}";
+  window.RUTA_USUARIOS_BUSCAR = "{{ ltrim(route('usuarios.find', [], false), '/') }}";
+  window.RUTA_PRODUCTOS_NOMBRES = "{{ ltrim(route('productos.nombres', [], false), '/') }}";
 </script>
 <script src="{{ secure_asset('js/recepcion/recepcion.js') }}"></script>
 <script src="{{ secure_asset('js/recepcion/recepcionLookup.js') }}"></script>

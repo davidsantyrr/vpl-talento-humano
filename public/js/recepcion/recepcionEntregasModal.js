@@ -11,17 +11,18 @@
 
     // Normalizar rutas inyectadas a una forma segura (pathname con query)
     function normalizeToSameOrigin(raw, fallbackPath) {
-        const fb = fallbackPath || '/';
+        const fb = fallbackPath || '';
         if (!raw) return fb;
         try {
             const u = new URL(raw);
             if (u.origin !== window.location.origin) {
-                console.warn('Injected route host differs; using pathname to keep same origin', raw);
+                console.warn('Injected route host differs; using pathname+search to keep same origin', raw);
                 return u.pathname + (u.search || '');
             }
             return u.pathname + (u.search || '');
         } catch (e) {
-            return raw.startsWith('/') ? raw : '/' + raw;
+            // raw is not an absolute URL — treat it as a path relative to current document
+            return raw; // preserve relative form (no forced leading slash)
         }
     }
 
@@ -74,7 +75,7 @@
 
         try {
             Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
-            const finalUrl = new URL(rutaEntregas, window.location.origin);
+            const finalUrl = new URL(rutaEntregas, window.location.href);
             finalUrl.searchParams.set('numero', numero);
             console.debug('fetching', finalUrl.href, 'window.location:', window.location.href);
             const resp = await fetch(finalUrl.href);
@@ -172,7 +173,7 @@
         // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
-                const u = new URL(rutaUsuarios, window.location.origin);
+                const u = new URL(rutaUsuarios, window.location.href);
                 u.searchParams.set('numero', entrega.numero_documento);
                 console.debug('fetching usuario', u.href);
                 const respUsuario = await fetch(u.href);
@@ -198,7 +199,7 @@
         // Obtener nombres de productos
             try {
             const skus = entrega.elementos.map(e => e.sku);
-            const url = new URL(rutaProductos, window.location.origin).href;
+            const url = new URL(rutaProductos, window.location.href).href;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                              document.querySelector('input[name="_token"]')?.value || '';
             
