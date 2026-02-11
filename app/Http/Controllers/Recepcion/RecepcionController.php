@@ -240,43 +240,28 @@ class RecepcionController extends Controller
     {
         $numero = $request->query('numero');
         try {
-            // Determinar rol del usuario en sesión (primer rol)
-            $authUser = session('auth.user');
-            $primerRol = null;
-            if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles']) && !empty($authUser['roles'])) {
-                $first = $authUser['roles'][0] ?? null;
-                if (is_array($first) && isset($first['roles'])) { $primerRol = $first['roles']; }
-                elseif (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
-                elseif (is_string($first)) { $primerRol = $first; }
-            } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles) && !empty($authUser->roles)) {
-                $first = $authUser->roles[0] ?? null;
-                if (is_object($first) && isset($first->roles)) { $primerRol = $first->roles; }
-                elseif (is_string($first)) { $primerRol = $first; }
-            }
-
             $query = DB::table('entregas')
+                ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
                 ->join('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
                 ->select([
                     'entregas.id',
                     'entregas.created_at',
-                    'entregas.nombres',
-                    'entregas.apellidos',
-                    'entregas.numero_documento',
-                    'entregas.tipo_documento',
+                    DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
+                    DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                    DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                    DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                     'sub_areas.operationName as operacion'
                 ])
-                ->where('entregas.tipo_entrega', 'prestamo') // Solo entregas tipo préstamo
-                ->where('entregas.recibido', false) // Solo entregas no recibidas
+                ->whereIn('entregas.tipo_entrega', ['prestamo','préstamo'])
+                ->where('entregas.recibido', false)
                 ->whereNull('entregas.deleted_at')
                 ->orderBy('entregas.created_at', 'desc');
 
-            // Filtrar por rol de sesión si está disponible
-            if (!empty($primerRol)) {
-                $query->where('entregas.rol_entrega', $primerRol);
-            }
-
-            if ($numero) {
-                $query->where('entregas.numero_documento', 'like', "%{$numero}%");
+            if (!empty($numero)) {
+                $query->where(function($q) use ($numero) {
+                    $q->where('entregas.numero_documento', 'like', "%{$numero}%")
+                      ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$numero}%");
+                });
             }
 
             $entregas = $query->limit(50)->get();
