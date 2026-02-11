@@ -57,10 +57,20 @@
                 icon: 'info',
                 title: 'Buscando entregas...'
             });
+                const rutaEntregas = (window.RUTA_ENTREGAS_BUSCAR || '/entregas/buscar');
+                const rutaUsuarios = (window.RUTA_USUARIOS_BUSCAR || '/usuarios/buscar');
+                const rutaProductos = (window.RUTA_PRODUCTOS_NOMBRES || '/productos/nombres');
 
-            const url = `/entregas/buscar?numero=${encodeURIComponent(numero)}`;
-            console.debug('fetching', url);
-            const resp = await fetch(url);
+                const url = `${rutaEntregas}?numero=${encodeURIComponent(numero)}`;
+                console.debug('fetching', url, 'window.location:', window.location.href);
+                const resp = await fetch(url);
+
+                if (!resp.ok) {
+                    const text = await resp.text().catch(()=>'');
+                    console.error('fetch error', { url, status: resp.status, body: text });
+                    Toast.fire({ icon: 'error', title: 'Error al buscar entregas (ver consola)' });
+                    return;
+                }
             
             if (!resp.ok) throw new Error('Error en la búsqueda');
             
@@ -151,7 +161,7 @@
         // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
-                const fetchUrl = `/usuarios/buscar?numero=${encodeURIComponent(entrega.numero_documento)}`;
+                const fetchUrl = `${rutaUsuarios}?numero=${encodeURIComponent(entrega.numero_documento)}`;
                 console.debug('fetching usuario', fetchUrl);
                 const respUsuario = await fetch(fetchUrl);
                 if (respUsuario.ok) {
@@ -176,7 +186,7 @@
         // Obtener nombres de productos
         try {
             const skus = entrega.elementos.map(e => e.sku);
-            const url = `/productos/nombres`;
+            const url = `${rutaProductos}`;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                              document.querySelector('input[name="_token"]')?.value || '';
             

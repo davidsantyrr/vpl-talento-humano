@@ -202,6 +202,12 @@
   // Flag global: evitar listeners externos de submit
   window.__TH_AJAX_SUBMIT__ = true;
 </script>
+<script>
+  // Rutas expuestas para JS (fallback seguro en caso de cambios de basepath)
+  window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar') }}";
+  window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find') }}";
+  window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres') }}";
+</script>
 <script src="{{ secure_asset('js/recepcion/recepcion.js') }}"></script>
 <script src="{{ secure_asset('js/recepcion/recepcionLookup.js') }}"></script>
 <script src="{{ secure_asset('js/recepcion/recepcionModal.js') }}"></script>
