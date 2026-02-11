@@ -23,11 +23,8 @@
       "composer install --no-dev --optimize-autoloader",
       "php artisan key:generate --force",
       "php artisan config:clear",
-      "php artisan config:cache",
-      "php artisan view:cache"
+      "php artisan route:clear",
+      "php artisan view:clear"
     ]
-  },
-  "deploy": {
-    "command": "php artisan migrate --force || true && php -S 0.0.0.0:$PORT -t public public/index.php"
   }
 }
