@@ -18,7 +18,7 @@
     });
 
     function escapeHtml(s){ 
-        return String(s||'')
+        return String(s || '')
             .replace(/&/g,'&amp;')
             .replace(/</g,'&lt;')
             .replace(/>/g,'&gt;'); 
@@ -43,7 +43,7 @@
         modalEntregas?.classList.remove('active');
     };
 
-    // ✅ BUSCAR ENTREGAS PRESTAMO (FIX REAL)
+    // 🔥 BUSCAR ENTREGAS PRESTAMO (FIX DEFINITIVO)
     window.buscarEntregasPrestamo = async function(){
         const numero = buscarEntregaInput?.value.trim();
 
@@ -55,20 +55,33 @@
         try {
             Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
 
-            const url = `/entregas/buscar?numero=${encodeURIComponent(numero)}`;
+            // Ruta segura desde Blade
+            const base = window.RUTA_ENTREGAS_BUSCAR || '/entregas/buscar';
+            const url = `${base}?numero=${encodeURIComponent(numero)}`;
 
             console.log('FETCH ENTREGAS →', url);
 
-            const resp = await fetch(url);
+            const resp = await fetch(url, {
+                headers: { 'Accept': 'application/json' }
+            });
 
+            // Manejo de errores HTTP
             if (!resp.ok) {
                 const text = await resp.text();
                 console.error('ERROR FETCH ENTREGAS:', resp.status, text);
-                Toast.fire({ icon: 'error', title: 'Error al buscar entregas' });
+                Toast.fire({ icon: 'error', title: `Error ${resp.status} al buscar entregas` });
                 return;
             }
 
-            const entregas = await resp.json();
+            // Intentar parsear JSON seguro
+            let entregas = [];
+            try {
+                entregas = await resp.json();
+            } catch (jsonErr) {
+                console.error('RESPUESTA NO JSON:', jsonErr);
+                Toast.fire({ icon: 'error', title: 'Respuesta inválida del servidor' });
+                return;
+            }
 
             if (!Array.isArray(entregas) || entregas.length === 0) {
                 entregasTbody.innerHTML = `
@@ -81,6 +94,7 @@
                 return;
             }
 
+            // Renderizar tabla
             entregasTbody.innerHTML = entregas.map(e => {
                 const elementosTexto = (e.elementos || [])
                     .map(el => `${el.sku} (${el.cantidad})`)
@@ -138,7 +152,7 @@
     }
 
     // Seleccionar entrega
-    window.seleccionarEntregaPrestamo = async function(entrega){
+    window.seleccionarEntregaPrestamo = function(entrega){
         if (!entrega?.elementos) return;
 
         document.getElementById('nombresRecepcion').value = entrega.nombres || '';
@@ -158,8 +172,8 @@
         renderItemsTable();
         cerrarModalEntregas();
 
-        addBtnTrigger.style.display = '';
-        btnSeleccionarEntrega.style.display = 'none';
+        if (addBtnTrigger) addBtnTrigger.style.display = '';
+        if (btnSeleccionarEntrega) btnSeleccionarEntrega.style.display = 'none';
 
         Toast.fire({ icon: 'success', title: 'Entrega cargada correctamente' });
     };
