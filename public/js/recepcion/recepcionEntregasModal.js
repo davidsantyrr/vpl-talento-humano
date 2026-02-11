@@ -58,7 +58,8 @@
                 title: 'Buscando entregas...'
             });
 
-            const url = `${window.location.origin}/entregas/buscar?numero=${encodeURIComponent(numero)}`;
+            const url = `/entregas/buscar?numero=${encodeURIComponent(numero)}`;
+            console.debug('fetching', url);
             const resp = await fetch(url);
             
             if (!resp.ok) throw new Error('Error en la búsqueda');
@@ -150,7 +151,8 @@
         // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
-                const fetchUrl = `${window.location.origin}/usuarios/buscar?numero=${encodeURIComponent(entrega.numero_documento)}`;
+                const fetchUrl = `/usuarios/buscar?numero=${encodeURIComponent(entrega.numero_documento)}`;
+                console.debug('fetching usuario', fetchUrl);
                 const respUsuario = await fetch(fetchUrl);
                 if (respUsuario.ok) {
                     const dataUsuario = await respUsuario.json();
@@ -174,7 +176,7 @@
         // Obtener nombres de productos
         try {
             const skus = entrega.elementos.map(e => e.sku);
-            const url = `${window.location.origin}/productos/nombres`;
+            const url = `/productos/nombres`;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                              document.querySelector('input[name="_token"]')?.value || '';
             
