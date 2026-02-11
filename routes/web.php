@@ -27,6 +27,26 @@ Route::get('/', function () {
     return view('index');
 });
 
+// Endpoint de salud: listado de rutas (para validar en deploy)
+Route::get('/health/routes', function(){
+    $routes = [];
+    foreach (\Illuminate\Support\Facades\Route::getRoutes() as $route) {
+        $routes[] = [
+            'uri' => $route->uri(),
+            'methods' => $route->methods(),
+            'name' => $route->getName(),
+            'action' => $route->getActionName(),
+        ];
+    }
+    $only = request()->query('only');
+    if ($only) {
+        $routes = array_values(array_filter($routes, function($r) use ($only){
+            return (stripos($r['uri'], $only) !== false) || (stripos($r['name'] ?? '', $only) !== false);
+        }));
+    }
+    return response()->json(['count' => count($routes), 'routes' => $routes], 200);
+})->name('health.routes');
+
 // Aceptar GET /login redirigiendo al formulario en '/'
 Route::get('/login', function () {
     return redirect('/');

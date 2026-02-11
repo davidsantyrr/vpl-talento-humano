@@ -11,7 +11,7 @@
 
     // Normalizar rutas inyectadas a una forma segura (pathname con query)
     function normalizeToSameOrigin(raw, fallbackPath) {
-        const fb = fallbackPath || '';
+        const fb = fallbackPath || '/';
         if (!raw) return fb;
         try {
             const u = new URL(raw);
@@ -21,14 +21,20 @@
             }
             return u.pathname + (u.search || '');
         } catch (e) {
-            // raw is not an absolute URL — treat it as a path relative to current document
-            return raw; // preserve relative form (no forced leading slash)
+            // raw is not an absolute URL — ensure it is root-anchored
+            return raw.startsWith('/') ? raw : '/' + raw;
         }
     }
 
     const rutaEntregas = normalizeToSameOrigin(window.RUTA_ENTREGAS_BUSCAR, '/entregas/buscar');
     const rutaUsuarios = normalizeToSameOrigin(window.RUTA_USUARIOS_BUSCAR, '/usuarios/buscar');
     const rutaProductos = normalizeToSameOrigin(window.RUTA_PRODUCTOS_NOMBRES, '/productos/nombres');
+    const apiBase = (function(){
+        let base = window.API_BASE || window.location.origin;
+        // Asegurar que termina con '/'
+        if (!String(base).endsWith('/')) base = String(base) + '/';
+        return base;
+    })();
 
     const Toast = Swal.mixin({
         toast: true,
@@ -75,7 +81,8 @@
 
         try {
             Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
-            const finalUrl = new URL(rutaEntregas, window.location.href);
+            const finalUrl = new URL(rutaEntregas, apiBase);
+            console.log('Buscando entregas URL:', finalUrl.href);
             finalUrl.searchParams.set('numero', numero);
             console.debug('fetching', finalUrl.href, 'window.location:', window.location.href);
             const resp = await fetch(finalUrl.href);
@@ -173,7 +180,7 @@
         // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
-                const u = new URL(rutaUsuarios, window.location.href);
+                const u = new URL(rutaUsuarios, apiBase);
                 u.searchParams.set('numero', entrega.numero_documento);
                 console.debug('fetching usuario', u.href);
                 const respUsuario = await fetch(u.href);
@@ -199,7 +206,7 @@
         // Obtener nombres de productos
             try {
             const skus = entrega.elementos.map(e => e.sku);
-            const url = new URL(rutaProductos, window.location.href).href;
+            const url = new URL(rutaProductos, apiBase).href;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                              document.querySelector('input[name="_token"]')?.value || '';
             
