@@ -57,13 +57,31 @@
                 icon: 'info',
                 title: 'Buscando entregas...'
             });
-                const rutaEntregas = (window.RUTA_ENTREGAS_BUSCAR || '/entregas/buscar');
-                const rutaUsuarios = (window.RUTA_USUARIOS_BUSCAR || '/usuarios/buscar');
-                const rutaProductos = (window.RUTA_PRODUCTOS_NOMBRES || '/productos/nombres');
+                // Normalizar rutas inyectadas: si tienen host distinto, usar solo el pathname
+                function normalizeToSameOrigin(raw, fallbackPath) {
+                    const fb = fallbackPath || '/';
+                    if (!raw) return fb;
+                    try {
+                        const u = new URL(raw);
+                        if (u.origin !== window.location.origin) {
+                            console.warn('Injected route host differs; using pathname to keep same origin', raw);
+                            return u.pathname + (u.search || '');
+                        }
+                        return u.pathname + (u.search || '');
+                    } catch (e) {
+                        // raw is not an absolute URL
+                        return raw.startsWith('/') ? raw : '/' + raw;
+                    }
+                }
 
-                const url = `${rutaEntregas}?numero=${encodeURIComponent(numero)}`;
-                console.debug('fetching', url, 'window.location:', window.location.href);
-                const resp = await fetch(url);
+                const rutaEntregas = normalizeToSameOrigin(window.RUTA_ENTREGAS_BUSCAR, '/entregas/buscar');
+                const rutaUsuarios = normalizeToSameOrigin(window.RUTA_USUARIOS_BUSCAR, '/usuarios/buscar');
+                const rutaProductos = normalizeToSameOrigin(window.RUTA_PRODUCTOS_NOMBRES, '/productos/nombres');
+
+                const finalUrl = new URL(rutaEntregas, window.location.origin);
+                finalUrl.searchParams.set('numero', numero);
+                console.debug('fetching', finalUrl.href, 'window.location:', window.location.href);
+                const resp = await fetch(finalUrl.href);
 
                 if (!resp.ok) {
                     const text = await resp.text().catch(()=>'');
