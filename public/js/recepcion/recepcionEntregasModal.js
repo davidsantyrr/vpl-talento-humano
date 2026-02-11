@@ -9,6 +9,26 @@
 
     let items = [];
 
+    // Normalizar rutas inyectadas a una forma segura (pathname con query)
+    function normalizeToSameOrigin(raw, fallbackPath) {
+        const fb = fallbackPath || '/';
+        if (!raw) return fb;
+        try {
+            const u = new URL(raw);
+            if (u.origin !== window.location.origin) {
+                console.warn('Injected route host differs; using pathname to keep same origin', raw);
+                return u.pathname + (u.search || '');
+            }
+            return u.pathname + (u.search || '');
+        } catch (e) {
+            return raw.startsWith('/') ? raw : '/' + raw;
+        }
+    }
+
+    const rutaEntregas = normalizeToSameOrigin(window.RUTA_ENTREGAS_BUSCAR, '/entregas/buscar');
+    const rutaUsuarios = normalizeToSameOrigin(window.RUTA_USUARIOS_BUSCAR, '/usuarios/buscar');
+    const rutaProductos = normalizeToSameOrigin(window.RUTA_PRODUCTOS_NOMBRES, '/productos/nombres');
+
     const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -53,44 +73,17 @@
         }
 
         try {
-            Toast.fire({
-                icon: 'info',
-                title: 'Buscando entregas...'
-            });
-                // Normalizar rutas inyectadas: si tienen host distinto, usar solo el pathname
-                function normalizeToSameOrigin(raw, fallbackPath) {
-                    const fb = fallbackPath || '/';
-                    if (!raw) return fb;
-                    try {
-                        const u = new URL(raw);
-                        if (u.origin !== window.location.origin) {
-                            console.warn('Injected route host differs; using pathname to keep same origin', raw);
-                            return u.pathname + (u.search || '');
-                        }
-                        return u.pathname + (u.search || '');
-                    } catch (e) {
-                        // raw is not an absolute URL
-                        return raw.startsWith('/') ? raw : '/' + raw;
-                    }
-                }
-
-                const rutaEntregas = normalizeToSameOrigin(window.RUTA_ENTREGAS_BUSCAR, '/entregas/buscar');
-                const rutaUsuarios = normalizeToSameOrigin(window.RUTA_USUARIOS_BUSCAR, '/usuarios/buscar');
-                const rutaProductos = normalizeToSameOrigin(window.RUTA_PRODUCTOS_NOMBRES, '/productos/nombres');
-
-                const finalUrl = new URL(rutaEntregas, window.location.origin);
-                finalUrl.searchParams.set('numero', numero);
-                console.debug('fetching', finalUrl.href, 'window.location:', window.location.href);
-                const resp = await fetch(finalUrl.href);
-
-                if (!resp.ok) {
-                    const text = await resp.text().catch(()=>'');
-                    console.error('fetch error', { url, status: resp.status, body: text });
-                    Toast.fire({ icon: 'error', title: 'Error al buscar entregas (ver consola)' });
-                    return;
-                }
-            
-            if (!resp.ok) throw new Error('Error en la búsqueda');
+            Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
+            const finalUrl = new URL(rutaEntregas, window.location.origin);
+            finalUrl.searchParams.set('numero', numero);
+            console.debug('fetching', finalUrl.href, 'window.location:', window.location.href);
+            const resp = await fetch(finalUrl.href);
+            if (!resp.ok) {
+                const text = await resp.text().catch(()=>'');
+                console.error('fetch error', { url: finalUrl.href, status: resp.status, body: text });
+                Toast.fire({ icon: 'error', title: 'Error al buscar entregas (ver consola)' });
+                return;
+            }
             
             const entregas = await resp.json();
             
@@ -179,9 +172,10 @@
         // Buscar y cargar datos completos del usuario (corrección de llaves)
         if (entrega.numero_documento) {
             try {
-                const fetchUrl = `${rutaUsuarios}?numero=${encodeURIComponent(entrega.numero_documento)}`;
-                console.debug('fetching usuario', fetchUrl);
-                const respUsuario = await fetch(fetchUrl);
+                const u = new URL(rutaUsuarios, window.location.origin);
+                u.searchParams.set('numero', entrega.numero_documento);
+                console.debug('fetching usuario', u.href);
+                const respUsuario = await fetch(u.href);
                 if (respUsuario.ok) {
                     const dataUsuario = await respUsuario.json();
                     if (operacionSelect && dataUsuario.operacion_id) {
@@ -202,9 +196,9 @@
         }
 
         // Obtener nombres de productos
-        try {
+            try {
             const skus = entrega.elementos.map(e => e.sku);
-            const url = `${rutaProductos}`;
+            const url = new URL(rutaProductos, window.location.origin).href;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                              document.querySelector('input[name="_token"]')?.value || '';
             

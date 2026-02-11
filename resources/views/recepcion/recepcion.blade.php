@@ -203,10 +203,10 @@
   window.__TH_AJAX_SUBMIT__ = true;
 </script>
 <script>
-  // Rutas expuestas para JS (fallback seguro en caso de cambios de basepath)
-  window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar') }}";
-  window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find') }}";
-  window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres') }}";
+  // Rutas expuestas para JS (usar rutas relativas para evitar problemas de basepath/APP_URL)
+  window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar', [], false) }}";
+  window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find', [], false) }}";
+  window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres', [], false) }}";
 </script>
 <script src="{{ secure_asset('js/recepcion/recepcion.js') }}"></script>
 <script src="{{ secure_asset('js/recepcion/recepcionLookup.js') }}"></script>
