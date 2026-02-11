@@ -43,17 +43,43 @@ window.buscarEntregasPrestamo = async function(){
         Toast.fire({ icon: 'info', title: 'Buscando...' });
 
         const apiBase = (window.API_BASE || '').replace(/\/$/, '');
-        const url = `${apiBase}${window.RUTA_ENTREGAS_BUSCAR}?numero=${encodeURIComponent(numero)}`;
+        const bases = [
+            window.RUTA_ENTREGAS_BUSCAR,
+            '/entregas/recepcion/buscar',
+            '/entregas/buscar'
+        ].filter(Boolean);
 
-        console.log('FETCH →', url);
+        let entregas = null;
+        let lastStatus = null;
 
-        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+        for (const base of bases) {
+            const full = base.startsWith('/') ? `${apiBase}${base}` : base;
+            const url = `${full}?numero=${encodeURIComponent(numero)}`;
+            console.log('FETCH →', url);
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!resp.ok) {
+                lastStatus = resp.status;
+                console.warn('Intento fallido:', base, resp.status);
+                continue;
+            }
+            try {
+                const data = await resp.json();
+                entregas = Array.isArray(data) ? data : [];
+                break;
+            } catch (jsonErr) {
+                lastStatus = 'json';
+                console.warn('Respuesta no JSON en:', base, jsonErr);
+                continue;
+            }
+        }
 
-        if (!resp.ok) throw new Error('Error servidor');
+        if (!entregas) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Error consultando entregas (${lastStatus ?? 'error'})</td></tr>`;
+            Toast.fire({ icon: 'error', title: 'No se pudo consultar entregas' });
+            return;
+        }
 
-        const entregas = await resp.json();
-
-        if (!Array.isArray(entregas) || entregas.length === 0) {
+        if (entregas.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay entregas</td></tr>`;
             return;
         }
@@ -74,6 +100,7 @@ window.buscarEntregasPrestamo = async function(){
 
     } catch (err) {
         console.error(err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Error buscando entregas</td></tr>`;
         Toast.fire({ icon: 'error', title: 'Error buscando entregas' });
     }
 };
