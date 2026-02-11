@@ -56,7 +56,7 @@
             Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
 
             // Ruta segura desde Blade
-            const base = window.RUTA_ENTREGAS_BUSCAR || '/recepcion/entregas/buscar';
+            const base = window.RUTA_ENTREGAS_BUSCAR || '/entregas/buscar';
             const url = `${base}?numero=${encodeURIComponent(numero)}`;
 
             console.log('FETCH ENTREGAS →', url);
