@@ -4,6 +4,7 @@ const modal = document.getElementById('modalEntregas');
 const buscarInput = document.getElementById('buscarEntregaInput');
 const tbody = document.getElementById('entregasTbody');
 const itemsField = document.getElementById('itemsField');
+const btnSeleccionarEntrega = document.getElementById('btnSeleccionarEntrega');
 
 let items = [];
 
@@ -97,5 +98,10 @@ window.seleccionarEntregaPrestamo = function(entrega){
 
     Toast.fire({ icon: 'success', title: 'Entrega cargada' });
 };
+
+// Abrir modal desde el botón "Seleccionar entrega"
+btnSeleccionarEntrega && btnSeleccionarEntrega.addEventListener('click', function(){
+    abrirModalEntregas();
+});
 
 })();
