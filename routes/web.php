@@ -104,6 +104,8 @@ Route::middleware([VplAuth::class])->group(function () {
     Route::post('/recepcion', [RecepcionController::class, 'store'])->name('recepcion.store');
     // Búsqueda de entregas (ruta principal ajustada)
     Route::get('/entregas/recepcion/buscar', [RecepcionController::class, 'buscarEntregas'])->name('entregas.buscar');
+    // Alias de compatibilidad (sin nombre)
+    Route::get('/entregas/buscar', [RecepcionController::class, 'buscarEntregas']);
 
     // Vista matriz cargo x subárea
     Route::get('/elementoxcargo/matriz', [CargoProductosController::class, 'matrix'])->name('elementoxcargo.productos.matriz');

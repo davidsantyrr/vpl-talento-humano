@@ -55,30 +55,49 @@
         try {
             Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
 
-            // Ruta segura desde Blade
-            const base = window.RUTA_ENTREGAS_BUSCAR || '/entregas/recepcion/buscar';
-            const url = `${base}?numero=${encodeURIComponent(numero)}`;
+            // Ruta segura desde Blade y absoluta con API_BASE (para subpaths)
+            const apiBase = (window.API_BASE || '').replace(/\/$/, '');
+            const candidates = [
+                window.RUTA_ENTREGAS_BUSCAR || '/entregas/recepcion/buscar',
+                '/entregas/recepcion/buscar',
+                '/entregas/buscar'
+            ];
+            let lastErr = null;
+            let entregas = null;
+            for (const base of candidates) {
+                const full = base.startsWith('/') ? `${apiBase}${base}` : base;
+                const url = `${full}?numero=${encodeURIComponent(numero)}`;
+                console.log('FETCH ENTREGAS →', url);
+                try {
+                    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+                    if (!resp.ok) {
+                        const text = await resp.text();
+                        lastErr = { status: resp.status, body: text };
+                        console.warn('Intento fallido:', base, resp.status);
+                        continue;
+                    }
+                    try {
+                        entregas = await resp.json();
+                    } catch (jsonErr) {
+                        lastErr = { status: 'json', body: String(jsonErr) };
+                        continue;
+                    }
+                    break; // éxito
+                } catch (err) {
+                    lastErr = { status: 'network', body: String(err) };
+                    console.warn('Error de red intentando:', base, err);
+                    continue;
+                }
+            }
 
-            console.log('FETCH ENTREGAS →', url);
-
-            const resp = await fetch(url, {
-                headers: { 'Accept': 'application/json' }
-            });
-
-            // Manejo de errores HTTP
-            if (!resp.ok) {
-                const text = await resp.text();
-                console.error('ERROR FETCH ENTREGAS:', resp.status, text);
-                Toast.fire({ icon: 'error', title: `Error ${resp.status} al buscar entregas` });
+            if (!entregas) {
+                console.error('ERROR FETCH ENTREGAS:', lastErr);
+                Toast.fire({ icon: 'error', title: `No se pudo consultar entregas (${lastErr?.status || 'error'})` });
                 return;
             }
 
             // Intentar parsear JSON seguro
-            let entregas = [];
-            try {
-                entregas = await resp.json();
-            } catch (jsonErr) {
-                console.error('RESPUESTA NO JSON:', jsonErr);
+            if (!Array.isArray(entregas)) {
                 Toast.fire({ icon: 'error', title: 'Respuesta inválida del servidor' });
                 return;
             }
