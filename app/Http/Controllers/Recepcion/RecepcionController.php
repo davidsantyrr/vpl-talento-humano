@@ -237,63 +237,61 @@ class RecepcionController extends Controller
      * API: Buscar entregas tipo préstamo por número de documento
      */
     public function buscarEntregas(Request $request)
-    {
-        $numero = $request->query('numero');
-        try {
-            $query = DB::table('entregas')
-                ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
-                ->join('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
-                ->select([
-                    'entregas.id',
-                    'entregas.created_at',
-                    DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
-                    DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
-                    DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
-                    DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
-                    'sub_areas.operationName as operacion'
-                ])
-                ->whereIn('entregas.tipo_entrega', ['prestamo','préstamo'])
-                ->where('entregas.recibido', false)
-                ->whereNull('entregas.deleted_at')
-                ->orderBy('entregas.created_at', 'desc');
+{
+    $numero = $request->query('numero');
 
-            if (!empty($numero)) {
-                $query->where(function($q) use ($numero) {
-                    $q->where('entregas.numero_documento', 'like', "%{$numero}%")
-                      ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$numero}%");
-                });
-            }
+    try {
+        $query = DB::table('entregas')
+            ->leftJoin('usuarios_entregas', 'entregas.usuarios_id', '=', 'usuarios_entregas.id')
+            ->join('sub_areas', 'entregas.sub_area_id', '=', 'sub_areas.id')
+            ->select([
+                'entregas.id',
+                'entregas.created_at',
+                DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
+                DB::raw('COALESCE(entregas.apellidos, usuarios_entregas.apellidos) as apellidos'),
+                DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
+                DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
+                'sub_areas.operationName as operacion'
+            ])
+            ->whereIn('entregas.tipo_entrega', ['prestamo','préstamo'])
+            ->where('entregas.recibido', false)
+            ->whereNull('entregas.deleted_at')
+            ->orderBy('entregas.created_at', 'desc');
 
-            $entregas = $query->limit(50)->get();
-
-            // Cargar elementos de cada entrega
-            $data = $entregas->map(function ($e) {
-                $elementos = DB::table('elemento_x_entrega')
-                    ->where('entrega_id', $e->id)
-                    ->select(['sku', 'cantidad'])
-                    ->get();
-
-                return [
-                    'id' => $e->id,
-                    'fecha' => $e->created_at,
-                    'nombres' => $e->nombres,
-                    'apellidos' => $e->apellidos ?? '',
-                    'numero_documento' => $e->numero_documento,
-                    'tipo_documento' => $e->tipo_documento,
-                    'operacion' => $e->operacion,
-                    'elementos' => $elementos->map(fn($el) => [
-                        'sku' => $el->sku,
-                        'cantidad' => $el->cantidad
-                    ])->toArray()
-                ];
+        if ($numero) {
+            $query->where(function($q) use ($numero) {
+                $q->where('entregas.numero_documento', 'like', "%{$numero}%")
+                  ->orWhere('usuarios_entregas.numero_documento', 'like', "%{$numero}%");
             });
-
-            return response()->json($data, 200);
-        } catch (\Throwable $e) {
-            Log::error('Error buscando entregas', ['error' => $e->getMessage()]);
-            return response()->json([], 200);
         }
+
+        $entregas = $query->limit(50)->get();
+
+        $data = $entregas->map(function ($e) {
+            $elementos = DB::table('elemento_x_entrega')
+                ->where('entrega_id', $e->id)
+                ->select(['sku', 'cantidad'])
+                ->get();
+
+            return [
+                'id' => $e->id,
+                'fecha' => $e->created_at,
+                'nombres' => $e->nombres,
+                'apellidos' => $e->apellidos ?? '',
+                'numero_documento' => $e->numero_documento,
+                'tipo_documento' => $e->tipo_documento,
+                'operacion' => $e->operacion,
+                'elementos' => $elementos
+            ];
+        });
+
+        return response()->json($data, 200);
+
+    } catch (\Throwable $e) {
+        Log::error('Error buscando entregas', ['error' => $e->getMessage()]);
+        return response()->json([], 500);
     }
+}
 
     /**
      * Actualizar inventario según tipo de recepción

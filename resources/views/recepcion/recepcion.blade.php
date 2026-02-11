@@ -205,7 +205,7 @@
   window.API_BASE = "{{ url('/') }}";
 </script>
 <script>
-  // Rutas expuestas para JS (usar rutas relativas para evitar problemas de basepath/APP_URL)
+  // Rutas reales del backend
   window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar', [], false) }}";
   window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find', [], false) }}";
   window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres', [], false) }}";

@@ -1,210 +1,101 @@
 (function(){
-    const modalEntregas = document.getElementById('modalEntregas');
-    const buscarEntregaInput = document.getElementById('buscarEntregaInput');
-    const entregasTbody = document.getElementById('entregasTbody');
-    const btnSeleccionarEntrega = document.getElementById('btnSeleccionarEntrega');
-    const tableBody = document.querySelector('#itemsTable tbody');
-    const itemsField = document.getElementById('itemsField');
-    const addBtnTrigger = document.getElementById('addItemBtn');
 
-    let items = [];
+const modal = document.getElementById('modalEntregas');
+const buscarInput = document.getElementById('buscarEntregaInput');
+const tbody = document.getElementById('entregasTbody');
+const itemsField = document.getElementById('itemsField');
 
-    const Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true
-    });
+let items = [];
 
-    function escapeHtml(s){ 
-        return String(s || '')
-            .replace(/&/g,'&amp;')
-            .replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;'); 
+const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 3000
+});
+
+function escapeHtml(text){
+    return String(text || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+}
+
+window.abrirModalEntregas = function(){
+    modal.classList.add('active');
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ingrese documento</td></tr>`;
+};
+
+window.cerrarModalEntregas = function(){
+    modal.classList.remove('active');
+};
+
+window.buscarEntregasPrestamo = async function(){
+    const numero = buscarInput.value.trim();
+
+    if (!numero) {
+        Toast.fire({ icon: 'warning', title: 'Ingrese documento' });
+        return;
     }
 
-    // Abrir modal
-    window.abrirModalEntregas = function(){
-        modalEntregas?.classList.add('active');
-        if (buscarEntregaInput) buscarEntregaInput.value = '';
-        if (entregasTbody) {
-            entregasTbody.innerHTML = `
-                <tr>
-                    <td colspan="5" style="text-align:center;padding:20px;">
-                        Ingrese un número de documento para buscar entregas
-                    </td>
-                </tr>`;
-        }
-    };
+    try {
+        Toast.fire({ icon: 'info', title: 'Buscando...' });
 
-    // Cerrar modal
-    window.cerrarModalEntregas = function(){
-        modalEntregas?.classList.remove('active');
-    };
+        const apiBase = (window.API_BASE || '').replace(/\/$/, '');
+        const url = `${apiBase}${window.RUTA_ENTREGAS_BUSCAR}?numero=${encodeURIComponent(numero)}`;
 
-    // 🔥 BUSCAR ENTREGAS PRESTAMO (FIX DEFINITIVO)
-    window.buscarEntregasPrestamo = async function(){
-        const numero = buscarEntregaInput?.value.trim();
+        console.log('FETCH →', url);
 
-        if (!numero) {
-            Toast.fire({ icon: 'warning', title: 'Ingrese un número de documento' });
+        const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+
+        if (!resp.ok) throw new Error('Error servidor');
+
+        const entregas = await resp.json();
+
+        if (!Array.isArray(entregas) || entregas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">No hay entregas</td></tr>`;
             return;
         }
 
-        try {
-            Toast.fire({ icon: 'info', title: 'Buscando entregas...' });
-
-            // Ruta segura desde Blade y absoluta con API_BASE (para subpaths)
-            const apiBase = (window.API_BASE || '').replace(/\/$/, '');
-            const candidates = [
-                window.RUTA_ENTREGAS_BUSCAR || '/entregas/recepcion/buscar',
-                '/entregas/recepcion/buscar',
-                '/entregas/buscar'
-            ];
-            let lastErr = null;
-            let entregas = null;
-            for (const base of candidates) {
-                const full = base.startsWith('/') ? `${apiBase}${base}` : base;
-                const url = `${full}?numero=${encodeURIComponent(numero)}`;
-                console.log('FETCH ENTREGAS →', url);
-                try {
-                    const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                    if (!resp.ok) {
-                        const text = await resp.text();
-                        lastErr = { status: resp.status, body: text };
-                        console.warn('Intento fallido:', base, resp.status);
-                        continue;
-                    }
-                    try {
-                        entregas = await resp.json();
-                    } catch (jsonErr) {
-                        lastErr = { status: 'json', body: String(jsonErr) };
-                        continue;
-                    }
-                    break; // éxito
-                } catch (err) {
-                    lastErr = { status: 'network', body: String(err) };
-                    console.warn('Error de red intentando:', base, err);
-                    continue;
-                }
-            }
-
-            if (!entregas) {
-                console.error('ERROR FETCH ENTREGAS:', lastErr);
-                Toast.fire({ icon: 'error', title: `No se pudo consultar entregas (${lastErr?.status || 'error'})` });
-                return;
-            }
-
-            // Intentar parsear JSON seguro
-            if (!Array.isArray(entregas)) {
-                Toast.fire({ icon: 'error', title: 'Respuesta inválida del servidor' });
-                return;
-            }
-
-            if (!Array.isArray(entregas) || entregas.length === 0) {
-                entregasTbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align:center;padding:20px;">
-                            No se encontraron entregas
-                        </td>
-                    </tr>`;
-                Toast.fire({ icon: 'info', title: 'No hay entregas disponibles' });
-                return;
-            }
-
-            // Renderizar tabla
-            entregasTbody.innerHTML = entregas.map(e => {
-                const elementosTexto = (e.elementos || [])
-                    .map(el => `${el.sku} (${el.cantidad})`)
-                    .join(', ') || 'Sin elementos';
-
-                return `
-                <tr>
-                    <td>${escapeHtml(new Date(e.fecha).toLocaleDateString())}</td>
-                    <td>${escapeHtml(e.nombres)} ${escapeHtml(e.apellidos)}</td>
-                    <td>${escapeHtml(e.numero_documento)}</td>
-                    <td title="${escapeHtml(elementosTexto)}">${escapeHtml(elementosTexto)}</td>
-                    <td>
-                        <button class="btn btn-sm primary"
-                            onclick='seleccionarEntregaPrestamo(${JSON.stringify(e).replace(/'/g, "&apos;")})'>
-                            Seleccionar
-                        </button>
-                    </td>
-                </tr>`;
-            }).join('');
-
-            Toast.fire({ icon: 'success', title: `${entregas.length} entregas encontradas` });
-
-        } catch (err) {
-            console.error('ERROR GENERAL FETCH:', err);
-            Toast.fire({ icon: 'error', title: 'Error inesperado al buscar entregas' });
-        }
-    };
-
-    // Render tabla items
-    function renderItemsTable(){
-        if (!tableBody) return;
-
-        tableBody.innerHTML = items.map((it, idx) => `
-            <tr data-idx="${idx}">
-                <td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td>
-                <td style="text-align:center;">${it.cantidad}</td>
+        tbody.innerHTML = entregas.map(e => `
+            <tr>
+                <td>${escapeHtml(new Date(e.fecha).toLocaleDateString())}</td>
+                <td>${escapeHtml(e.nombres)} ${escapeHtml(e.apellidos)}</td>
+                <td>${escapeHtml(e.numero_documento)}</td>
+                <td>${(e.elementos || []).map(el => `${el.sku} (${el.cantidad})`).join(', ')}</td>
                 <td>
-                    <button class="btn btn-sm btn-danger" data-idx="${idx}">
-                        Quitar
+                    <button class="btn btn-sm btn-primary" onclick='seleccionarEntregaPrestamo(${JSON.stringify(e)})'>
+                        Seleccionar
                     </button>
                 </td>
             </tr>
         `).join('');
 
-        tableBody.querySelectorAll('button[data-idx]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const i = Number(btn.dataset.idx);
-                items.splice(i, 1);
-                itemsField.value = JSON.stringify(items);
-                renderItemsTable();
-            });
-        });
-
-        itemsField.value = JSON.stringify(items);
+    } catch (err) {
+        console.error(err);
+        Toast.fire({ icon: 'error', title: 'Error buscando entregas' });
     }
+};
 
-    // Seleccionar entrega
-    window.seleccionarEntregaPrestamo = function(entrega){
-        if (!entrega?.elementos) return;
+window.seleccionarEntregaPrestamo = function(entrega){
 
-        document.getElementById('nombresRecepcion').value = entrega.nombres || '';
-        document.getElementById('apellidosRecepcion').value = entrega.apellidos || '';
-        document.getElementById('numDocumento').value = entrega.numero_documento || '';
-        document.getElementById('tipoDocumento').value = entrega.tipo_documento || 'CC';
+    document.getElementById('nombresRecepcion').value = entrega.nombres || '';
+    document.getElementById('apellidosRecepcion').value = entrega.apellidos || '';
+    document.getElementById('numDocumento').value = entrega.numero_documento || '';
+    document.getElementById('tipoDocumento').value = entrega.tipo_documento || 'CC';
+    document.getElementById('entregaIdHidden').value = entrega.id;
 
-        const entregaIdHidden = document.getElementById('entregaIdHidden');
-        if (entregaIdHidden) entregaIdHidden.value = entrega.id || '';
+    items = (entrega.elementos || []).map(e => ({
+        sku: e.sku,
+        name: e.name,
+        cantidad: parseInt(e.cantidad) || 1
+    }));
 
-        items = entrega.elementos.map(e => ({
-            sku: e.sku,
-            name: e.sku,
-            cantidad: Math.max(1, parseInt(e.cantidad) || 1)
-        }));
+    itemsField.value = JSON.stringify(items);
 
-        renderItemsTable();
-        cerrarModalEntregas();
+    cerrarModalEntregas();
 
-        if (addBtnTrigger) addBtnTrigger.style.display = '';
-        if (btnSeleccionarEntrega) btnSeleccionarEntrega.style.display = 'none';
-
-        Toast.fire({ icon: 'success', title: 'Entrega cargada correctamente' });
-    };
-
-    // Eventos UI
-    btnSeleccionarEntrega?.addEventListener('click', abrirModalEntregas);
-
-    buscarEntregaInput?.addEventListener('keypress', e => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            buscarEntregasPrestamo();
-        }
-    });
+    Toast.fire({ icon: 'success', title: 'Entrega cargada' });
+};
 
 })();
