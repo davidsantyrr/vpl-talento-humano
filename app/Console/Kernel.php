@@ -8,12 +8,20 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     protected function schedule(Schedule $schedule): void
-    {
-        // Ejecutar el chequeo de periodicidades cada minuto
-        $schedule->command('notify:periodicidad');
-        // Enviar recordatorios de devolución de préstamos — modo prueba: cada minuto
-        $schedule->command('entregas:recordatorios-devolucion');
-    }
+{
+    $schedule->command('notify:periodicidad')
+        ->everyFifteenMinutes()
+        ->withoutOverlapping()
+        ->runInBackground()
+        ->appendOutputTo(storage_path('logs/periodicidad.log'));
+
+    $schedule->command('entregas:recordatorios-devolucion')
+        ->everyFifteenMinutes()
+        ->withoutOverlapping()
+        ->runInBackground()
+        ->appendOutputTo(storage_path('logs/entregas.log'));
+}
+
 
     protected function commands(): void
     {
