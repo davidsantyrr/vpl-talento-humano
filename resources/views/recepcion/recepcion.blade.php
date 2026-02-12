@@ -205,8 +205,9 @@
   window.API_BASE = "{{ url('/') }}";
 </script>
 <script>
-  // Rutas reales del backend
+  // Rutas reales del backend (usando /api/ para evitar conflicto con carpeta public/entregas/)
   window.RUTA_ENTREGAS_BUSCAR = "{{ route('entregas.buscar', [], false) }}";
+  window.RUTA_ENTREGAS_BUSCAR_API = "/api/entregas/recepcion/buscar";
   window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find', [], false) }}";
   window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres', [], false) }}";
 </script>

@@ -43,8 +43,11 @@ window.buscarEntregasPrestamo = async function(){
         Toast.fire({ icon: 'info', title: 'Buscando...' });
 
         const apiBase = (window.API_BASE || '').replace(/\/$/, '');
+        // Priorizar rutas /api/ para evitar conflicto con carpeta public/entregas/
         const bases = [
             window.RUTA_ENTREGAS_BUSCAR,
+            '/api/entregas/recepcion/buscar',
+            '/api/entregas/buscar',
             '/entregas/recepcion/buscar',
             '/entregas/buscar'
         ].filter(Boolean);

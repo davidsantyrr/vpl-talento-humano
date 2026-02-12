@@ -102,9 +102,11 @@ Route::middleware([VplAuth::class])->group(function () {
     // Recepción de devoluciones
     Route::get('/recepcion', [RecepcionController::class, 'create'])->name('recepcion.create');
     Route::post('/recepcion', [RecepcionController::class, 'store'])->name('recepcion.store');
-    // Búsqueda de entregas (ruta principal ajustada)
-    Route::get('/entregas/recepcion/buscar', [RecepcionController::class, 'buscarEntregas'])->name('entregas.buscar');
-    // Alias de compatibilidad (sin nombre)
+    // Búsqueda de entregas - RUTAS API (evitan conflicto con carpeta public/entregas/)
+    Route::get('/api/entregas/recepcion/buscar', [RecepcionController::class, 'buscarEntregas'])->name('entregas.buscar');
+    Route::get('/api/entregas/buscar', [RecepcionController::class, 'buscarEntregas'])->name('api.entregas.buscar');
+    // Alias de compatibilidad (rutas legacy sin prefijo /api)
+    Route::get('/entregas/recepcion/buscar', [RecepcionController::class, 'buscarEntregas']);
     Route::get('/entregas/buscar', [RecepcionController::class, 'buscarEntregas']);
 
     // Vista matriz cargo x subárea
