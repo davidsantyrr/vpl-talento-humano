@@ -22,7 +22,24 @@
 
     <p class="page-subtitle">Gestiona inventario en la BD 3 (bodega, ubicación, estatus y stock) para artículos provenientes de requisición.</p>
 
-    <div class="filters" style="display:flex; gap:16px; align-items:center; margin: 12px 0;">
+    <div class="filters" style="display:flex; gap:16px; align-items:center; margin: 12px 0; flex-wrap: wrap;">
+      <!-- Barra de búsqueda -->
+      <form method="GET" action="{{ route('articulos.index') }}" class="search-filter-form" style="display:flex; gap:8px; align-items:center;">
+        <label for="search">Buscar</label>
+        <input type="text" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Nombre o SKU..." style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
+        <button type="submit" class="btn btn-sm" style="padding: 6px 12px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+        </button>
+        @if(!empty($search))
+          <a href="{{ route('articulos.index', ['per_page' => $perPage ?? 20, 'category' => $selectedCategory ?? '']) }}" class="btn btn-sm secondary" style="padding: 6px 12px;" title="Limpiar búsqueda">✕</a>
+        @endif
+        <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
+        <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
+      </form>
+
       <form method="GET" action="{{ route('articulos.index') }}" class="category-filter-form" style="display:flex; gap:8px; align-items:center;">
         <label for="category">Categoría</label>
         <select id="category" name="category" onchange="this.form.submit()">
@@ -32,6 +49,7 @@
           @endforeach
         </select>
         <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
+        <input type="hidden" name="search" value="{{ $search ?? '' }}">
       </form>
       @if($canExport)
         <div class="btn btn-primary" style="margin-left:auto;">
@@ -93,6 +111,7 @@
           </select>
           <span>artículos</span>
           <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
+          <input type="hidden" name="search" value="{{ $search ?? '' }}">
         </form>
       </div>
 
@@ -191,6 +210,7 @@
         <input type="hidden" name="estatus" id="destruccionEstatusHidden">
         <input type="hidden" name="per_page" value="{{ $perPage }}">
         <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
+        <input type="hidden" name="search" value="{{ $search ?? '' }}">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn secondary" onclick="cerrarModalDestruccion()">Cancelar</button>

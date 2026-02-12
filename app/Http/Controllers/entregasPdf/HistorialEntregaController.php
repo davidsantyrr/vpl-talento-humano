@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SubArea;
 use App\Models\Entrega;
+use App\Models\Producto;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -224,12 +225,44 @@ class HistorialEntregaController extends Controller
                     $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
                 }
 
+                // Si aún no hay cargo, intentar buscar por numero_documento en usuarios_entregas
+                if ($registro && empty($registro->cargo) && !empty($registro->numero_documento)) {
+                    $usuarioEntrega = DB::table('usuarios_entregas')
+                        ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
+                        ->where('usuarios_entregas.numero_documento', $registro->numero_documento)
+                        ->select('cargos.nombre as cargo')
+                        ->first();
+                    if ($usuarioEntrega && !empty($usuarioEntrega->cargo)) {
+                        $registro->cargo = $usuarioEntrega->cargo;
+                    }
+                }
+
                 if (!$registro) { abort(404, 'Entrega no encontrada'); }
 
                 $elementos = DB::table('elemento_x_entrega')
                     ->where('entrega_id', $id)
-                    ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                    ->select(['sku', 'cantidad'])
                     ->get();
+
+                // Obtener nombres de productos desde la base de datos secundaria
+                $skus = $elementos->pluck('sku')->filter()->toArray();
+                if (!empty($skus)) {
+                    $productosMap = Producto::whereIn('sku', $skus)
+                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
+                        ->pluck('name_produc', 'sku')
+                        ->toArray();
+                    // Crear mapa normalizado para búsqueda case-insensitive
+                    $productosMapLower = [];
+                    foreach ($productosMap as $k => $v) {
+                        $productosMapLower[mb_strtolower($k)] = $v;
+                    }
+                    $elementos = $elementos->map(function ($el) use ($productosMap, $productosMapLower) {
+                        $el->name_produc = $productosMap[$el->sku] 
+                            ?? $productosMapLower[mb_strtolower($el->sku)] 
+                            ?? null;
+                        return $el;
+                    });
+                }
             } else { // recepcion
                 $registro = DB::table('recepciones')
                     ->leftJoin('usuarios_entregas', 'recepciones.usuarios_id', '=', 'usuarios_entregas.id')
@@ -257,12 +290,44 @@ class HistorialEntregaController extends Controller
                     $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
                 }
 
+                // Si aún no hay cargo, intentar buscar por numero_documento en usuarios_entregas
+                if ($registro && empty($registro->cargo) && !empty($registro->numero_documento)) {
+                    $usuarioRecepcion = DB::table('usuarios_entregas')
+                        ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
+                        ->where('usuarios_entregas.numero_documento', $registro->numero_documento)
+                        ->select('cargos.nombre as cargo')
+                        ->first();
+                    if ($usuarioRecepcion && !empty($usuarioRecepcion->cargo)) {
+                        $registro->cargo = $usuarioRecepcion->cargo;
+                    }
+                }
+
                 if (!$registro) { abort(404, 'Recepción no encontrada'); }
 
                 $elementos = DB::table('elemento_x_recepcion')
                     ->where('recepcion_id', $id)
-                    ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                    ->select(['sku', 'cantidad'])
                     ->get();
+
+                // Obtener nombres de productos desde la base de datos secundaria
+                $skus = $elementos->pluck('sku')->filter()->toArray();
+                if (!empty($skus)) {
+                    $productosMap = Producto::whereIn('sku', $skus)
+                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
+                        ->pluck('name_produc', 'sku')
+                        ->toArray();
+                    // Crear mapa normalizado para búsqueda case-insensitive
+                    $productosMapLower = [];
+                    foreach ($productosMap as $k => $v) {
+                        $productosMapLower[mb_strtolower($k)] = $v;
+                    }
+                    $elementos = $elementos->map(function ($el) use ($productosMap, $productosMapLower) {
+                        $el->name_produc = $productosMap[$el->sku] 
+                            ?? $productosMapLower[mb_strtolower($el->sku)] 
+                            ?? null;
+                        return $el;
+                    });
+                }
             }
 
             // Si existe comprobante guardado, servir ese archivo (incluye firma si se generó con ella)
@@ -448,17 +513,48 @@ class HistorialEntregaController extends Controller
 
                 if ($added) { continue; }
 
+                // Si no hay cargo, intentar buscar por numero_documento en usuarios_entregas
+                if (empty($reg->cargo) && !empty($reg->numero_documento)) {
+                    $usuarioCargo = DB::table('usuarios_entregas')
+                        ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
+                        ->where('usuarios_entregas.numero_documento', $reg->numero_documento)
+                        ->select('cargos.nombre as cargo')
+                        ->first();
+                    if ($usuarioCargo && !empty($usuarioCargo->cargo)) {
+                        $reg->cargo = $usuarioCargo->cargo;
+                    }
+                }
+
                 // Construir datos y renderizar PDF en memoria si no existe comprobante
                 if ($tipoReg === 'entrega') {
                     $elementos = DB::table('elemento_x_entrega')
                         ->where('entrega_id', $reg->id)
-                        ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                        ->select(['sku', 'cantidad'])
                         ->get();
                 } else {
                     $elementos = DB::table('elemento_x_recepcion')
                         ->where('recepcion_id', $reg->id)
-                        ->select(['sku', 'cantidad', DB::raw('NULL as name_produc')])
+                        ->select(['sku', 'cantidad'])
                         ->get();
+                }
+
+                // Obtener nombres de productos desde la base de datos secundaria
+                $skus = $elementos->pluck('sku')->filter()->toArray();
+                if (!empty($skus)) {
+                    $productosMap = Producto::whereIn('sku', $skus)
+                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
+                        ->pluck('name_produc', 'sku')
+                        ->toArray();
+                    $productosMapLower = [];
+                    foreach ($productosMap as $k => $v) {
+                        $productosMapLower[mb_strtolower($k)] = $v;
+                    }
+                    $elementos = $elementos->map(function ($el) use ($productosMap, $productosMapLower) {
+                        $el->name_produc = $productosMap[$el->sku] 
+                            ?? $productosMapLower[mb_strtolower($el->sku)] 
+                            ?? null;
+                        return $el;
+                    });
                 }
 
                 $pdf = Pdf::loadView('pdf.comprobante', [

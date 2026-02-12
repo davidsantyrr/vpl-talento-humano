@@ -19,6 +19,7 @@ class ArticulosController extends Controller
         $perPage = (int) $request->get('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 20, 50]) ? $perPage : 20;
         $category = trim((string) $request->get('category', ''));
+        $search = trim((string) $request->get('search', ''));
 
         // listado de categorías disponibles (union externas + locales)
         $catExt = Producto::select('categoria_produc')
@@ -99,9 +100,17 @@ class ArticulosController extends Controller
             $productosQuery->where('categoria_produc', $category);
         }
 
+        // Filtro de búsqueda por nombre o SKU
+        if ($search !== '') {
+            $productosQuery->where(function($q) use ($search) {
+                $q->where('name_produc', 'like', '%' . $search . '%')
+                  ->orWhere('sku', 'like', '%' . $search . '%');
+            });
+        }
+
         $productos = $productosQuery
             ->paginate($perPage)
-            ->appends(['per_page' => $perPage, 'category' => $category]);
+            ->appends(['per_page' => $perPage, 'category' => $category, 'search' => $search]);
 
         $skus = $productos->pluck('sku');
         $skusArr = $skus->map(function($s){ return (string)$s; })->all();
@@ -248,6 +257,7 @@ class ArticulosController extends Controller
                             . '<input type="hidden" name="inventario_id" value="' . e($inv->inventario_id) . '">'
                             . '<input type="hidden" name="per_page" value="' . e($perPage) . '">'
                             . '<input type="hidden" name="category" value="' . e($category) . '">'
+                            . '<input type="hidden" name="search" value="' . e($search) . '">'
                             . '<button type="submit" class="btn-icon delete-location" title="Eliminar ubicación" aria-label="Eliminar ubicación">'
                             . '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18" stroke="currentColor" stroke-width="1.2"/><path d="M8 6V4h8v2" stroke="currentColor" stroke-width="1.2"/><path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="1.2"/></svg>'
                             . '</button>'
@@ -298,6 +308,14 @@ class ArticulosController extends Controller
                             }
                         });
                     }
+                }
+
+                // Aplicar filtro de búsqueda en extras también
+                if ($search !== '') {
+                    $extrasQuery->where(function($q) use ($search) {
+                        $q->where('nombre_articulo', 'like', '%' . $search . '%')
+                          ->orWhere('sku', 'like', '%' . $search . '%');
+                    });
                 }
 
                 $extras = $extrasQuery->whereNotIn('sku', $remoteSkus)->orderBy('nombre_articulo')->get();
@@ -401,17 +419,18 @@ class ArticulosController extends Controller
 
                 return view('articulos.articulos', [
             'rowsHtml' => $rowsHtml,
-            'paginationHtml' => $this->buildPagination($productos, $perPage, $category),
+            'paginationHtml' => $this->buildPagination($productos, $perPage, $category, $search),
             'perPage' => $perPage,
             'categories' => $categories,
             'selectedCategory' => $category,
+            'search' => $search,
             'status' => session('status'),
             'canExport' => ($isAdmin || $isHseq || $isTalento),
                     'usadosHtml' => $usadosHtml,
         ]);
     }
 
-    private function buildPagination($productos, $perPage, $category = '')
+    private function buildPagination($productos, $perPage, $category = '', $search = '')
     {
         $paginationHtml = '';
         if ($productos->hasPages()) {
@@ -419,7 +438,7 @@ class ArticulosController extends Controller
             if ($productos->onFirstPage()) {
                 $paginationHtml .= '<li class="disabled"><span>&lsaquo;</span></li>';
             } else {
-                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->previousPageUrl() . '" rel="prev">&lsaquo;</a></li>';
+                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category, 'search' => $search])->previousPageUrl() . '" rel="prev">&lsaquo;</a></li>';
             }
             $window = $perPage <= 10 ? 3 : ($perPage <= 20 ? 5 : 7);
             $start = max(1, $productos->currentPage() - intdiv($window, 2));
@@ -428,11 +447,11 @@ class ArticulosController extends Controller
                 if ($page == $productos->currentPage()) {
                     $paginationHtml .= '<li class="active"><span>' . $page . '</span></li>';
                 } else {
-                    $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->url($page) . '">' . $page . '</a></li>';
+                    $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category, 'search' => $search])->url($page) . '">' . $page . '</a></li>';
                 }
             }
             if ($productos->hasMorePages()) {
-                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category])->nextPageUrl() . '" rel="next">&rsaquo;</a></li>';
+                $paginationHtml .= '<li><a href="' . $productos->appends(['per_page' => $perPage, 'category' => $category, 'search' => $search])->nextPageUrl() . '" rel="next">&rsaquo;</a></li>';
             } else {
                 $paginationHtml .= '<li class="disabled"><span>&rsaquo;</span></li>';
             }
@@ -968,7 +987,8 @@ class ArticulosController extends Controller
         $data = $request->validate([
             'inventario_id' => ['required','integer'],
             'per_page' => ['nullable','integer'],
-            'category' => ['nullable','string']
+            'category' => ['nullable','string'],
+            'search' => ['nullable','string']
         ]);
 
         try {
@@ -995,7 +1015,8 @@ class ArticulosController extends Controller
             }
             return redirect()->route('articulos.index', [
                 'per_page' => (int)($data['per_page'] ?? 20),
-                'category' => $data['category'] ?? ''
+                'category' => $data['category'] ?? '',
+                'search' => $data['search'] ?? ''
             ])->with('status', 'Ubicación eliminada');
 
         } catch (\Exception $e) {

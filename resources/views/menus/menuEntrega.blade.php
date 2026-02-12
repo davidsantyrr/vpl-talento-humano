@@ -53,7 +53,7 @@
           <h3>Recepción de elementos</h3>
           <p class="desc">Registra reemplazos de elementos entregados</p>
         </div>
-        <div class="card__footer"><a href="{{ route('entregas.buscar') }}" class="btn btn-orange"
+        <div class="card__footer"><a href="{{ route('recepcion.create') }}" class="btn btn-orange"
           aria-label="Ingresar a Realizar cambio">Ingresar</a></div>
       </article>
 

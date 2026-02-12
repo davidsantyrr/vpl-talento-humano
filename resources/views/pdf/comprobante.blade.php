@@ -141,7 +141,12 @@
       @php
         $sku = is_array($el) ? ($el['sku'] ?? 'N/A') : (isset($el->sku) ? $el->sku : 'N/A');
         $nombreProduc = is_array($el) ? ($el['name_produc'] ?? null) : (isset($el->name_produc) ? $el->name_produc : null);
-        $nombre = $nombreProduc ?: $sku;
+        // Mostrar SKU y nombre del producto si está disponible
+        if (!empty($nombreProduc)) {
+          $elementoDisplay = $sku . ' - ' . $nombreProduc;
+        } else {
+          $elementoDisplay = $sku;
+        }
         if ($motivoPrimeraVez) {
           $motivoText = 'ENTREGA 1° VEZ';
         } elseif ($motivoReposicion) {
@@ -159,7 +164,7 @@
       @endphp
       <tr>
         <td class="center">{{ $fechaReg }}</td>
-        <td>{{ $nombre }}</td>
+        <td>{{ $elementoDisplay }}</td>
         <td class="center">{{ $motivoText }}</td>
         <td class="center">&nbsp;</td>
         <td class="center">{{ $personaEntrega }}</td>
