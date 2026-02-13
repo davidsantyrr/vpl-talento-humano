@@ -267,12 +267,38 @@ document.addEventListener('DOMContentLoaded', function(){
     const operacionSelectEl = document.getElementById('operacionSelect');
     const operacionHiddenEl = document.getElementById('operacionIdHidden');
 
+    // Obtener nombre del cargo desde el select de cargo o desde los datos del usuario buscado
+    const cargoSelectEl = document.getElementById('cargoSelect');
+    const lookupBoxEl = document.getElementById('usuarioLookup');
+    const cargoNombre = (function(){
+      // Primero obtener del usuario buscado (guardado en dataset) - más confiable
+      if (lookupBoxEl && lookupBoxEl.dataset.cargoNombre) {
+        console.log('Cargo obtenido del usuario buscado:', lookupBoxEl.dataset.cargoNombre);
+        return lookupBoxEl.dataset.cargoNombre;
+      }
+      // Si no, intentar desde el select de cargo si tiene valor
+      if (cargoSelectEl && cargoSelectEl.value) {
+        const opt = cargoSelectEl.options[cargoSelectEl.selectedIndex];
+        if (opt && opt.textContent.trim()) {
+          console.log('Cargo obtenido del select:', opt.textContent.trim());
+          return opt.textContent.trim();
+        }
+      }
+      console.log('No se encontró cargo');
+      return null;
+    })();
+
+    // Log para debug
+    console.log('Datos para registro:', { cargo: cargoNombre, lookupDataset: lookupBoxEl?.dataset });
+
     const registro = {
       id: null,
       tipo_documento: form.tipo_documento?.value || null,
       numero_documento: form.numberDocumento?.value || null,
       nombres: form.nombre?.value || null,
       apellidos: form.apellidos?.value || null,
+      cargo: cargoNombre,
+      entrega_user: '{{ session("auth.user.name") ?? "Sistema" }}',
       // obtener texto de operación preferentemente desde el select; si está deshabilitado usar el hidden para encontrar la opción
       operacion: (function(){
         if (operacionSelectEl) {
@@ -291,6 +317,13 @@ document.addEventListener('DOMContentLoaded', function(){
     };
 
     const elementos = JSON.parse(document.getElementById('elementosJson').value || '[]');
+    
+    // Log para verificar estructura de elementos
+    console.log('Elementos a enviar:', elementos);
+    if (elementos.length > 0) {
+      console.log('Primer elemento:', elementos[0]);
+      console.log('¿Tiene name?', elementos[0].name || 'NO');
+    }
 
     const firmaField = document.getElementById('firmaField');
     const firmaData = {};

@@ -29,6 +29,16 @@ class ComprobanteController extends Controller
             $elementos = $data['elementos'] ?? [];
             $firma = $data['firma'] ?? [];
 
+            // Log para depuración de los datos recibidos
+            Log::info('ComprobanteController::generar - Datos recibidos', [
+                'tipo' => $tipo,
+                'registro_cargo' => $registro['cargo'] ?? 'NO ENVIADO',
+                'registro_entrega_user' => $registro['entrega_user'] ?? 'NO ENVIADO',
+                'registro_operacion' => $registro['operacion'] ?? 'NO ENVIADO',
+                'elementos_count' => count($elementos),
+                'elementos_sample' => array_slice($elementos, 0, 2) // primeros 2 elementos para ver estructura
+            ]);
+
             // Normalizar firmas para la vista: preferimos data-uri (base64) si viene así,
             // o file://absolute_path si la firma es una ruta en storage.
             $firmaProcessed = [];

@@ -150,8 +150,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     lastOperacionValue = String(data.operacion_id);
                 }
 
-                // NUEVO: exponer cargo_id para otros scripts
-                if (lookupBox) lookupBox.dataset.cargoId = data.cargo_id ? String(data.cargo_id) : '';
+                // NUEVO: exponer cargo_id y cargo_nombre para otros scripts
+                if (lookupBox) {
+                    lookupBox.dataset.cargoId = data.cargo_id ? String(data.cargo_id) : '';
+                    lookupBox.dataset.cargoNombre = data.cargo_nombre ? String(data.cargo_nombre) : '';
+                }
                 if (cargoHidden) cargoHidden.value = data.cargo_id ? String(data.cargo_id) : '';
                 // SINCRONIZAR operacion hidden
                 if (operacionHidden) operacionHidden.value = (operacionSelect && operacionSelect.value) ? String(operacionSelect.value) : (usuarioOperacionId || lastOperacionValue || '');

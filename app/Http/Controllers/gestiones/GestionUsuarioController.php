@@ -478,13 +478,17 @@ $lists->getProtection()->setPassword('1234');
             return response()->json(['error' => 'missing_number'], 400);
         }
 
-        $usuario = Usuarios::where('numero_documento', $numero)->first();
+        $usuario = Usuarios::with('cargo')->where('numero_documento', $numero)->first();
         \Illuminate\Support\Facades\Log::info('findByDocumento result', ['usuario' => $usuario ? $usuario->toArray() : null]);
 
         if (!$usuario) {
             return response()->json(null, 204);
         }
 
-        return response()->json($usuario);
+        // Incluir nombre del cargo en la respuesta
+        $data = $usuario->toArray();
+        $data['cargo_nombre'] = $usuario->cargo ? $usuario->cargo->nombre : null;
+
+        return response()->json($data);
     }
 }

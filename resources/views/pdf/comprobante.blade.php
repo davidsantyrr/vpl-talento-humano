@@ -145,7 +145,10 @@
     @foreach($elementos as $i => $el)
       @php
         $sku = is_array($el) ? ($el['sku'] ?? 'N/A') : (isset($el->sku) ? $el->sku : 'N/A');
-        $nombreProduc = is_array($el) ? ($el['name_produc'] ?? null) : (isset($el->name_produc) ? $el->name_produc : null);
+        // Buscar nombre en 'name_produc' o 'name' (el JS usa 'name')
+        $nombreProduc = is_array($el) 
+            ? ($el['name_produc'] ?? $el['name'] ?? null) 
+            : (isset($el->name_produc) ? $el->name_produc : (isset($el->name) ? $el->name : null));
         // Mostrar SKU y nombre del producto si está disponible
         if (!empty($nombreProduc)) {
           $elementoDisplay = $sku . ' - ' . $nombreProduc;
