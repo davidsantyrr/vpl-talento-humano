@@ -43,10 +43,15 @@
   $nombreCompleto = trim(($registro->nombres ?? '') . ' ' . ($registro->apellidos ?? ''));
   $doc = $registro->numero_documento ?? 'N/A';
   $cargo = $registro->cargo ?? 'N/A';
-  $personaEntrega = 'Sistema';
-  $auth = session('auth.user');
-  if (is_array($auth) && isset($auth['name'])) { $personaEntrega = $auth['name']; }
-  elseif (is_object($auth) && isset($auth->name)) { $personaEntrega = $auth->name; }
+  
+  // Persona que entrega: usar el campo guardado en la entrega, o fallback a sesión
+  $personaEntrega = $registro->entrega_user ?? null;
+  if (empty($personaEntrega)) {
+    $personaEntrega = 'Sistema';
+    $auth = session('auth.user');
+    if (is_array($auth) && isset($auth['name'])) { $personaEntrega = $auth['name']; }
+    elseif (is_object($auth) && isset($auth->name)) { $personaEntrega = $auth->name; }
+  }
 
   // Normalizar tipo y detectar motivo base
   $tipoNormalizado = strtolower(trim($registro->tipo ?? ''));

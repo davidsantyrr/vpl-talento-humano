@@ -207,6 +207,8 @@ class HistorialEntregaController extends Controller
                         'entregas.created_at',
                         'entregas.tipo_entrega as tipo',
                         'entregas.comprobante_path as comprobante_path',
+                        'entregas.entrega_user',
+                        'entregas.usuarios_id as entrega_usuarios_id',
                         DB::raw('COALESCE(entregas.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
                         DB::raw('COALESCE(entregas.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(entregas.nombres, usuarios_entregas.nombres) as nombres'),
@@ -220,18 +222,41 @@ class HistorialEntregaController extends Controller
                     ->where('entregas.id', $id)
                     ->first();
 
+                Log::info('PDF Entrega - Registro obtenido', [
+                    'id' => $id,
+                    'usuarios_id' => $registro->entrega_usuarios_id ?? null,
+                    'numero_documento' => $registro->numero_documento ?? null,
+                    'cargo_join' => $registro->cargo ?? null,
+                    'cargo_id' => $registro->cargo_id ?? null
+                ]);
+
                 // si no se obtuvo nombre de cargo por join, intentar resolver por cargo_id
                 if ($registro && empty($registro->cargo) && !empty($registro->cargo_id)) {
                     $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
+                    Log::info('PDF Entrega - Cargo encontrado por cargo_id', ['cargo' => $registro->cargo]);
                 }
 
                 // Si aún no hay cargo, intentar buscar por numero_documento en usuarios_entregas
                 if ($registro && empty($registro->cargo) && !empty($registro->numero_documento)) {
+                    // Buscar con el numero_documento exacto y también normalizado
+                    $docNum = trim($registro->numero_documento);
                     $usuarioEntrega = DB::table('usuarios_entregas')
                         ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
-                        ->where('usuarios_entregas.numero_documento', $registro->numero_documento)
-                        ->select('cargos.nombre as cargo')
+                        ->where(function($q) use ($docNum) {
+                            $q->where('usuarios_entregas.numero_documento', $docNum)
+                              ->orWhere('usuarios_entregas.numero_documento', preg_replace('/[^0-9]/', '', $docNum));
+                        })
+                        ->select('cargos.nombre as cargo', 'usuarios_entregas.id as usr_id', 'usuarios_entregas.cargo_id as cargo_id_usr')
                         ->first();
+                    
+                    Log::info('PDF Entrega - Busqueda de cargo por numero_documento', [
+                        'numero_documento' => $docNum,
+                        'usuario_encontrado' => $usuarioEntrega ? true : false,
+                        'cargo_encontrado' => $usuarioEntrega->cargo ?? null,
+                        'usr_id' => $usuarioEntrega->usr_id ?? null,
+                        'cargo_id' => $usuarioEntrega->cargo_id_usr ?? null
+                    ]);
+                    
                     if ($usuarioEntrega && !empty($usuarioEntrega->cargo)) {
                         $registro->cargo = $usuarioEntrega->cargo;
                     }
@@ -246,11 +271,47 @@ class HistorialEntregaController extends Controller
 
                 // Obtener nombres de productos desde la base de datos secundaria
                 $skus = $elementos->pluck('sku')->filter()->toArray();
+                Log::info('PDF Entrega - SKUs a buscar', ['skus' => $skus]);
+                
                 if (!empty($skus)) {
-                    $productosMap = Producto::whereIn('sku', $skus)
-                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
-                        ->pluck('name_produc', 'sku')
-                        ->toArray();
+                    $productosMap = [];
+                    try {
+                        // Búsqueda principal
+                        $productos = Producto::whereIn('sku', $skus)
+                            ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
+                            ->get();
+                        
+                        foreach ($productos as $p) {
+                            $productosMap[$p->sku] = $p->name_produc;
+                        }
+                        
+                        // Si no se encontraron todos, buscar uno por uno con más flexibilidad
+                        foreach ($skus as $sku) {
+                            if (isset($productosMap[$sku])) continue;
+                            $skuLower = mb_strtolower(trim($sku));
+                            
+                            // Verificar si ya existe con case diferente
+                            foreach ($productosMap as $k => $v) {
+                                if (mb_strtolower($k) === $skuLower) {
+                                    $productosMap[$sku] = $v;
+                                    break;
+                                }
+                            }
+                            
+                            if (!isset($productosMap[$sku])) {
+                                // Buscar individualmente
+                                $producto = Producto::whereRaw('LOWER(sku) = ?', [$skuLower])->first();
+                                if ($producto) {
+                                    $productosMap[$sku] = $producto->name_produc;
+                                }
+                            }
+                        }
+                        
+                        Log::info('PDF Entrega - Productos encontrados', ['map' => $productosMap]);
+                    } catch (\Throwable $e) {
+                        Log::warning('PDF Entrega - Error buscando productos', ['error' => $e->getMessage()]);
+                    }
+                    
                     // Crear mapa normalizado para búsqueda case-insensitive
                     $productosMapLower = [];
                     foreach ($productosMap as $k => $v) {
@@ -273,6 +334,7 @@ class HistorialEntregaController extends Controller
                         'recepciones.created_at',
                         'recepciones.tipo_recepcion as tipo',
                         'recepciones.comprobante_path as comprobante_path',
+                        'recepciones.recepcion_user',
                         DB::raw('COALESCE(recepciones.numero_documento, usuarios_entregas.numero_documento) as numero_documento'),
                         DB::raw('COALESCE(recepciones.tipo_documento, usuarios_entregas.tipo_documento) as tipo_documento'),
                         DB::raw('COALESCE(recepciones.nombres, usuarios_entregas.nombres) as nombres'),
@@ -286,15 +348,24 @@ class HistorialEntregaController extends Controller
                     ->where('recepciones.id', $id)
                     ->first();
 
+                // Asignar entrega_user desde recepcion_user para compatibilidad con la plantilla
+                if ($registro) {
+                    $registro->entrega_user = $registro->recepcion_user ?? null;
+                }
+
                 if ($registro && empty($registro->cargo) && !empty($registro->cargo_id)) {
                     $registro->cargo = DB::table('cargos')->where('id', $registro->cargo_id)->value('nombre');
                 }
 
                 // Si aún no hay cargo, intentar buscar por numero_documento en usuarios_entregas
                 if ($registro && empty($registro->cargo) && !empty($registro->numero_documento)) {
+                    $docNum = trim($registro->numero_documento);
                     $usuarioRecepcion = DB::table('usuarios_entregas')
                         ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
-                        ->where('usuarios_entregas.numero_documento', $registro->numero_documento)
+                        ->where(function($q) use ($docNum) {
+                            $q->where('usuarios_entregas.numero_documento', $docNum)
+                              ->orWhere('usuarios_entregas.numero_documento', preg_replace('/[^0-9]/', '', $docNum));
+                        })
                         ->select('cargos.nombre as cargo')
                         ->first();
                     if ($usuarioRecepcion && !empty($usuarioRecepcion->cargo)) {
@@ -312,11 +383,36 @@ class HistorialEntregaController extends Controller
                 // Obtener nombres de productos desde la base de datos secundaria
                 $skus = $elementos->pluck('sku')->filter()->toArray();
                 if (!empty($skus)) {
-                    $productosMap = Producto::whereIn('sku', $skus)
-                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
-                        ->pluck('name_produc', 'sku')
-                        ->toArray();
-                    // Crear mapa normalizado para búsqueda case-insensitive
+                    $productosMap = [];
+                    try {
+                        $productos = Producto::whereIn('sku', $skus)
+                            ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
+                            ->get();
+                        
+                        foreach ($productos as $p) {
+                            $productosMap[$p->sku] = $p->name_produc;
+                        }
+                        
+                        foreach ($skus as $sku) {
+                            if (isset($productosMap[$sku])) continue;
+                            $skuLower = mb_strtolower(trim($sku));
+                            foreach ($productosMap as $k => $v) {
+                                if (mb_strtolower($k) === $skuLower) {
+                                    $productosMap[$sku] = $v;
+                                    break;
+                                }
+                            }
+                            if (!isset($productosMap[$sku])) {
+                                $producto = Producto::whereRaw('LOWER(sku) = ?', [$skuLower])->first();
+                                if ($producto) {
+                                    $productosMap[$sku] = $producto->name_produc;
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        Log::warning('PDF Recepcion - Error buscando productos', ['error' => $e->getMessage()]);
+                    }
+                    
                     $productosMapLower = [];
                     foreach ($productosMap as $k => $v) {
                         $productosMapLower[mb_strtolower($k)] = $v;

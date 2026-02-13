@@ -172,6 +172,15 @@ class FormularioEntregasController extends Controller
 				}
 			}
 
+			// Buscar el usuario en usuarios_entregas por número de documento para asociar correctamente
+			$usuariosId = null;
+			if (!empty($data['numberDocumento'])) {
+				$usuarioEntrega = Usuarios::where('numero_documento', $data['numberDocumento'])->first();
+				if ($usuarioEntrega) {
+					$usuariosId = $usuarioEntrega->id;
+				}
+			}
+
 			$entregaData = [
 				'rol_entrega' => $rolEntrega,
 				'entrega_user' => $nombreUsuario,
@@ -182,7 +191,7 @@ class FormularioEntregasController extends Controller
 				'nombres' => $data['nombre'] ?? null,
 				'apellidos' => $data['apellidos'] ?? null,
 				'sub_area_id' => !empty($data['operacion_id']) ? (int)$data['operacion_id'] : null,
-				'usuarios_id' => null,
+				'usuarios_id' => $usuariosId,
 				'recepciones_id' => !empty($data['recepcion_id']) ? (int)$data['recepcion_id'] : null,
 				'recibido' => false,
 				'created_at' => now(),
