@@ -473,13 +473,50 @@ class FormularioEntregasController extends Controller
 			}
 
 			// Sin término de búsqueda: devolver productos según rol
-			// Si hay filtros de categoría (ej: Talento Humano solo ve dotación), mostrar todos los productos de esa categoría
+			// Filtrar por asignaciones de cargo_productos + categoría si aplica
+			if (!empty($categoryFilters) && ($cargoId || $subAreaId)) {
+				// Obtener asignaciones del cargo/subarea
+				$cpQuery = DB::table('cargo_productos')->select(['sku','name_produc']);
+				if ($cargoId) { $cpQuery->where('cargo_id', $cargoId); }
+				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
+				$cpRows = $cpQuery->get();
+				$assignedSkus = $cpRows->pluck('sku')->filter()->unique()->values()->toArray();
+				
+				if (!empty($assignedSkus)) {
+					// Filtrar por categoría permitida
+					$prodModel = new Producto();
+					$conn = $prodModel->getConnectionName() ?: config('database.default');
+					$table = $prodModel->getTable();
+					
+					$catalogQuery = DB::connection($conn)->table($table)
+						->select('sku','name_produc')
+						->whereIn('sku', $assignedSkus);
+					$catalogQuery->where(function($qc) use ($categoryFilters){
+						foreach ($categoryFilters as $i => $term) {
+							$like = '%'.$term.'%';
+							if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+							else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+						}
+					});
+					$catalogRows = $catalogQuery->orderBy('name_produc')->limit(1000)->get();
+					
+					$data = collect($catalogRows)->map(function($r){ 
+						return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
+					})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
+					
+					return response()->json($data, 200);
+				}
+				
+				// Si no hay asignaciones, devolver vacío
+				return response()->json([], 200);
+			}
+			
+			// Si hay filtros de categoría pero sin cargo/subarea específico, mostrar todos los de la categoría
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
 				
-				// Buscar productos del catálogo que coincidan con las categorías permitidas (sin límite estricto)
 				$catalogQuery = DB::connection($conn)->table($table)->select('sku','name_produc');
 				$catalogQuery->where(function($qc) use ($categoryFilters){
 					foreach ($categoryFilters as $i => $term) {
