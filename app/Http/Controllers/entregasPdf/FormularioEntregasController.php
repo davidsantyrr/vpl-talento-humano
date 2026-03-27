@@ -481,15 +481,36 @@ class FormularioEntregasController extends Controller
 				}
 			}
 
-			// Si es operación de Frío: usar asignaciones específicas de cargo_productos
+			// Si es operación de Frío: usar asignaciones específicas de cargo_productos + jeans específicos
 			if ($esFrio && ($cargoId || $subAreaId)) {
 				$cpQuery = DB::table('cargo_productos')->select(['sku','name_produc']);
 				if ($cargoId) { $cpQuery->where('cargo_id', $cargoId); }
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
+				// Jeans específicos para operaciones de Frío
+				$jeansEspecificos = [
+					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja rojo en manga derecha)',
+					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja rojo en manga derecha)',
+					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja azul en manga derecha)',
+					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja azul en manga derecha)',
+					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja verde en manga derecha)',
+					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja verde en manga derecha)',
+				];
+				
+				// Obtener los jeans específicos del catálogo de productos
+				$prodModel = new Producto();
+				$conn = $prodModel->getConnectionName() ?: config('database.default');
+				$table = $prodModel->getTable();
+				$jeansQuery = DB::connection($conn)->table($table)->select('sku','name_produc')
+					->whereIn('name_produc', $jeansEspecificos);
+				$jeansRows = $jeansQuery->orderBy('name_produc')->get();
+				
+				// Combinar asignaciones + jeans específicos
+				$combined = $cpRows->merge($jeansRows);
+				
 				// Devolver asignaciones (incluye las que no tienen SKU)
-				$data = $cpRows->map(function ($r) {
+				$data = $combined->map(function ($r) {
 					return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
 				})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
 					return $item['sku'] . '|' . $item['name_produc'];
