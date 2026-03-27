@@ -432,16 +432,6 @@ class FormularioEntregasController extends Controller
 				} 
 			}
 
-			// Log para debug
-			Log::info('cargoProductos - Detección de rol', [
-				'authUser_type' => gettype($authUser),
-				'authUser_roles_raw' => is_array($authUser) ? ($authUser['roles'] ?? 'no roles key') : 'not array',
-				'roleNames_detected' => $roleNames,
-				'isAdmin' => $isAdmin,
-				'cargo_id' => $cargoId,
-				'sub_area_id' => $subAreaId
-			]);
-
 			// Mapear roles conocidos -> filtros de categoría
 			$categoryFilters = [];
 			if (!$isAdmin) {
@@ -456,11 +446,6 @@ class FormularioEntregasController extends Controller
 				}
 			}
 			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
-			
-			Log::info('cargoProductos - Filtros de categoría', [
-				'categoryFilters' => $categoryFilters,
-				'config_talento' => config('vpl.role_filters.talento', 'NOT SET')
-			]);
             
 			// Si hay término de búsqueda, consultar el catálogo completo de productos por nombre/SKU
 			if ($q !== '') {
@@ -481,7 +466,7 @@ class FormularioEntregasController extends Controller
 						}
 					});
 				}
-				$rows = $catalog->orderBy('name_produc')->limit(50)->get();
+				$rows = $catalog->orderBy('name_produc')->limit(200)->get();
 				$data = collect($rows)->map(function($r){ return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; })
 					->filter(fn($x) => !empty($x['sku']))->values();
 				return response()->json($data, 200);
@@ -494,7 +479,7 @@ class FormularioEntregasController extends Controller
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
 				
-				// Buscar productos del catálogo que coincidan con las categorías permitidas
+				// Buscar productos del catálogo que coincidan con las categorías permitidas (sin límite estricto)
 				$catalogQuery = DB::connection($conn)->table($table)->select('sku','name_produc');
 				$catalogQuery->where(function($qc) use ($categoryFilters){
 					foreach ($categoryFilters as $i => $term) {
@@ -503,16 +488,11 @@ class FormularioEntregasController extends Controller
 						else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
 					}
 				});
-				$catalogRows = $catalogQuery->orderBy('name_produc')->limit(300)->get();
+				$catalogRows = $catalogQuery->orderBy('name_produc')->limit(1000)->get();
 				
 				$data = collect($catalogRows)->map(function($r){ 
 					return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
 				})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
-				
-				Log::info('cargoProductos - productos por categoría', [
-					'categoryFilters' => $categoryFilters,
-					'productos_count' => $data->count()
-				]);
 				
 				return response()->json($data, 200);
 			}
