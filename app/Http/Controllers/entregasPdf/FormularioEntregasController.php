@@ -472,26 +472,32 @@ class FormularioEntregasController extends Controller
 				return response()->json($data, 200);
 			}
 
-			// Sin término de búsqueda: devolver productos asignados al cargo/operación
-			// Primero buscar en cargo_productos si hay cargo_id o sub_area_id
-			if ($cargoId || $subAreaId) {
+			// Detectar si es operación de Frío
+			$esFrio = false;
+			if ($subAreaId) {
+				$subArea = DB::table('sub_areas')->where('id', $subAreaId)->first();
+				if ($subArea && stripos($subArea->operationName ?? '', 'frio') !== false) {
+					$esFrio = true;
+				}
+			}
+
+			// Si es operación de Frío: usar asignaciones específicas de cargo_productos
+			if ($esFrio && ($cargoId || $subAreaId)) {
 				$cpQuery = DB::table('cargo_productos')->select(['sku','name_produc']);
 				if ($cargoId) { $cpQuery->where('cargo_id', $cargoId); }
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
-				// Si hay asignaciones, devolverlas directamente (incluye las que no tienen SKU)
-				if ($cpRows->count() > 0) {
-					$data = $cpRows->map(function ($r) {
-						return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
-					})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
-						return $item['sku'] . '|' . $item['name_produc'];
-					})->values();
-					return response()->json($data, 200);
-				}
+				// Devolver asignaciones (incluye las que no tienen SKU)
+				$data = $cpRows->map(function ($r) {
+					return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
+				})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
+					return $item['sku'] . '|' . $item['name_produc'];
+				})->values();
+				return response()->json($data, 200);
 			}
 			
-			// Sin asignaciones específicas pero con filtros de categoría: mostrar todos de la categoría
+			// Para otras operaciones (no Frío): mostrar TODOS los productos de Dotación
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
@@ -514,7 +520,7 @@ class FormularioEntregasController extends Controller
 				return response()->json($data, 200);
 			}
 
-			// Sin filtros: devolver vacío (ya se buscó en cargo_productos arriba)
+			// Sin filtros: devolver vacío
 			return response()->json([], 200);
 		} catch (\Throwable $e) {
 			Log::warning('cargo_productos query failed', ['error' => $e->getMessage()]);
