@@ -268,7 +268,7 @@ class ArticulosController extends Controller
                                 $priceVal = $pricesBySku->get((string)$p->sku) ?? null;
                                 $priceDisplay = is_null($priceVal) ? '' : number_format((float)$priceVal, 2, '.', '');
 
-                                $rowsHtml .= '<tr data-sku="' . e($p->sku) . '" data-price="' . e($priceDisplay) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
+                                $rowsHtml .= '<tr data-sku="' . e($p->sku) . '" data-nombre="' . e($p->name_produc) . '" data-price="' . e($priceDisplay) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
                                         . '<td>' . e($p->sku) . '</td>'
                                         . '<td>' . e($p->name_produc) . '</td>'
                                         . '<td>' . e($p->categoria_produc) . '</td>'
@@ -347,7 +347,7 @@ class ArticulosController extends Controller
 
                                 $priceValLocal = $pricesBySku->get((string)$loc->sku) ?? null;
                                 $priceDisplayLocal = is_null($priceValLocal) ? '' : number_format((float)$priceValLocal, 2, '.', '');
-                                $rowsHtml .= '<tr data-sku="' . e($loc->sku) . '" data-price="' . e($priceDisplayLocal) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
+                                $rowsHtml .= '<tr data-sku="' . e($loc->sku) . '" data-nombre="' . e($loc->nombre_articulo) . '" data-price="' . e($priceDisplayLocal) . '" data-bodega="' . e($bodegaSel) . '" data-ubicacion="' . e($ubicacionSel) . '" data-estatus="' . e($estatus) . '" data-stock="' . e($stock) . '">'
                                         . '<td>' . e($loc->sku) . '</td>'
                                         . '<td>' . e($loc->nombre_articulo) . '</td>'
                                         . '<td>' . e($loc->categoria ?? '') . '</td>'
@@ -504,8 +504,23 @@ class ArticulosController extends Controller
             'stock' => ['required','integer','min:0'],
             'per_page' => ['nullable','integer'],
             'from_status' => ['nullable','in:disponible,perdido,prestado,destruido'],
-            'new_location' => ['nullable','in:1']
+            'new_location' => ['nullable','in:1'],
+            'by_name' => ['nullable','in:1']
         ]);
+
+        // Si viene by_name, el parámetro $sku realmente es el nombre del producto
+        // Buscar el SKU real o usar el nombre como identificador
+        $realSku = $sku;
+        if (!empty($data['by_name'])) {
+            $producto = DB::connection('mysql_second')->table('productos')
+                ->where('name_produc', $sku)
+                ->first();
+            if ($producto && !empty($producto->sku)) {
+                $realSku = $producto->sku;
+            }
+            // Si no tiene SKU, usamos el nombre como identificador en inventarios
+        }
+        $sku = $realSku;
 
         // upsert ubicaciones si el usuario envía datos
         $ubicacionesId = null;

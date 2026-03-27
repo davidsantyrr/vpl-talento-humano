@@ -34,8 +34,17 @@
     return html;
   }
 
+  // Helper para obtener identificador del elemento (SKU o nombre)
+  function getIdentifier(row) {
+    const sku = (row.dataset.sku || '').trim();
+    const nombre = (row.dataset.nombre || '').trim();
+    if (sku) return { id: sku, isName: false };
+    if (nombre) return { id: nombre, isName: true };
+    return { id: '', isName: false };
+  }
+
   function openLocation(row){
-    const sku = row.dataset.sku;
+    const identifier = getIdentifier(row);
     const bodega = row.dataset.bodega || '';
     const ubicacion = row.dataset.ubicacion || '';
 
@@ -55,7 +64,8 @@
   }
 
   function showLocationModal(row, mode){
-    const sku = row.dataset.sku;
+    const identifier = getIdentifier(row);
+    const sku = row.dataset.sku || '';
     const bodega = row.dataset.bodega || '';
     const ubicacion = row.dataset.ubicacion || '';
 
@@ -106,9 +116,13 @@
       }
     }).then(res => {
       if (!res.isConfirmed || !res.value) return;
+      if (!identifier.id) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El artículo no tiene identificador válido' });
+        return;
+      }
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = `${baseUrl}/${sku}`;
+      form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = res.value.bodega || '';
@@ -117,6 +131,7 @@
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = mode === 'new' ? '0' : String(row.dataset.stock || 0);
       form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
       if (mode === 'new') { const nl = document.createElement('input'); nl.type = 'hidden'; nl.name = 'new_location'; nl.value = '1'; form.appendChild(nl); }
+      if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
       form.submit();
     });
@@ -124,13 +139,14 @@
 
   function openEditor(row){
     if (!requireLocation(row)) return;
-    const sku = row.dataset.sku;
+    const identifier = getIdentifier(row);
+    const displayId = identifier.id || 'Sin identificador';
     const currentStatus = (row.dataset.estatus || 'disponible');
     let estatus = currentStatus;
     let stock = Number(row.dataset.stock || 0);
 
     Swal.fire({
-      title: `Editar (${sku})`,
+      title: `Editar (${displayId})`,
       html: `
         <div class="modal-grid">
           <div class="field">
@@ -205,9 +221,13 @@
       }
     }).then(res => {
       if (!res.isConfirmed || !res.value) return;
+      if (!identifier.id) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El artículo no tiene identificador válido' });
+        return;
+      }
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = `${baseUrl}/${sku}`;
+      form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = row.dataset.bodega || '';
@@ -218,17 +238,19 @@
       form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
       form.appendChild(p);
       if (res.value.targetStatus !== currentStatus) { const f = document.createElement('input'); f.type = 'hidden'; f.name = 'from_status'; f.value = currentStatus; form.appendChild(f); }
+      if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
       form.submit();
     });
   }
 
   function openDestroy(row){
-    const sku = row.dataset.sku;
+    const identifier = getIdentifier(row);
+    const displayId = identifier.id || 'Sin identificador';
     const currentStatus = (row.dataset.estatus || 'disponible');
     const stock = Number(row.dataset.stock || 0);
     Swal.fire({
-      title: `Destruir (${sku})`,
+      title: `Destruir (${displayId})`,
       html: `
         <div class="modal-grid center">
           <div class="field">
@@ -251,9 +273,13 @@
       }
     }).then(res => {
       if (!res.isConfirmed || !res.value) return;
+      if (!identifier.id) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'El artículo no tiene identificador válido' });
+        return;
+      }
       const form = document.createElement('form');
       form.method = 'POST';
-      form.action = `${baseUrl}/${sku}`;
+      form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = row.dataset.bodega || '';
@@ -262,6 +288,7 @@
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = String(res.value.qty || 0);
       const f = document.createElement('input'); f.type = 'hidden'; f.name = 'from_status'; f.value = currentStatus;
       form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s); form.appendChild(f);
+      if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
       form.submit();
     });

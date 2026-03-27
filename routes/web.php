@@ -185,13 +185,13 @@ Route::post('comprobantes/generar', [ComprobanteController::class, 'generar'])->
 Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
 Route::get('/debug/usados', [ArticulosController::class, 'debugUsados'])->name('debug.usados');
 Route::get('/articulos/export-inventario', [App\Http\Controllers\articulos\ArticulosController::class, 'exportInventario'])->name('articulos.exportInventario');
-Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->name('articulos.update');
-Route::post('/articulos/price', [ArticulosController::class, 'savePrice'])->name('articulos.savePrice');
-Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
 Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
 Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
 Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');
+Route::post('/articulos/price', [ArticulosController::class, 'savePrice'])->name('articulos.savePrice');
 Route::post('/articulos/ubicacion/eliminar', [App\Http\Controllers\articulos\ArticulosController::class, 'eliminarUbicacion'])->name('articulos.ubicacion.eliminar');
+Route::post('/articulos-destruir', [ArticulosController::class, 'destruir'])->name('articulos.destruir');
+Route::post('/articulos/{sku}', [ArticulosController::class, 'update'])->where('sku', '.*')->name('articulos.update');
 
 
 
