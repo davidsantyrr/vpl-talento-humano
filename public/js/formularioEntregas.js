@@ -287,18 +287,16 @@ document.addEventListener('DOMContentLoaded', function () {
         modal.classList.add('active');
         elementoSeleccionado = null;
         
-        // Limpiar dropdown previo si existe
-        const prevDD = document.getElementById('modal-prod-dd');
-        if (prevDD) prevDD.remove();
-        
         if (elementoSelect) {
             elementoSelect.value = '';
         }
+        if (elementoInput) {
+            elementoInput.value = '';
+        }
         if (cantidadInput) cantidadInput.value = '1';
         
-        // Cargar productos y configurar dropdown
+        // Cargar productos
         updateElementoOptions().then(() => {
-            setupDropdown();
             renderModalTable();
         });
     }
@@ -308,14 +306,9 @@ document.addEventListener('DOMContentLoaded', function () {
         tempElementos = [];
         modal.classList.remove('active');
         
-        // Limpiar dropdown al cerrar
-        const dd = document.getElementById('modal-prod-dd');
-        if (dd) dd.remove();
-        
-        // Limpiar input de búsqueda y restaurar select
-        const searchInput = document.getElementById('modal-search-input');
-        if (searchInput) searchInput.remove();
-        if (elementoSelect) elementoSelect.style.display = '';
+        // Limpiar campos
+        if (elementoSelect) elementoSelect.value = '';
+        if (elementoInput) elementoInput.value = '';
     }
 
     window.guardarModal = function(){
@@ -346,13 +339,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
     window.agregarElementoModal = function(){
         let sel = null;
+        // elementoSelect ahora es un hidden input, elementoInput es el campo de texto
         if (elementoSelect && elementoSelect.value) {
             const sku = elementoSelect.value;
-            const opt = elementoSelect.querySelector(`option[value="${sku}"]`);
-            const name = opt ? (opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent) : '';
+            const name = elementoSelect.dataset.name_produc || '';
             sel = { sku, name };
         }
-        if (!sel) { 
+        if (!sel || !sel.sku) { 
             Toast.fire({
                 icon: 'error',
                 title: 'Seleccione un elemento válido'
@@ -368,14 +361,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return; 
         }
         tempElementos.push({ sku: sel.sku, name: sel.name, cantidad: qty });
-        elementoSelect.value = '';
-        cantidadInput.value = '1';
         
-        // Limpiar el input de búsqueda si existe
-        const searchInput = document.getElementById('modal-search-input');
-        if (searchInput) {
-            searchInput.value = '';
-        }
+        // Limpiar campos
+        if (elementoSelect) elementoSelect.value = '';
+        if (elementoInput) elementoInput.value = '';
+        cantidadInput.value = '1';
         
         renderModalTable();
         Toast.fire({
@@ -384,121 +374,13 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Setup del dropdown de búsqueda para el modal
-    function setupDropdown() {
-        if (!elementoSelect) return;
-        
-        // Verificar si ya existe un input de búsqueda
-        let searchInput = document.getElementById('modal-search-input');
-        if (searchInput) {
-            // Si ya existe, solo actualizar opciones y focus
-            searchInput.value = '';
-            searchInput.focus();
-            return;
-        }
-        
-        // Convertir select en input de búsqueda
-        const wrapper = elementoSelect.parentElement;
-        searchInput = document.createElement('input');
-        searchInput.type = 'text';
-        searchInput.className = elementoSelect.className;
-        searchInput.placeholder = 'Escribe para buscar SKU o nombre';
-        searchInput.id = 'modal-search-input';
-        
-        elementoSelect.style.display = 'none';
-        wrapper.insertBefore(searchInput, elementoSelect);
-        
-        const dd = document.createElement('ul');
-        dd.id = 'modal-prod-dd';
-        dd.className = 'modal-list';
-        dd.hidden = true;
-        document.body.appendChild(dd);
-        
-        let allOptions = Array.from(elementoSelect.options)
-            .filter(opt => opt.value)
-            .map(opt => ({
-                sku: opt.value,
-                name: opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent
-            }));
-        
-        function updateDDPos(){
-            const r = searchInput.getBoundingClientRect();
-            const w = Math.min(r.width, 420);
-            dd.style.left = r.left + 'px';
-            dd.style.top = (r.bottom + 6) + 'px';
-            dd.style.width = w + 'px';
-        }
-        
-        function renderDD(list){
-            dd.innerHTML = '';
-            list.slice(0, 200).forEach(p => {
-                const li = document.createElement('li');
-                li.className = 'modal-list-item';
-                li.textContent = `${p.sku} — ${p.name}`;
-                li.addEventListener('click', () => {
-                    elementoSelect.value = p.sku;
-                    searchInput.value = `${p.sku} — ${p.name}`;
-                    dd.hidden = true;
-                });
-                dd.appendChild(li);
-            });
-            dd.hidden = list.length === 0;
-            if (!dd.hidden) updateDDPos();
-        }
-        
-        function filter(term){
-            const t = term.trim().toLowerCase();
-            if (!t) return allOptions.slice();
-            return allOptions.filter(p => 
-                p.sku.toLowerCase().includes(t) || 
-                p.name.toLowerCase().includes(t)
-            );
-        }
-        
-        searchInput.addEventListener('input', () => {
-            elementoSelect.value = '';
-            renderDD(filter(searchInput.value));
-        });
-        
-        searchInput.addEventListener('focus', () => {
-            elementoSelect.value = '';
-            renderDD(allOptions.slice());
-        });
-        
-        searchInput.addEventListener('click', () => {
-            renderDD(filter(searchInput.value));
-        });
-        
-        window.addEventListener('resize', updateDDPos);
-        document.addEventListener('scroll', updateDDPos, true);
-        document.addEventListener('click', (e) => {
-            if (!dd.contains(e.target) && e.target !== searchInput) {
-                dd.hidden = true;
-            }
-        });
-        
-        // Actualizar lista cuando cambia el select
-        const observer = new MutationObserver(() => {
-            allOptions = Array.from(elementoSelect.options)
-                .filter(opt => opt.value)
-                .map(opt => ({
-                    sku: opt.value,
-                    name: opt.dataset.name_produc || opt.textContent.split(' — ')[1] || opt.textContent
-                }));
-        });
-        observer.observe(elementoSelect, { childList: true });
-        
-        searchInput.focus();
-    }
-
-    if (elementoSelect){ elementoSelect.addEventListener('change', ()=>{ const sku = elementoSelect.value; const opt = elementoSelect.querySelector(`option[value="${sku}"]`); elementoSeleccionado = opt ? { sku, name: (opt.dataset.name_produc || opt.textContent) } : null; } ); }
-
     // al cargar la página si hay elementos en el hidden, restaurarlos
     try{ const existing = elementosJson && elementosJson.value ? JSON.parse(elementosJson.value) : null; if (Array.isArray(existing)) { elementos = existing; syncFormTable(); } } catch(e){ /* ignore */ }
 
-    // Lista completa de productos cargados (para filtrar localmente)
+    // Lista completa de productos cargados
     let allProductos = [];
-    const buscarElementoInput = document.getElementById('buscarElementoInput');
+    const elementoInput = document.getElementById('elementoInput');
+    const elementoDatalist = document.getElementById('elementoDatalist');
 
     async function fetchProductosCargo(cargoId, operacionId){
         try{
@@ -521,45 +403,50 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function renderProductOptions(lista, filterText = '') {
-        if(!elementoSelect) return;
-        const current = elementoSelect.value;
-        elementoSelect.innerHTML = '';
+    function renderProductOptions(lista) {
+        if(!elementoDatalist) return;
+        elementoDatalist.innerHTML = '';
         
-        // Filtrar por texto si hay
-        let filtered = lista;
-        if (filterText) {
-            const terms = filterText.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-            filtered = lista.filter(p => {
-                const text = `${p.sku} ${p.name_produc}`.toLowerCase();
-                return terms.every(term => text.includes(term));
-            });
-        }
-        
-        if (filtered.length === 0) {
+        lista.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = filterText ? 'No se encontraron productos' : 'Seleccione un producto';
-            elementoSelect.appendChild(opt);
-        } else {
-            filtered.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = String(p.sku);
-                opt.dataset.name_produc = String(p.name_produc);
-                opt.textContent = `${p.sku} — ${p.name_produc}`;
-                elementoSelect.appendChild(opt);
-            });
-        }
+            opt.value = `${p.sku} — ${p.name_produc}`;
+            opt.dataset.sku = String(p.sku);
+            opt.dataset.name_produc = String(p.name_produc);
+            elementoDatalist.appendChild(opt);
+        });
+    }
+
+    // Cuando selecciona una opción del datalist, actualizar el hidden
+    if (elementoInput) {
+        elementoInput.addEventListener('input', function() {
+            const val = this.value;
+            // Buscar si el valor coincide con alguna opción
+            const match = allProductos.find(p => `${p.sku} — ${p.name_produc}` === val);
+            if (match && elementoSelect) {
+                elementoSelect.value = match.sku;
+                elementoSelect.dataset.name_produc = match.name_produc;
+            }
+        });
         
-        elementoSelect.disabled = false;
-        if(current){ 
-            const found = elementoSelect.querySelector(`option[value="${current}"]`); 
-            elementoSelect.value = found ? current : ''; 
-        }
+        elementoInput.addEventListener('change', function() {
+            const val = this.value;
+            const match = allProductos.find(p => `${p.sku} — ${p.name_produc}` === val);
+            if (match && elementoSelect) {
+                elementoSelect.value = match.sku;
+                elementoSelect.dataset.name_produc = match.name_produc;
+            } else if (elementoSelect) {
+                // Si no hay match exacto, buscar por SKU parcial
+                const skuMatch = allProductos.find(p => val.startsWith(p.sku));
+                if (skuMatch) {
+                    elementoSelect.value = skuMatch.sku;
+                    elementoSelect.dataset.name_produc = skuMatch.name_produc;
+                    this.value = `${skuMatch.sku} — ${skuMatch.name_produc}`;
+                }
+            }
+        });
     }
 
     async function updateElementoOptions(){
-        if(!elementoSelect) return;
         console.log('updateElementoOptions called');
         // Obtener cargo_id y operacion_id
         const cargoId = (cargoHidden && cargoHidden.value) ? cargoHidden.value : (cargoSelect && cargoSelect.value) ? cargoSelect.value : '';
@@ -569,18 +456,11 @@ document.addEventListener('DOMContentLoaded', function () {
         allProductos = await fetchProductosCargo(cargoId, operacionId);
         console.log('Lista productos:', allProductos.length, 'items');
         
-        // Limpiar campo de búsqueda al recargar productos
-        if (buscarElementoInput) buscarElementoInput.value = '';
+        // Limpiar campo de entrada al recargar productos
+        if (elementoInput) elementoInput.value = '';
+        if (elementoSelect) elementoSelect.value = '';
         
         renderProductOptions(allProductos);
-    }
-
-    // Filtrar mientras escribe en el buscador
-    if (buscarElementoInput) {
-        buscarElementoInput.addEventListener('input', function() {
-            const filterText = this.value.trim();
-            renderProductOptions(allProductos, filterText);
-        });
     }
 
     // inicial: cargar lista completa y asegurar hidden inicial
