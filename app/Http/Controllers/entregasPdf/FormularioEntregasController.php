@@ -488,22 +488,15 @@ class FormularioEntregasController extends Controller
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
-				// Jeans específicos para operaciones de Frío
-				$jeansEspecificos = [
-					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja rojo en manga derecha)',
-					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja rojo en manga derecha)',
-					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja azul en manga derecha)',
-					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja azul en manga derecha)',
-					'JEAN PARA CABALLERO 14 ONZAS CLASICO SIN BOLSILLOS (Franja verde en manga derecha)',
-					'JEAN PARA DAMA 14 ONZAS CLASICO SIN BOLSILLOS (Franja verde en manga derecha)',
-				];
-				
-				// Obtener los jeans específicos del catálogo de productos
+				// Obtener los jeans específicos del catálogo de productos (14 ONZAS CLASICO SIN BOLSILLOS con franjas)
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
 				$jeansQuery = DB::connection($conn)->table($table)->select('sku','name_produc')
-					->whereIn('name_produc', $jeansEspecificos);
+					->whereRaw('LOWER(name_produc) LIKE ?', ['%jean%'])
+					->whereRaw('LOWER(name_produc) LIKE ?', ['%14 onzas%'])
+					->whereRaw('LOWER(name_produc) LIKE ?', ['%sin bolsillos%'])
+					->whereRaw('LOWER(name_produc) LIKE ?', ['%franja%']);
 				$jeansRows = $jeansQuery->orderBy('name_produc')->get();
 				
 				// Combinar asignaciones + jeans específicos
