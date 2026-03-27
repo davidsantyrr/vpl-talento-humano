@@ -256,14 +256,15 @@ class CargoProductosController extends Controller
         }
         $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
 
-        // Si hay filtros de categoría, obtener SKUs permitidos y filtrar asignaciones
-        $allowedSkus = null;
+        // Si hay filtros de categoría, obtener productos permitidos (por SKU y por nombre)
+        $allowedSkus = [];
+        $allowedNames = [];
         if (!empty($categoryFilters)) {
             try {
                 $prodModel = new Producto();
                 $conn = $prodModel->getConnectionName() ?: config('database.default');
                 $table = $prodModel->getTable();
-                $catQuery = \DB::connection($conn)->table($table)->select('sku');
+                $catQuery = \DB::connection($conn)->table($table)->select('sku', 'name_produc');
                 $catQuery->where(function($qc) use ($categoryFilters){
                     foreach ($categoryFilters as $i => $term) {
                         $like = '%'.$term.'%';
@@ -271,17 +272,48 @@ class CargoProductosController extends Controller
                         else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
                     }
                 });
-                $allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+                $productos = $catQuery->get();
+                $allowedSkus = $productos->pluck('sku')->filter()->unique()->values()->all();
+                $allowedNames = $productos->pluck('name_produc')->filter()->map(function($n){ return mb_strtolower(trim($n)); })->unique()->values()->all();
             } catch (\Throwable $e) {
-                $allowedSkus = null;
+                // Error obteniendo productos, continuar sin filtro
             }
         }
 
+        // Obtener todas las asignaciones
         $asignQuery = CargoProducto::select('cargo_id','sub_area_id','sku','name_produc');
-        if (is_array($allowedSkus) && !empty($allowedSkus)) {
-            $asignQuery->whereIn('sku', $allowedSkus);
-        }
         $asignaciones = $asignQuery->get();
+        
+        // Filtrar por categoría si aplica (por SKU O por nombre de producto)
+        if (!empty($categoryFilters) && (!empty($allowedSkus) || !empty($allowedNames))) {
+            $asignaciones = $asignaciones->filter(function($a) use ($allowedSkus, $allowedNames) {
+                // Coincide por SKU exacto
+                if (!empty($a->sku) && in_array($a->sku, $allowedSkus)) {
+                    return true;
+                }
+                // Coincide por nombre - buscar si el nombre de la asignación contiene algún nombre de producto permitido
+                if (!empty($a->name_produc)) {
+                    $nombreAsignacion = mb_strtolower(trim($a->name_produc));
+                    foreach ($allowedNames as $nombreProducto) {
+                        // Si el nombre de la asignación contiene el nombre del producto (o viceversa)
+                        if (strpos($nombreAsignacion, $nombreProducto) !== false) {
+                            return true;
+                        }
+                        if (strpos($nombreProducto, $nombreAsignacion) !== false) {
+                            return true;
+                        }
+                        // Comparar las primeras palabras significativas (ignorando talla, género, etc.)
+                        $palabrasAsig = array_slice(preg_split('/\s+/', $nombreAsignacion), 0, 3);
+                        $palabrasProd = array_slice(preg_split('/\s+/', $nombreProducto), 0, 3);
+                        $coinciden = count(array_intersect($palabrasAsig, $palabrasProd));
+                        if ($coinciden >= 2) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
+        }
 
         // Construir mapa [sub_area_id][cargo_id] => array de productos
         $map = [];
