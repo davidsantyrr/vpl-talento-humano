@@ -374,21 +374,73 @@ class FormularioEntregasController extends Controller
 			// Rol en sesión -> categorías permitidas según config('vpl.role_filters')
 			$authUser = session('auth.user');
 			$roleNames = [];
-			if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
-				foreach ($authUser['roles'] as $r) {
-					if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-					if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
-					if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+			
+			// Función helper para extraer roles de diferentes estructuras
+			$extractRoles = function($user) {
+				$roles = [];
+				$push = function($val) use (&$roles) { 
+					if (is_string($val) && !empty(trim($val))) $roles[] = trim(strtolower($val)); 
+				};
+				
+				// Buscar en campos de nivel superior
+				$candidates = ['role','rol','perfil','role_name','nombre_rol','tipo_rol'];
+				if (is_array($user)) {
+					foreach ($candidates as $k) if (isset($user[$k])) $push($user[$k]);
+					// Buscar en array de roles
+					if (isset($user['roles']) && is_array($user['roles'])) {
+						foreach ($user['roles'] as $item) {
+							if (is_string($item)) { $push($item); continue; }
+							$roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+							if (is_array($item)) {
+								foreach ($roleKeys as $kk) if (isset($item[$kk])) $push($item[$kk]);
+							} elseif (is_object($item)) {
+								foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+							}
+						}
+					}
+				} elseif (is_object($user)) {
+					foreach ($candidates as $k) if (isset($user->$k)) $push($user->$k);
+					if (isset($user->roles) && is_array($user->roles)) {
+						foreach ($user->roles as $item) {
+							if (is_string($item)) { $push($item); continue; }
+							$roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+							if (is_object($item)) {
+								foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+							}
+						}
+					}
 				}
-			} elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
-				foreach ($authUser->roles as $r) {
-					if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-					if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
-					if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
-				}
+				return array_values(array_filter(array_unique($roles)));
+			};
+			
+			$roleNames = $extractRoles($authUser);
+			
+			// Fallback: si no se detectaron roles, buscar substrings en el payload serializado
+			if (empty($roleNames) && $authUser) {
+				$serialized = strtolower(json_encode($authUser));
+				if (strpos($serialized, 'hseq') !== false) $roleNames[] = 'hseq';
+				if (strpos($serialized, 'talento') !== false) $roleNames[] = 'talento';
+				if (strpos($serialized, 'talentohumano') !== false || strpos($serialized, 'talento humano') !== false) $roleNames[] = 'talento humano';
 			}
-			$roleNames = array_values(array_filter(array_unique($roleNames)));
-			$isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
+			
+			$isAdmin = false; 
+			foreach ($roleNames as $rn) { 
+				$rnc = str_replace(' ', '', $rn); 
+				if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { 
+					$isAdmin = true; 
+					break; 
+				} 
+			}
+
+			// Log para debug
+			Log::info('cargoProductos - Detección de rol', [
+				'authUser_type' => gettype($authUser),
+				'authUser_roles_raw' => is_array($authUser) ? ($authUser['roles'] ?? 'no roles key') : 'not array',
+				'roleNames_detected' => $roleNames,
+				'isAdmin' => $isAdmin,
+				'cargo_id' => $cargoId,
+				'sub_area_id' => $subAreaId
+			]);
 
 			// Mapear roles conocidos -> filtros de categoría
 			$categoryFilters = [];
@@ -404,6 +456,11 @@ class FormularioEntregasController extends Controller
 				}
 			}
 			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
+			
+			Log::info('cargoProductos - Filtros de categoría', [
+				'categoryFilters' => $categoryFilters,
+				'config_talento' => config('vpl.role_filters.talento', 'NOT SET')
+			]);
             
 			// Si hay término de búsqueda, consultar el catálogo completo de productos por nombre/SKU
 			if ($q !== '') {
@@ -430,63 +487,41 @@ class FormularioEntregasController extends Controller
 				return response()->json($data, 200);
 			}
 
-			// Sin término de búsqueda: devolver asignaciones existentes del cargo/subárea, filtradas por categoría del rol
-			$query = DB::table('cargo_productos')->select(['sku','name_produc','cargo_id','sub_area_id']);
-			if ($cargoId) { $query->where('cargo_id', $cargoId); }
-			if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
-			$rows = $query->orderBy('name_produc')->get();
-
-			// Si hay filtros de categoría (ej: Talento Humano solo ve dotación), filtrar las asignaciones
+			// Sin término de búsqueda: devolver productos según rol
+			// Si hay filtros de categoría (ej: Talento Humano solo ve dotación), mostrar todos los productos de esa categoría
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
 				
-				// Obtener todos los SKUs de la categoría permitida (ej: dotación)
-				$catQuery = DB::connection($conn)->table($table)->select('sku');
-				$catQuery->where(function($qc) use ($categoryFilters){
+				// Buscar productos del catálogo que coincidan con las categorías permitidas
+				$catalogQuery = DB::connection($conn)->table($table)->select('sku','name_produc');
+				$catalogQuery->where(function($qc) use ($categoryFilters){
 					foreach ($categoryFilters as $i => $term) {
 						$like = '%'.$term.'%';
 						if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
 						else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
 					}
 				});
-				$allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+				$catalogRows = $catalogQuery->orderBy('name_produc')->limit(300)->get();
 				
-				// Si no hay asignaciones para el cargo específico o no se especificó cargo,
-				// mostrar TODAS las asignaciones de dotación de cualquier cargo
-				if (($rows->count() === 0 || (!$cargoId && !$subAreaId)) && !empty($allowedSkus)) {
-					// Obtener todas las asignaciones de cargo_productos que tengan SKUs de dotación
-					$allAssignments = DB::table('cargo_productos')
-						->whereIn('sku', $allowedSkus)
-						->select(['sku','name_produc'])
-						->orderBy('name_produc')
-						->get();
-					
-					if ($allAssignments->count() > 0) {
-						$data = collect($allAssignments)->map(function($r){ 
-							return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
-						})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
-						return response()->json($data, 200);
-					}
-					
-					// Si no hay asignaciones de dotación creadas por el admin, buscar directamente del catálogo
-					$catalogQuery = DB::connection($conn)->table($table)->select('sku','name_produc');
-					$catalogQuery->whereIn('sku', $allowedSkus);
-					$catalogRows = $catalogQuery->orderBy('name_produc')->limit(200)->get();
-					$data = collect($catalogRows)->map(function($r){ return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; })
-						->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
-					return response()->json($data, 200);
-				}
+				$data = collect($catalogRows)->map(function($r){ 
+					return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
+				})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
 				
-				// Si hay asignaciones para un cargo específico, filtrarlas por categoría
-				if ($rows->count() > 0) {
-					$rows = $rows->filter(function($r) use ($allowedSkus){
-						return in_array((string)$r->sku, $allowedSkus);
-					})->values();
-				}
+				Log::info('cargoProductos - productos por categoría', [
+					'categoryFilters' => $categoryFilters,
+					'productos_count' => $data->count()
+				]);
+				
+				return response()->json($data, 200);
 			}
 
+			// Sin filtros de categoría: devolver asignaciones existentes del cargo/subárea
+			$query = DB::table('cargo_productos')->select(['sku','name_produc','cargo_id','sub_area_id']);
+			if ($cargoId) { $query->where('cargo_id', $cargoId); }
+			if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
+			$rows = $query->orderBy('name_produc')->get();
 
 			$data = $rows->map(function ($r) {
 				return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];

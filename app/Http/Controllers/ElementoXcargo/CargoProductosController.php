@@ -25,39 +25,61 @@ class CargoProductosController extends Controller
         $allProducts = Producto::select('sku', 'name_produc')->orderBy('name_produc')->get();
 
         // Filtrar asignaciones por rol del usuario en sesión
-        // 1) Intentar filtrar por cargos cuyo nombre coincide con el rol
         $authUser = session('auth.user');
         $roleNames = [];
-        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
-            foreach ($authUser['roles'] as $r) {
-                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-                if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
-                if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+        
+        // Función helper para extraer roles de diferentes estructuras
+        $extractRoles = function($user) {
+            $roles = [];
+            $push = function($val) use (&$roles) { 
+                if (is_string($val) && !empty(trim($val))) $roles[] = trim(strtolower($val)); 
+            };
+            
+            // Buscar en campos de nivel superior
+            $candidates = ['role','rol','perfil','role_name','nombre_rol','tipo_rol'];
+            if (is_array($user)) {
+                foreach ($candidates as $k) if (isset($user[$k])) $push($user[$k]);
+                // Buscar en array de roles
+                if (isset($user['roles']) && is_array($user['roles'])) {
+                    foreach ($user['roles'] as $item) {
+                        if (is_string($item)) { $push($item); continue; }
+                        $roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+                        if (is_array($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item[$kk])) $push($item[$kk]);
+                        } elseif (is_object($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+                        }
+                    }
+                }
+            } elseif (is_object($user)) {
+                foreach ($candidates as $k) if (isset($user->$k)) $push($user->$k);
+                if (isset($user->roles) && is_array($user->roles)) {
+                    foreach ($user->roles as $item) {
+                        if (is_string($item)) { $push($item); continue; }
+                        $roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+                        if (is_object($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+                        }
+                    }
+                }
             }
-        } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
-            foreach ($authUser->roles as $r) {
-                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-                if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
-                if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
-            }
+            return array_values(array_filter(array_unique($roles)));
+        };
+        
+        $roleNames = $extractRoles($authUser);
+        
+        // Fallback: si no se detectaron roles, buscar substrings en el payload serializado
+        if (empty($roleNames) && $authUser) {
+            $serialized = strtolower(json_encode($authUser));
+            if (strpos($serialized, 'hseq') !== false) $roleNames[] = 'hseq';
+            if (strpos($serialized, 'talento') !== false) $roleNames[] = 'talento';
+            if (strpos($serialized, 'talentohumano') !== false || strpos($serialized, 'talento humano') !== false) $roleNames[] = 'talento humano';
         }
-        $roleNames = array_values(array_filter(array_unique($roleNames)));
+        
         $isAdmin = false;
         foreach ($roleNames as $rn) {
             $rnc = str_replace(' ', '', $rn);
             if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; }
-        }
-        $cargoIdsForRoles = [];
-        if (!empty($roleNames) && !$isAdmin) {
-            $cargoIdsForRoles = \DB::table('cargos')
-                ->where(function($q) use ($roleNames) {
-                    foreach ($roleNames as $i => $rn) {
-                        if ($i === 0) $q->whereRaw('LOWER(nombre) = ?', [$rn]);
-                        else $q->orWhereRaw('LOWER(nombre) = ?', [$rn]);
-                    }
-                })
-                ->pluck('id')
-                ->toArray();
         }
 
         // 2) Construir filtros de categoría de productos según rol (HSEQ vs Talento Humano)
@@ -96,7 +118,7 @@ class CargoProductosController extends Controller
         }
 
         $asignQuery = CargoProducto::with(['cargo','subArea'])->orderByDesc('id');
-        if (!empty($cargoIdsForRoles)) { $asignQuery->whereIn('cargo_id', $cargoIdsForRoles); }
+        // Si hay filtros de categoría (ej: Talento Humano), filtrar solo por SKUs permitidos
         if (is_array($allowedSkus) && !empty($allowedSkus)) { $asignQuery->whereIn('sku', $allowedSkus); }
         if ($cargoId) { $asignQuery->where('cargo_id', $cargoId); }
         if ($subAreaId) { $asignQuery->where('sub_area_id', $subAreaId); }
@@ -162,24 +184,64 @@ class CargoProductosController extends Controller
         $cargos = Cargo::orderBy('nombre')->get();
         $subAreas = SubArea::orderBy('operationName')->get();
 
-        // Determinar filtros por rol (categorías permitidas)
+        // Determinar filtros por rol (categorías permitidas) - usar misma lógica que index()
         $authUser = session('auth.user');
         $roleNames = [];
-        if (is_array($authUser) && isset($authUser['roles']) && is_array($authUser['roles'])) {
-            foreach ($authUser['roles'] as $r) {
-                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-                if (is_array($r) && isset($r['roles'])) { $roleNames[] = trim(strtolower($r['roles'])); continue; }
-                if (is_array($r) && isset($r['name'])) { $roleNames[] = trim(strtolower($r['name'])); continue; }
+        
+        // Función helper para extraer roles de diferentes estructuras
+        $extractRoles = function($user) {
+            $roles = [];
+            $push = function($val) use (&$roles) { 
+                if (is_string($val) && !empty(trim($val))) $roles[] = trim(strtolower($val)); 
+            };
+            
+            $candidates = ['role','rol','perfil','role_name','nombre_rol','tipo_rol'];
+            if (is_array($user)) {
+                foreach ($candidates as $k) if (isset($user[$k])) $push($user[$k]);
+                if (isset($user['roles']) && is_array($user['roles'])) {
+                    foreach ($user['roles'] as $item) {
+                        if (is_string($item)) { $push($item); continue; }
+                        $roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+                        if (is_array($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item[$kk])) $push($item[$kk]);
+                        } elseif (is_object($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+                        }
+                    }
+                }
+            } elseif (is_object($user)) {
+                foreach ($candidates as $k) if (isset($user->$k)) $push($user->$k);
+                if (isset($user->roles) && is_array($user->roles)) {
+                    foreach ($user->roles as $item) {
+                        if (is_string($item)) { $push($item); continue; }
+                        $roleKeys = ['name','nombre','role','rol','roles','slug','key','display_name'];
+                        if (is_object($item)) {
+                            foreach ($roleKeys as $kk) if (isset($item->$kk)) $push($item->$kk);
+                        }
+                    }
+                }
             }
-        } elseif (is_object($authUser) && isset($authUser->roles) && is_array($authUser->roles)) {
-            foreach ($authUser->roles as $r) {
-                if (is_string($r)) { $roleNames[] = trim(strtolower($r)); continue; }
-                if (is_object($r) && isset($r->roles)) { $roleNames[] = trim(strtolower($r->roles)); continue; }
-                if (is_object($r) && isset($r->name)) { $roleNames[] = trim(strtolower($r->name)); continue; }
-            }
+            return array_values(array_filter(array_unique($roles)));
+        };
+        
+        $roleNames = $extractRoles($authUser);
+        
+        // Fallback: si no se detectaron roles, buscar substrings en el payload serializado
+        if (empty($roleNames) && $authUser) {
+            $serialized = strtolower(json_encode($authUser));
+            if (strpos($serialized, 'hseq') !== false) $roleNames[] = 'hseq';
+            if (strpos($serialized, 'talento') !== false) $roleNames[] = 'talento';
+            if (strpos($serialized, 'talentohumano') !== false || strpos($serialized, 'talento humano') !== false) $roleNames[] = 'talento humano';
         }
-        $roleNames = array_values(array_filter(array_unique($roleNames)));
-        $isAdmin = false; foreach ($roleNames as $rn) { $rnc = str_replace(' ', '', $rn); if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { $isAdmin = true; break; } }
+        
+        $isAdmin = false; 
+        foreach ($roleNames as $rn) { 
+            $rnc = str_replace(' ', '', $rn); 
+            if (strpos($rnc, 'admin') !== false || strpos($rnc, 'administrador') !== false) { 
+                $isAdmin = true; 
+                break; 
+            } 
+        }
 
         $categoryFilters = [];
         if (!$isAdmin) {
