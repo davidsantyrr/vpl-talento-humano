@@ -340,12 +340,13 @@ document.addEventListener('DOMContentLoaded', function () {
     window.agregarElementoModal = function(){
         let sel = null;
         // elementoSelect ahora es un hidden input, elementoInput es el campo de texto
-        if (elementoSelect && elementoSelect.value) {
-            const sku = elementoSelect.value;
+        if (elementoSelect && (elementoSelect.value || elementoSelect.dataset.name_produc)) {
+            const sku = elementoSelect.dataset.sku || elementoSelect.value || '';
             const name = elementoSelect.dataset.name_produc || '';
             sel = { sku, name };
         }
-        if (!sel || !sel.sku) { 
+        // Aceptar si tiene SKU o nombre
+        if (!sel || (!sel.sku && !sel.name)) { 
             Toast.fire({
                 icon: 'error',
                 title: 'Seleccione un elemento válido'
@@ -396,7 +397,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if(!resp.ok) throw new Error('fetch_error');
         const data = await resp.json();
         console.log('Data received:', data);
-        return Array.isArray(data) ? data.filter(p=>p && p.sku && p.name_produc) : [];
+        // Aceptar elementos con SKU o solo con name_produc
+        return Array.isArray(data) ? data.filter(p => p && (p.sku || p.name_produc)) : [];
         }catch(e){
         console.error('Error fetching productos:', e);
         return [];
@@ -409,9 +411,11 @@ document.addEventListener('DOMContentLoaded', function () {
         
         lista.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = `${p.sku} — ${p.name_produc}`;
-            opt.dataset.sku = String(p.sku);
-            opt.dataset.name_produc = String(p.name_produc);
+            // Si tiene SKU mostrar "SKU — Nombre", si no solo "Nombre"
+            const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
+            opt.value = displayValue;
+            opt.dataset.sku = String(p.sku || '');
+            opt.dataset.name_produc = String(p.name_produc || '');
             elementoDatalist.appendChild(opt);
         });
     }
@@ -420,27 +424,39 @@ document.addEventListener('DOMContentLoaded', function () {
     if (elementoInput) {
         elementoInput.addEventListener('input', function() {
             const val = this.value;
-            // Buscar si el valor coincide con alguna opción
-            const match = allProductos.find(p => `${p.sku} — ${p.name_produc}` === val);
+            // Buscar si el valor coincide con alguna opción (con SKU o solo nombre)
+            const match = allProductos.find(p => {
+                const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
+                return displayValue === val;
+            });
             if (match && elementoSelect) {
-                elementoSelect.value = match.sku;
+                elementoSelect.value = match.sku || match.name_produc;
                 elementoSelect.dataset.name_produc = match.name_produc;
+                elementoSelect.dataset.sku = match.sku || '';
             }
         });
         
         elementoInput.addEventListener('change', function() {
             const val = this.value;
-            const match = allProductos.find(p => `${p.sku} — ${p.name_produc}` === val);
+            const match = allProductos.find(p => {
+                const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
+                return displayValue === val;
+            });
             if (match && elementoSelect) {
-                elementoSelect.value = match.sku;
+                elementoSelect.value = match.sku || match.name_produc;
                 elementoSelect.dataset.name_produc = match.name_produc;
+                elementoSelect.dataset.sku = match.sku || '';
             } else if (elementoSelect) {
-                // Si no hay match exacto, buscar por SKU parcial
-                const skuMatch = allProductos.find(p => val.startsWith(p.sku));
-                if (skuMatch) {
-                    elementoSelect.value = skuMatch.sku;
-                    elementoSelect.dataset.name_produc = skuMatch.name_produc;
-                    this.value = `${skuMatch.sku} — ${skuMatch.name_produc}`;
+                // Si no hay match exacto, buscar por SKU parcial o por nombre
+                const skuMatch = allProductos.find(p => p.sku && val.startsWith(p.sku));
+                const nameMatch = allProductos.find(p => p.name_produc && val.toLowerCase().includes(p.name_produc.toLowerCase()));
+                const found = skuMatch || nameMatch;
+                if (found) {
+                    elementoSelect.value = found.sku || found.name_produc;
+                    elementoSelect.dataset.name_produc = found.name_produc;
+                    elementoSelect.dataset.sku = found.sku || '';
+                    const displayValue = found.sku ? `${found.sku} — ${found.name_produc}` : found.name_produc;
+                    this.value = displayValue;
                 }
             }
         });

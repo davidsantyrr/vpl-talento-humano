@@ -468,12 +468,30 @@ class FormularioEntregasController extends Controller
 				}
 				$rows = $catalog->orderBy('name_produc')->limit(200)->get();
 				$data = collect($rows)->map(function($r){ return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; })
-					->filter(fn($x) => !empty($x['sku']))->values();
+					->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->values();
 				return response()->json($data, 200);
 			}
 
-			// Sin término de búsqueda: devolver productos según rol
-			// Si hay filtros de categoría (Talento Humano = Dotación), mostrar TODOS los productos de esa categoría
+			// Sin término de búsqueda: devolver productos asignados al cargo/operación
+			// Primero buscar en cargo_productos si hay cargo_id o sub_area_id
+			if ($cargoId || $subAreaId) {
+				$cpQuery = DB::table('cargo_productos')->select(['sku','name_produc']);
+				if ($cargoId) { $cpQuery->where('cargo_id', $cargoId); }
+				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
+				$cpRows = $cpQuery->orderBy('name_produc')->get();
+				
+				// Si hay asignaciones, devolverlas directamente (incluye las que no tienen SKU)
+				if ($cpRows->count() > 0) {
+					$data = $cpRows->map(function ($r) {
+						return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
+					})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
+						return $item['sku'] . '|' . $item['name_produc'];
+					})->values();
+					return response()->json($data, 200);
+				}
+			}
+			
+			// Sin asignaciones específicas pero con filtros de categoría: mostrar todos de la categoría
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
@@ -491,21 +509,13 @@ class FormularioEntregasController extends Controller
 				
 				$data = collect($catalogRows)->map(function($r){ 
 					return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
-				})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
+				})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique('sku')->values();
 				
 				return response()->json($data, 200);
 			}
 
-			// Sin filtros de categoría: devolver asignaciones existentes del cargo/subárea
-			$query = DB::table('cargo_productos')->select(['sku','name_produc','cargo_id','sub_area_id']);
-			if ($cargoId) { $query->where('cargo_id', $cargoId); }
-			if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
-			$rows = $query->orderBy('name_produc')->get();
-
-			$data = $rows->map(function ($r) {
-				return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
-			})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
-			return response()->json($data, 200);
+			// Sin filtros: devolver vacío (ya se buscó en cargo_productos arriba)
+			return response()->json([], 200);
 		} catch (\Throwable $e) {
 			Log::warning('cargo_productos query failed', ['error' => $e->getMessage()]);
 			return response()->json([], 200);
