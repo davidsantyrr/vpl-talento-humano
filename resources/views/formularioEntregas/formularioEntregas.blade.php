@@ -124,8 +124,12 @@
         <h1>Elementos a entregar</h1>
         <div class="modal-grid">
             <div class="modal-field">
+                <label>Buscar Producto</label>
+                <input type="text" id="buscarElementoInput" placeholder="Escriba para buscar (ej: buso, camibuso...)" autocomplete="off">
+            </div>
+            <div class="modal-field">
                 <label>Producto</label>
-                <select id="elementoSelect">
+                <select id="elementoSelect" size="8" style="height:200px;">
                     <option value="">Seleccione un producto</option>
                 </select>
             </div>

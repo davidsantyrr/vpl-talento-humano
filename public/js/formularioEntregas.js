@@ -496,6 +496,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // al cargar la página si hay elementos en el hidden, restaurarlos
     try{ const existing = elementosJson && elementosJson.value ? JSON.parse(elementosJson.value) : null; if (Array.isArray(existing)) { elementos = existing; syncFormTable(); } } catch(e){ /* ignore */ }
 
+    // Lista completa de productos cargados (para filtrar localmente)
+    let allProductos = [];
+    const buscarElementoInput = document.getElementById('buscarElementoInput');
+
     async function fetchProductosCargo(cargoId, operacionId){
         try{
         let url = `${window.location.origin}/cargo-productos`;
@@ -517,6 +521,43 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function renderProductOptions(lista, filterText = '') {
+        if(!elementoSelect) return;
+        const current = elementoSelect.value;
+        elementoSelect.innerHTML = '';
+        
+        // Filtrar por texto si hay
+        let filtered = lista;
+        if (filterText) {
+            const terms = filterText.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+            filtered = lista.filter(p => {
+                const text = `${p.sku} ${p.name_produc}`.toLowerCase();
+                return terms.every(term => text.includes(term));
+            });
+        }
+        
+        if (filtered.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = filterText ? 'No se encontraron productos' : 'Seleccione un producto';
+            elementoSelect.appendChild(opt);
+        } else {
+            filtered.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = String(p.sku);
+                opt.dataset.name_produc = String(p.name_produc);
+                opt.textContent = `${p.sku} — ${p.name_produc}`;
+                elementoSelect.appendChild(opt);
+            });
+        }
+        
+        elementoSelect.disabled = false;
+        if(current){ 
+            const found = elementoSelect.querySelector(`option[value="${current}"]`); 
+            elementoSelect.value = found ? current : ''; 
+        }
+    }
+
     async function updateElementoOptions(){
         if(!elementoSelect) return;
         console.log('updateElementoOptions called');
@@ -525,22 +566,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const operacionId = operacionSelect && operacionSelect.value ? operacionSelect.value : '';
         console.log('Filtering by cargo_id:', cargoId, 'operacion_id:', operacionId);
         
-        const lista = await fetchProductosCargo(cargoId, operacionId);
-        console.log('Lista productos:', lista.length, 'items');
-        const current = elementoSelect.value;
-        elementoSelect.innerHTML = '<option value="">Seleccione un producto</option>';
-        lista.forEach(p=>{
-        const opt = document.createElement('option');
-        opt.value = String(p.sku);
-        opt.dataset.name_produc = String(p.name_produc);
-        opt.textContent = `${p.sku} — ${p.name_produc}`;
-        elementoSelect.appendChild(opt);
-        console.log('Added option:', p.sku, p.name_produc);
+        allProductos = await fetchProductosCargo(cargoId, operacionId);
+        console.log('Lista productos:', allProductos.length, 'items');
+        
+        // Limpiar campo de búsqueda al recargar productos
+        if (buscarElementoInput) buscarElementoInput.value = '';
+        
+        renderProductOptions(allProductos);
+    }
+
+    // Filtrar mientras escribe en el buscador
+    if (buscarElementoInput) {
+        buscarElementoInput.addEventListener('input', function() {
+            const filterText = this.value.trim();
+            renderProductOptions(allProductos, filterText);
         });
-        // Siempre habilitado - el backend devuelve productos según el rol del usuario (dotación para TH)
-        elementoSelect.disabled = false;
-        console.log('Select enabled:', !elementoSelect.disabled, 'total options:', elementoSelect.options.length);
-        if(current){ const found = elementoSelect.querySelector(`option[value="${current}"]`); elementoSelect.value = found ? current : ''; }
     }
 
     // inicial: cargar lista completa y asegurar hidden inicial
