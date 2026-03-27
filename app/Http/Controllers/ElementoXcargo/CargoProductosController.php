@@ -97,13 +97,14 @@ class CargoProductosController extends Controller
         $categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
 
         // Si hay filtros de categoría, limitar asignaciones a SKUs cuyo `categoria_produc` coincida
-        $allowedSkus = null;
+        $allowedSkus = [];
+        $allowedNames = [];
         if (!empty($categoryFilters)) {
             try {
                 $prodModel = new Producto();
                 $conn = $prodModel->getConnectionName() ?: config('database.default');
                 $table = $prodModel->getTable();
-                $catQuery = \DB::connection($conn)->table($table)->select('sku');
+                $catQuery = \DB::connection($conn)->table($table)->select('sku', 'name_produc');
                 $catQuery->where(function($qc) use ($categoryFilters){
                     foreach ($categoryFilters as $i => $term) {
                         $like = '%'.$term.'%';
@@ -111,17 +112,44 @@ class CargoProductosController extends Controller
                         else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
                     }
                 });
-                $allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+                $productos = $catQuery->get();
+                $allowedSkus = $productos->pluck('sku')->filter()->unique()->values()->all();
+                $allowedNames = $productos->pluck('name_produc')->filter()->map(function($n){ return mb_strtolower(trim($n)); })->unique()->values()->all();
             } catch (\Throwable $e) {
-                $allowedSkus = null; // si falla, no aplicar filtro por categoría
+                // Si falla, no aplicar filtro por categoría
             }
         }
 
+        // Obtener todas las asignaciones primero
         $asignQuery = CargoProducto::with(['cargo','subArea'])->orderByDesc('id');
-        // Si hay filtros de categoría (ej: Talento Humano), filtrar solo por SKUs permitidos
-        if (is_array($allowedSkus) && !empty($allowedSkus)) { $asignQuery->whereIn('sku', $allowedSkus); }
         if ($cargoId) { $asignQuery->where('cargo_id', $cargoId); }
         if ($subAreaId) { $asignQuery->where('sub_area_id', $subAreaId); }
+        
+        // Si hay filtros de categoría, filtrar por SKU O por nombre de producto
+        // Aplica para todos los roles no-admin (incluyendo Talento Humano que solo ve dotación)
+        $applyFilter = !empty($categoryFilters) && (!empty($allowedSkus) || !empty($allowedNames));
+        if ($applyFilter) {
+            $asignQuery->where(function($q) use ($allowedSkus, $allowedNames) {
+                $first = true;
+                // Filtrar por SKU (solo si hay SKUs)
+                if (!empty($allowedSkus)) {
+                    $q->whereIn('sku', $allowedSkus);
+                    $first = false;
+                }
+                // También incluir por coincidencia de nombre (para asignaciones sin SKU)
+                if (!empty($allowedNames)) {
+                    foreach ($allowedNames as $nombre) {
+                        if ($first) {
+                            $q->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$nombre.'%']);
+                            $first = false;
+                        } else {
+                            $q->orWhereRaw('LOWER(name_produc) LIKE ?', ['%'.$nombre.'%']);
+                        }
+                    }
+                }
+            });
+        }
+        
         $asignaciones = $asignQuery->paginate($perPage, ['*'], 'page')->appends(['per_page' => $perPage]);
 
         return view('elementoxcargo.productos', compact('cargos', 'subAreas', 'cargoId', 'subAreaId', 'asignaciones', 'perPage', 'allProducts'));
@@ -285,6 +313,7 @@ class CargoProductosController extends Controller
         $asignaciones = $asignQuery->get();
         
         // Filtrar por categoría si aplica (por SKU O por nombre de producto)
+        // Aplica para todos los roles no-admin (incluyendo Talento Humano que solo ve dotación)
         if (!empty($categoryFilters) && (!empty($allowedSkus) || !empty($allowedNames))) {
             $asignaciones = $asignaciones->filter(function($a) use ($allowedSkus, $allowedNames) {
                 // Coincide por SKU exacto
