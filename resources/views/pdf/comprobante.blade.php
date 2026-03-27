@@ -129,7 +129,16 @@
   "Todos los empleadores están obligados a proporcionar a cada trabajador, sin costo para este, elementos de protección personal en cantidad y calidad acordes a los riesgos reales o potenciales en los lugares de trabajo."
 </div>
 
-<!-- Tabla principal -->
+<!-- Leyenda de colores (solo si hay historial) -->
+@if(isset($historialEntregas) && is_array($historialEntregas) && count($historialEntregas) > 0)
+<div style="margin-bottom:6px; font-size:10px; color:#475569;">
+  <span style="display:inline-block; width:12px; height:12px; background:#f8fafc; border:1px solid #dbeafe; vertical-align:middle;"></span> Entregas anteriores
+  &nbsp;&nbsp;
+  <span style="display:inline-block; width:12px; height:12px; background:#fffde7; border:1px solid #fef08a; vertical-align:middle;"></span> <strong>Entrega actual</strong>
+</div>
+@endif
+
+<!-- Tabla principal con historial de entregas -->
 <table class="elementos-table">
   <thead>
     <tr>
@@ -141,7 +150,55 @@
     </tr>
   </thead>
   <tbody>
-    @php $rows = 8; @endphp
+    @php 
+      $rowsTotal = 0;
+      $maxRows = 12; // Filas máximas a mostrar
+      $firmaSrcActual = isset($firma) ? ($firma['entrega'] ?? ($firma['recepcion'] ?? null)) : null;
+    @endphp
+    
+    {{-- HISTORIAL: Mostrar entregas anteriores primero --}}
+    @if(isset($historialEntregas) && is_array($historialEntregas) && count($historialEntregas) > 0)
+      @foreach($historialEntregas as $entregaHist)
+        @php
+          $fechaHist = \Carbon\Carbon::parse($entregaHist['fecha'])->format('d/m/Y');
+          $tipoHist = strtolower($entregaHist['tipo'] ?? '');
+          $motivoHist = '';
+          if (strpos($tipoHist, 'primera') !== false) {
+            $motivoHist = 'ENTREGA 1° VEZ';
+          } elseif (strpos($tipoHist, 'reposi') !== false) {
+            $motivoHist = 'REPOSICIÓN';
+          } elseif (strpos($tipoHist, 'period') !== false) {
+            $motivoHist = 'PERIÓDICA';
+          } elseif (strpos($tipoHist, 'prestamo') !== false || strpos($tipoHist, 'préstamo') !== false) {
+            $motivoHist = 'PRÉSTAMO';
+          } elseif (strpos($tipoHist, 'cambio') !== false) {
+            $motivoHist = 'CAMBIO';
+          } else {
+            $motivoHist = strtoupper($entregaHist['tipo'] ?? 'N/A');
+          }
+          $entregaUserHist = $entregaHist['entrega_user'] ?? 'Sistema';
+        @endphp
+        @foreach($entregaHist['elementos'] as $elemHist)
+          @php
+            $skuHist = $elemHist['sku'] ?? 'N/A';
+            $nombreHist = $elemHist['name_produc'] ?? '';
+            $elementoDisplayHist = !empty($nombreHist) ? ($skuHist . ' - ' . $nombreHist) : $skuHist;
+            $rowsTotal++;
+          @endphp
+          @if($rowsTotal <= $maxRows)
+          <tr style="background-color: #f8fafc;">
+            <td class="center">{{ $fechaHist }}</td>
+            <td>{{ $elementoDisplayHist }}</td>
+            <td class="center">{{ $motivoHist }}</td>
+            <td class="center"><span style="font-size:10px; color:#64748b;">✓</span></td>
+            <td class="center">{{ $entregaUserHist }}</td>
+          </tr>
+          @endif
+        @endforeach
+      @endforeach
+    @endif
+    
+    {{-- ENTREGA ACTUAL: Elementos de la nueva entrega --}}
     @foreach($elementos as $i => $el)
       @php
         $sku = is_array($el) ? ($el['sku'] ?? 'N/A') : (isset($el->sku) ? $el->sku : 'N/A');
@@ -168,17 +225,27 @@
         // Agregar tipo de entrega al motivo para mayor claridad
         $extraTipo = $tipoEntregaLabel ? (' — ' . strtoupper($tipoEntregaLabel)) : '';
         $motivoText = trim($motivoText . $extraTipo);
-        $firmaSrc = isset($firma) ? ($firma['entrega'] ?? ($firma['recepcion'] ?? null)) : null;
+        $rowsTotal++;
       @endphp
-      <tr>
+      @if($rowsTotal <= $maxRows)
+      <tr style="background-color: #fffde7;">
         <td class="center">{{ $fechaReg }}</td>
-        <td>{{ $elementoDisplay }}</td>
+        <td><strong>{{ $elementoDisplay }}</strong></td>
         <td class="center">{{ $motivoText }}</td>
-        <td class="center">&nbsp;</td>
+        <td class="center">
+          @if($i === 0 && !empty($firmaSrcActual))
+            <img src="{{ $firmaSrcActual }}" alt="Firma" style="height:28px; max-width:60px;" />
+          @else
+            &nbsp;
+          @endif
+        </td>
         <td class="center">{{ $personaEntrega }}</td>
       </tr>
+      @endif
     @endforeach
-    @for($j = count($elementos); $j < $rows; $j++)
+    
+    {{-- Filas vacías para completar --}}
+    @for($j = $rowsTotal; $j < $maxRows; $j++)
       <tr>
         <td style="height:18px">&nbsp;</td><td></td><td></td><td></td><td></td>
       </tr>

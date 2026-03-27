@@ -537,8 +537,8 @@ document.addEventListener('DOMContentLoaded', function () {
         elementoSelect.appendChild(opt);
         console.log('Added option:', p.sku, p.name_produc);
         });
-        // Habilitar si hay productos o si no hay filtros (mostrar todos)
-        elementoSelect.disabled = (lista.length === 0 && (cargoId || operacionId));
+        // Siempre habilitado - el backend devuelve productos según el rol del usuario (dotación para TH)
+        elementoSelect.disabled = false;
         console.log('Select enabled:', !elementoSelect.disabled, 'total options:', elementoSelect.options.length);
         if(current){ const found = elementoSelect.querySelector(`option[value="${current}"]`); elementoSelect.value = found ? current : ''; }
     }

@@ -436,28 +436,61 @@ class FormularioEntregasController extends Controller
 			if ($subAreaId) { $query->where('sub_area_id', $subAreaId); }
 			$rows = $query->orderBy('name_produc')->get();
 
-			if (!empty($categoryFilters) && $rows->count() > 0) {
+			// Si hay filtros de categoría (ej: Talento Humano solo ve dotación), filtrar las asignaciones
+			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
-				$skus = $rows->pluck('sku')->filter()->unique()->values()->all();
-				if (!empty($skus)) {
-					$prodRows = DB::connection($conn)->table($table)->whereIn('sku', $skus)->select('sku','categoria_produc')->get();
-					$catMap = [];
-					foreach ($prodRows as $pr) { $catMap[(string)$pr->sku] = mb_strtolower((string)($pr->categoria_produc ?? '')); }
-					$rows = $rows->filter(function($r) use ($catMap, $categoryFilters){
-						$cat = $catMap[(string)$r->sku] ?? '';
-						foreach ($categoryFilters as $term) { if ($term !== '' && strpos($cat, $term) !== false) return true; }
-						return false;
+				
+				// Obtener todos los SKUs de la categoría permitida (ej: dotación)
+				$catQuery = DB::connection($conn)->table($table)->select('sku');
+				$catQuery->where(function($qc) use ($categoryFilters){
+					foreach ($categoryFilters as $i => $term) {
+						$like = '%'.$term.'%';
+						if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+						else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+					}
+				});
+				$allowedSkus = $catQuery->pluck('sku')->filter()->unique()->values()->all();
+				
+				// Si no hay asignaciones para el cargo específico o no se especificó cargo,
+				// mostrar TODAS las asignaciones de dotación de cualquier cargo
+				if (($rows->count() === 0 || (!$cargoId && !$subAreaId)) && !empty($allowedSkus)) {
+					// Obtener todas las asignaciones de cargo_productos que tengan SKUs de dotación
+					$allAssignments = DB::table('cargo_productos')
+						->whereIn('sku', $allowedSkus)
+						->select(['sku','name_produc'])
+						->orderBy('name_produc')
+						->get();
+					
+					if ($allAssignments->count() > 0) {
+						$data = collect($allAssignments)->map(function($r){ 
+							return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
+						})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
+						return response()->json($data, 200);
+					}
+					
+					// Si no hay asignaciones de dotación creadas por el admin, buscar directamente del catálogo
+					$catalogQuery = DB::connection($conn)->table($table)->select('sku','name_produc');
+					$catalogQuery->whereIn('sku', $allowedSkus);
+					$catalogRows = $catalogQuery->orderBy('name_produc')->limit(200)->get();
+					$data = collect($catalogRows)->map(function($r){ return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; })
+						->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
+					return response()->json($data, 200);
+				}
+				
+				// Si hay asignaciones para un cargo específico, filtrarlas por categoría
+				if ($rows->count() > 0) {
+					$rows = $rows->filter(function($r) use ($allowedSkus){
+						return in_array((string)$r->sku, $allowedSkus);
 					})->values();
-				} else {
-					$rows = collect();
 				}
 			}
 
+
 			$data = $rows->map(function ($r) {
 				return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
-			})->filter(fn($x) => !empty($x['sku']))->values();
+			})->filter(fn($x) => !empty($x['sku']))->unique('sku')->values();
 			return response()->json($data, 200);
 		} catch (\Throwable $e) {
 			Log::warning('cargo_productos query failed', ['error' => $e->getMessage()]);
