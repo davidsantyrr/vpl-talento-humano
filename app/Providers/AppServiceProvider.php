@@ -20,8 +20,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Forzar HTTPS solo en producción/testing (no en local)
-        if (app()->environment('production', 'testing')) {
+        // Forzar HTTPS si NO estamos en local o si la request viene por HTTPS
+        if (!app()->environment('local') || 
+            (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+            (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')) {
             URL::forceScheme('https');
         }
     }
