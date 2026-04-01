@@ -479,14 +479,50 @@ class FormularioEntregasController extends Controller
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
-				// Si hay asignaciones, devolverlas
+				// Si hay asignaciones, filtrarlas por categoría del rol
 				if ($cpRows->count() > 0) {
+					// Si hay filtros de categoría (no es admin), filtrar las asignaciones
+					if (!empty($categoryFilters)) {
+						// Obtener SKUs de las asignaciones
+						$assignedSkus = $cpRows->pluck('sku')->filter()->unique()->values()->all();
+						
+						// Buscar en el catálogo de productos cuáles de esos SKUs pertenecen a las categorías permitidas
+						if (!empty($assignedSkus)) {
+							$prodModel = new Producto();
+							$conn = $prodModel->getConnectionName() ?: config('database.default');
+							$table = $prodModel->getTable();
+							
+							$allowedQuery = DB::connection($conn)->table($table)
+								->select('sku', 'name_produc')
+								->whereIn('sku', $assignedSkus)
+								->where(function($qc) use ($categoryFilters) {
+									foreach ($categoryFilters as $i => $term) {
+										$like = '%'.$term.'%';
+										if ($i === 0) $qc->whereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+										else $qc->orWhereRaw('LOWER(categoria_produc) LIKE ?', [$like]);
+									}
+								});
+							
+							$allowedProducts = $allowedQuery->get();
+							$allowedSkuSet = $allowedProducts->pluck('sku')->filter()->unique()->values()->all();
+							
+							// Filtrar las asignaciones para solo incluir SKUs permitidos
+							$cpRows = $cpRows->filter(function($r) use ($allowedSkuSet) {
+								return in_array($r->sku, $allowedSkuSet);
+							});
+						}
+					}
+					
 					$data = $cpRows->map(function ($r) {
 						return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
 					})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
 						return $item['sku'] . '|' . $item['name_produc'];
 					})->values();
-					return response()->json($data, 200);
+					
+					// Si después de filtrar hay asignaciones, devolverlas
+					if ($data->count() > 0) {
+						return response()->json($data, 200);
+					}
 				}
 			}
 			
