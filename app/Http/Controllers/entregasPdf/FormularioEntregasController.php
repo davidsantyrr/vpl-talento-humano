@@ -472,46 +472,25 @@ class FormularioEntregasController extends Controller
 				return response()->json($data, 200);
 			}
 
-			// Detectar si es operación de Frío
-			$esFrio = false;
-			if ($subAreaId) {
-				$subArea = DB::table('sub_areas')->where('id', $subAreaId)->first();
-				if ($subArea && stripos($subArea->operationName ?? '', 'frio') !== false) {
-					$esFrio = true;
-				}
-			}
-
-			// Si es operación de Frío: usar asignaciones específicas de cargo_productos + jeans específicos
-			if ($esFrio && ($cargoId || $subAreaId)) {
+			// Primero buscar asignaciones en cargo_productos si hay cargo_id y/o sub_area_id
+			if ($cargoId || $subAreaId) {
 				$cpQuery = DB::table('cargo_productos')->select(['sku','name_produc']);
 				if ($cargoId) { $cpQuery->where('cargo_id', $cargoId); }
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
-				// Obtener los jeans específicos del catálogo de productos (14 ONZAS CLASICO SIN BOLSILLOS con franjas)
-				$prodModel = new Producto();
-				$conn = $prodModel->getConnectionName() ?: config('database.default');
-				$table = $prodModel->getTable();
-				$jeansQuery = DB::connection($conn)->table($table)->select('sku','name_produc')
-					->whereRaw('LOWER(name_produc) LIKE ?', ['%jean%'])
-					->whereRaw('LOWER(name_produc) LIKE ?', ['%14 onzas%'])
-					->whereRaw('LOWER(name_produc) LIKE ?', ['%sin bolsillos%'])
-					->whereRaw('LOWER(name_produc) LIKE ?', ['%franja%']);
-				$jeansRows = $jeansQuery->orderBy('name_produc')->get();
-				
-				// Combinar asignaciones + jeans específicos
-				$combined = $cpRows->merge($jeansRows);
-				
-				// Devolver asignaciones (incluye las que no tienen SKU)
-				$data = $combined->map(function ($r) {
-					return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
-				})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
-					return $item['sku'] . '|' . $item['name_produc'];
-				})->values();
-				return response()->json($data, 200);
+				// Si hay asignaciones, devolverlas
+				if ($cpRows->count() > 0) {
+					$data = $cpRows->map(function ($r) {
+						return ['sku' => (string) ($r->sku ?? ''), 'name_produc' => (string) ($r->name_produc ?? '')];
+					})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->unique(function($item) {
+						return $item['sku'] . '|' . $item['name_produc'];
+					})->values();
+					return response()->json($data, 200);
+				}
 			}
 			
-			// Para otras operaciones (no Frío): mostrar TODOS los productos de Dotación
+			// Fallback: Si no hay asignaciones específicas, mostrar productos del catálogo según categoría del rol
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');

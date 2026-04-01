@@ -20,10 +20,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Forzar esquema HTTPS globalmente cuando se requiera.
-        // Controlado por la variable de entorno FORCE_HTTPS (por defecto true para este entorno).
-        // Si necesitas desactivarlo en local, pon FORCE_HTTPS=false en tu .env.
-        if (env('FORCE_HTTPS', true) || env('APP_ENV') !== 'local') {
+        // Forzar HTTPS solo en producción/testing (no en local)
+        if (app()->environment('production', 'testing')) {
             URL::forceScheme('https');
         }
     }

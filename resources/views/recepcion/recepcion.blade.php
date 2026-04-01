@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @push('styles')
-<link rel="stylesheet" href="{{ secure_asset('css/recepcion/recepcion.css') }}">
+<link rel="stylesheet" href="{{ asset('css/recepcion/recepcion.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente />
@@ -211,10 +211,10 @@
   window.RUTA_USUARIOS_BUSCAR = "{{ route('usuarios.find', [], false) }}";
   window.RUTA_PRODUCTOS_NOMBRES = "{{ route('productos.nombres', [], false) }}";
 </script>
-<script src="{{ secure_asset('js/recepcion/recepcion.js') }}"></script>
-<script src="{{ secure_asset('js/recepcion/recepcionLookup.js') }}"></script>
-<script src="{{ secure_asset('js/recepcion/recepcionModal.js') }}"></script>
-<script src="{{ secure_asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
+<script src="{{ asset('js/recepcion/recepcion.js') }}"></script>
+<script src="{{ asset('js/recepcion/recepcionLookup.js') }}"></script>
+<script src="{{ asset('js/recepcion/recepcionModal.js') }}"></script>
+<script src="{{ asset('js/recepcion/recepcionEntregasModal.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function(){
   const canvas = document.getElementById('firmaCanvas');

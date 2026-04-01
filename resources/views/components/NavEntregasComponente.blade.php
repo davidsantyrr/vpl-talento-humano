@@ -3,7 +3,7 @@
   <nav class="navegacion" aria-label="Navegación principal">
     <div class="nav-left">
       <a href="/" class="brand">
-        <img src="{{ secure_asset('img/Logo.png') }}" alt="Logo" class="logoVigia">
+        <img src="{{ asset('img/Logo.png') }}" alt="Logo" class="logoVigia">
       </a>
     </div>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navOpciones">Menú</button>
@@ -27,7 +27,7 @@
   </nav>
 </div>
 
-<link rel="stylesheet" href="{{ secure_asset('css/components/styleNavEntregas.css') }}">
+<link rel="stylesheet" href="{{ asset('css/components/styleNavEntregas.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
   (function(){

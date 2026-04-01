@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Gestión de Notificaciones de Inventario')
 @push('styles')
-<link rel="stylesheet" href="{{ secure_asset('css/gestiones/gestionNotificacionesInventario.css') }}">
+<link rel="stylesheet" href="{{ asset('css/gestiones/gestionNotificacionesInventario.css') }}">
 @endpush
 @section('content')
 <x-NavEntregasComponente/>

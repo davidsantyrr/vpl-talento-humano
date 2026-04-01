@@ -381,7 +381,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // Lista completa de productos cargados
     let allProductos = [];
     const elementoInput = document.getElementById('elementoInput');
-    const elementoDatalist = document.getElementById('elementoDatalist');
+    const elementoDropdown = document.getElementById('elementoDropdown');
+    let highlightedIndex = -1;
 
     async function fetchProductosCargo(cargoId, operacionId){
         try{
@@ -405,61 +406,123 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function renderProductOptions(lista) {
-        if(!elementoDatalist) return;
-        elementoDatalist.innerHTML = '';
+    function renderDropdownOptions(lista, filterText = '') {
+        if(!elementoDropdown) return;
+        elementoDropdown.innerHTML = '';
+        highlightedIndex = -1;
         
-        lista.forEach(p => {
-            const opt = document.createElement('option');
-            // Si tiene SKU mostrar "SKU — Nombre", si no solo "Nombre"
-            const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
-            opt.value = displayValue;
-            opt.dataset.sku = String(p.sku || '');
-            opt.dataset.name_produc = String(p.name_produc || '');
-            elementoDatalist.appendChild(opt);
+        const filtered = filterText 
+            ? lista.filter(p => {
+                const searchText = filterText.toLowerCase();
+                return (p.sku && p.sku.toLowerCase().includes(searchText)) || 
+                       (p.name_produc && p.name_produc.toLowerCase().includes(searchText));
+            })
+            : lista;
+        
+        if (filtered.length === 0) {
+            const noResults = document.createElement('li');
+            noResults.className = 'no-results';
+            noResults.textContent = 'No se encontraron productos';
+            elementoDropdown.appendChild(noResults);
+            return;
+        }
+        
+        filtered.forEach((p, idx) => {
+            const li = document.createElement('li');
+            li.dataset.sku = String(p.sku || '');
+            li.dataset.name_produc = String(p.name_produc || '');
+            li.dataset.index = idx;
+            
+            if (p.sku) {
+                li.innerHTML = `<span class="sku-tag">${p.sku}</span><span class="producto-name">${p.name_produc}</span>`;
+            } else {
+                li.innerHTML = `<span class="producto-name">${p.name_produc}</span>`;
+            }
+            
+            li.addEventListener('click', function() {
+                selectProducto(p);
+            });
+            
+            elementoDropdown.appendChild(li);
         });
     }
+    
+    function selectProducto(producto) {
+        if (!producto) return;
+        const displayValue = producto.sku ? `${producto.sku} — ${producto.name_produc}` : producto.name_produc;
+        if (elementoInput) elementoInput.value = displayValue;
+        if (elementoSelect) {
+            elementoSelect.value = producto.sku || producto.name_produc;
+            elementoSelect.dataset.name_produc = producto.name_produc;
+            elementoSelect.dataset.sku = producto.sku || '';
+        }
+        hideDropdown();
+    }
+    
+    function showDropdown() {
+        if (elementoDropdown) {
+            elementoDropdown.classList.add('active');
+        }
+    }
+    
+    function hideDropdown() {
+        if (elementoDropdown) {
+            elementoDropdown.classList.remove('active');
+            highlightedIndex = -1;
+        }
+    }
 
-    // Cuando selecciona una opción del datalist, actualizar el hidden
+    // Eventos del input para dropdown custom
     if (elementoInput) {
+        elementoInput.addEventListener('focus', function() {
+            renderDropdownOptions(allProductos, this.value);
+            showDropdown();
+        });
+        
         elementoInput.addEventListener('input', function() {
-            const val = this.value;
-            // Buscar si el valor coincide con alguna opción (con SKU o solo nombre)
-            const match = allProductos.find(p => {
-                const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
-                return displayValue === val;
-            });
-            if (match && elementoSelect) {
-                elementoSelect.value = match.sku || match.name_produc;
-                elementoSelect.dataset.name_produc = match.name_produc;
-                elementoSelect.dataset.sku = match.sku || '';
+            renderDropdownOptions(allProductos, this.value);
+            showDropdown();
+        });
+        
+        elementoInput.addEventListener('keydown', function(e) {
+            const items = elementoDropdown ? elementoDropdown.querySelectorAll('li:not(.no-results)') : [];
+            if (items.length === 0) return;
+            
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+                updateHighlight(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                highlightedIndex = Math.max(highlightedIndex - 1, 0);
+                updateHighlight(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (highlightedIndex >= 0 && items[highlightedIndex]) {
+                    const sku = items[highlightedIndex].dataset.sku;
+                    const name = items[highlightedIndex].dataset.name_produc;
+                    selectProducto({ sku, name_produc: name });
+                }
+            } else if (e.key === 'Escape') {
+                hideDropdown();
             }
         });
         
-        elementoInput.addEventListener('change', function() {
-            const val = this.value;
-            const match = allProductos.find(p => {
-                const displayValue = p.sku ? `${p.sku} — ${p.name_produc}` : p.name_produc;
-                return displayValue === val;
-            });
-            if (match && elementoSelect) {
-                elementoSelect.value = match.sku || match.name_produc;
-                elementoSelect.dataset.name_produc = match.name_produc;
-                elementoSelect.dataset.sku = match.sku || '';
-            } else if (elementoSelect) {
-                // Si no hay match exacto, buscar por SKU parcial o por nombre
-                const skuMatch = allProductos.find(p => p.sku && val.startsWith(p.sku));
-                const nameMatch = allProductos.find(p => p.name_produc && val.toLowerCase().includes(p.name_produc.toLowerCase()));
-                const found = skuMatch || nameMatch;
-                if (found) {
-                    elementoSelect.value = found.sku || found.name_produc;
-                    elementoSelect.dataset.name_produc = found.name_produc;
-                    elementoSelect.dataset.sku = found.sku || '';
-                    const displayValue = found.sku ? `${found.sku} — ${found.name_produc}` : found.name_produc;
-                    this.value = displayValue;
-                }
+        // Cerrar dropdown al hacer clic fuera
+        document.addEventListener('click', function(e) {
+            if (!elementoInput.contains(e.target) && !elementoDropdown.contains(e.target)) {
+                hideDropdown();
             }
         });
+    }
+    
+    function updateHighlight(items) {
+        items.forEach((item, idx) => {
+            item.classList.toggle('highlighted', idx === highlightedIndex);
+        });
+        if (highlightedIndex >= 0 && items[highlightedIndex]) {
+            items[highlightedIndex].scrollIntoView({ block: 'nearest' });
+        }
     }
 
     async function updateElementoOptions(){
@@ -476,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (elementoInput) elementoInput.value = '';
         if (elementoSelect) elementoSelect.value = '';
         
-        renderProductOptions(allProductos);
+        renderDropdownOptions(allProductos);
     }
 
     // inicial: cargar lista completa y asegurar hidden inicial
