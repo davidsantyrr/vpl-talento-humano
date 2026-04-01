@@ -519,14 +519,15 @@ class FormularioEntregasController extends Controller
 						return $item['sku'] . '|' . $item['name_produc'];
 					})->values();
 					
-					// Si después de filtrar hay asignaciones, devolverlas
-					if ($data->count() > 0) {
-						return response()->json($data, 200);
-					}
+					// Devolver las asignaciones (pueden ser vacías si el filtro las eliminó todas)
+					return response()->json($data, 200);
 				}
+				
+				// Si hay cargo_id pero no hay asignaciones, devolver vacío (NO el catálogo completo)
+				return response()->json([], 200);
 			}
 			
-			// Fallback: Si no hay asignaciones específicas, mostrar productos del catálogo según categoría del rol
+			// Fallback: Si NO hay cargo_id ni sub_area_id, mostrar productos del catálogo según categoría del rol
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
