@@ -384,12 +384,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const elementoDropdown = document.getElementById('elementoDropdown');
     let highlightedIndex = -1;
 
-    async function fetchProductosCargo(cargoId, operacionId){
+    async function fetchProductosCargo(cargoId, operacionId, searchQuery = ''){
         try{
         let url = `${window.location.origin}/cargo-productos`;
         const params = new URLSearchParams();
         if(cargoId) params.append('cargo_id', cargoId);
         if(operacionId) params.append('sub_area_id', operacionId);
+        if(searchQuery) params.append('q', searchQuery);
         if(params.toString()) url += '?' + params.toString();
         console.log('Fetching from:', url);
         const resp = await fetch(url);
@@ -422,7 +423,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (filtered.length === 0) {
             const noResults = document.createElement('li');
             noResults.className = 'no-results';
-            noResults.textContent = 'No se encontraron productos';
+            // Mensaje según la situación
+            if (lista.length === 0 && (!filterText || filterText.length < 2)) {
+                noResults.textContent = 'Escriba al menos 2 letras para buscar productos';
+            } else {
+                noResults.textContent = 'No se encontraron productos';
+            }
             elementoDropdown.appendChild(noResults);
             return;
         }
@@ -472,16 +478,47 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Debounce para búsqueda en servidor
+    let searchTimeout = null;
+    
+    async function searchProductosOnServer(query) {
+        const cargoId = (cargoHidden && cargoHidden.value) ? cargoHidden.value : (cargoSelect && cargoSelect.value) ? cargoSelect.value : '';
+        const operacionId = operacionSelect && operacionSelect.value ? operacionSelect.value : '';
+        
+        const results = await fetchProductosCargo(cargoId, operacionId, query);
+        allProductos = results;
+        renderDropdownOptions(allProductos, '');
+    }
+
     // Eventos del input para dropdown custom
     if (elementoInput) {
         elementoInput.addEventListener('focus', function() {
+            // Si no hay productos y hay texto, buscar en servidor
+            if (allProductos.length === 0 && this.value.length >= 2) {
+                searchProductosOnServer(this.value);
+            }
             renderDropdownOptions(allProductos, this.value);
             showDropdown();
         });
         
         elementoInput.addEventListener('input', function() {
-            renderDropdownOptions(allProductos, this.value);
-            showDropdown();
+            const query = this.value.trim();
+            
+            // Si hay productos locales, filtrar localmente primero
+            if (allProductos.length > 0) {
+                renderDropdownOptions(allProductos, query);
+                showDropdown();
+            }
+            
+            // Siempre buscar en servidor con debounce si hay al menos 2 caracteres
+            // Esto permite encontrar productos del catálogo que no están en la lista local
+            clearTimeout(searchTimeout);
+            if (query.length >= 2) {
+                searchTimeout = setTimeout(() => {
+                    searchProductosOnServer(query);
+                    showDropdown();
+                }, 400);
+            }
         });
         
         elementoInput.addEventListener('keydown', function(e) {

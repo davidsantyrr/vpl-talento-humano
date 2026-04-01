@@ -432,21 +432,108 @@ class FormularioEntregasController extends Controller
 				} 
 			}
 
+			// Detectar tipo de rol
+			$isHSEQ = false;
+			$isTalentoHumano = false;
+			foreach ($roleNames as $rn) {
+				if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
+					$isHSEQ = true;
+				}
+				if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
+					$isTalentoHumano = true;
+				}
+			}
+			
+			// Detectar si la operación es de Frío
+			$isFrioOperation = false;
+			if ($subAreaId) {
+				$subArea = DB::table('sub_areas')->where('id', $subAreaId)->first();
+				if ($subArea && isset($subArea->operationName)) {
+					$opName = mb_strtolower($subArea->operationName);
+					$isFrioOperation = (strpos($opName, 'frio') !== false || strpos($opName, 'frío') !== false);
+				}
+			}
+			
+			Log::info('Role and operation detection', [
+				'roleNames' => $roleNames,
+				'isAdmin' => $isAdmin,
+				'isHSEQ' => $isHSEQ,
+				'isTalentoHumano' => $isTalentoHumano,
+				'isFrioOperation' => $isFrioOperation,
+				'subAreaId' => $subAreaId
+			]);
+			
 			// Mapear roles conocidos -> filtros de categoría
 			$categoryFilters = [];
 			if (!$isAdmin) {
-				foreach ($roleNames as $rn) {
-					// heurística simple: si contiene 'hseq' -> usar filtros hseq; si contiene 'talento'/'humano'/'th' -> usar filtros talento
-					if (strpos($rn, 'hseq') !== false || strpos($rn, 'seguridad') !== false) {
-						$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
-					}
-					if (strpos($rn, 'talento') !== false || strpos($rn, 'humano') !== false || $rn === 'th') {
-						$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
-					}
+				if ($isHSEQ) {
+					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.hseq', ''))));
+				}
+				if ($isTalentoHumano) {
+					$categoryFilters = array_merge($categoryFilters, array_map('trim', explode(',', config('vpl.role_filters.talento', ''))));
 				}
 			}
 			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
+			
+			// ==========================================
+			// LÓGICA DIFERENCIADA POR ROL Y OPERACIÓN
+			// ==========================================
+			
+			// CASO 1: HSEQ o Admin -> Usar asignaciones de cargo_productos
+			// CASO 2: Talento Humano + Operación Frío -> Usar asignaciones de cargo_productos
+			// CASO 3: Talento Humano + Operación NO Frío -> Catálogo Dotación (sin Frío), requiere búsqueda
+			
+			$useAssignments = $isAdmin || $isHSEQ || ($isTalentoHumano && $isFrioOperation);
+			$useCatalogWithSearch = $isTalentoHumano && !$isFrioOperation;
+			
+			Log::info('Logic path', [
+				'useAssignments' => $useAssignments,
+				'useCatalogWithSearch' => $useCatalogWithSearch,
+				'q' => $q
+			]);
+			
+			// CASO 3: Talento Humano + NO Frío -> Catálogo de Dotación (excluyendo Frío) con búsqueda
+			if ($useCatalogWithSearch) {
+				// Si no hay término de búsqueda, devolver vacío (para que escriba y busque)
+				if ($q === '') {
+					return response()->json([], 200);
+				}
+				
+				$prodModel = new Producto();
+				$conn = $prodModel->getConnectionName() ?: config('database.default');
+				$table = $prodModel->getTable();
+				
+				$catalog = DB::connection($conn)->table($table)->select('sku','name_produc','categoria_produc');
+				
+				// Filtrar por término de búsqueda
+				$catalog->where(function($qq) use ($q){
+					$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
+					   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
+				});
+				
+				// Solo categoría Dotación
+				$catalog->whereRaw('LOWER(categoria_produc) LIKE ?', ['%dotacion%']);
+				
+				// EXCLUIR productos de Frío (por nombre o categoría)
+				$catalog->whereRaw('LOWER(name_produc) NOT LIKE ?', ['%frio%']);
+				$catalog->whereRaw('LOWER(name_produc) NOT LIKE ?', ['%frío%']);
+				$catalog->whereRaw('LOWER(categoria_produc) NOT LIKE ?', ['%frio%']);
+				$catalog->whereRaw('LOWER(categoria_produc) NOT LIKE ?', ['%frío%']);
+				
+				$rows = $catalog->orderBy('name_produc')->limit(50)->get();
+				$data = collect($rows)->map(function($r){ 
+					return ['sku' => (string)($r->sku ?? ''), 'name_produc' => (string)($r->name_produc ?? '')]; 
+				})->filter(fn($x) => !empty($x['sku']) || !empty($x['name_produc']))->values();
+				
+				Log::info('Catalog search for Talento (no Frio)', [
+					'q' => $q,
+					'results' => $data->count()
+				]);
+				
+				return response()->json($data, 200);
+			}
             
+			// CASO 1 y 2: Usar asignaciones de cargo_productos
 			// Si hay término de búsqueda, consultar el catálogo completo de productos por nombre/SKU
 			if ($q !== '') {
 				$prodModel = new Producto();
@@ -479,18 +566,45 @@ class FormularioEntregasController extends Controller
 				if ($subAreaId) { $cpQuery->where('sub_area_id', $subAreaId); }
 				$cpRows = $cpQuery->orderBy('name_produc')->get();
 				
+				Log::info('cargo_productos query', [
+					'cargo_id' => $cargoId,
+					'sub_area_id' => $subAreaId,
+					'count' => $cpRows->count(),
+					'categoryFilters' => $categoryFilters,
+					'isAdmin' => $isAdmin,
+					'roleNames' => $roleNames
+				]);
+				
 				// Si hay asignaciones, filtrarlas por categoría del rol
 				if ($cpRows->count() > 0) {
-					// Si hay filtros de categoría (no es admin), filtrar las asignaciones
-					if (!empty($categoryFilters)) {
+					// Si NO es admin y hay filtros de categoría, filtrar las asignaciones
+					if (!$isAdmin && !empty($categoryFilters)) {
 						// Obtener SKUs de las asignaciones
 						$assignedSkus = $cpRows->pluck('sku')->filter()->unique()->values()->all();
+						
+						Log::info('Filtering by category', [
+							'assignedSkus' => $assignedSkus,
+							'categoryFilters' => $categoryFilters
+						]);
 						
 						// Buscar en el catálogo de productos cuáles de esos SKUs pertenecen a las categorías permitidas
 						if (!empty($assignedSkus)) {
 							$prodModel = new Producto();
 							$conn = $prodModel->getConnectionName() ?: config('database.default');
 							$table = $prodModel->getTable();
+							
+							// Primero obtener todas las categorías de los productos asignados para debug
+							$debugQuery = DB::connection($conn)->table($table)
+								->select('sku', 'name_produc', 'categoria_produc')
+								->whereIn('sku', $assignedSkus);
+							$debugProducts = $debugQuery->get();
+							
+							Log::info('Products in catalog with assigned SKUs', [
+								'products' => $debugProducts->map(fn($p) => [
+									'sku' => $p->sku,
+									'categoria' => $p->categoria_produc
+								])->toArray()
+							]);
 							
 							$allowedQuery = DB::connection($conn)->table($table)
 								->select('sku', 'name_produc')
@@ -506,6 +620,11 @@ class FormularioEntregasController extends Controller
 							$allowedProducts = $allowedQuery->get();
 							$allowedSkuSet = $allowedProducts->pluck('sku')->filter()->unique()->values()->all();
 							
+							Log::info('Allowed SKUs after category filter', [
+								'allowedSkuSet' => $allowedSkuSet,
+								'allowedCount' => count($allowedSkuSet)
+							]);
+							
 							// Filtrar las asignaciones para solo incluir SKUs permitidos
 							$cpRows = $cpRows->filter(function($r) use ($allowedSkuSet) {
 								return in_array($r->sku, $allowedSkuSet);
@@ -519,15 +638,16 @@ class FormularioEntregasController extends Controller
 						return $item['sku'] . '|' . $item['name_produc'];
 					})->values();
 					
-					// Devolver las asignaciones (pueden ser vacías si el filtro las eliminó todas)
-					return response()->json($data, 200);
+					Log::info('Final data to return', ['count' => $data->count()]);
+					
+					// Si después de filtrar hay asignaciones, devolverlas
+					if ($data->count() > 0) {
+						return response()->json($data, 200);
+					}
 				}
-				
-				// Si hay cargo_id pero no hay asignaciones, devolver vacío (NO el catálogo completo)
-				return response()->json([], 200);
 			}
 			
-			// Fallback: Si NO hay cargo_id ni sub_area_id, mostrar productos del catálogo según categoría del rol
+			// Fallback: Si no hay asignaciones específicas, mostrar productos del catálogo según categoría del rol
 			if (!empty($categoryFilters)) {
 				$prodModel = new Producto();
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
