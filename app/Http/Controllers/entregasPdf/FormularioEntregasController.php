@@ -475,9 +475,9 @@ class FormularioEntregasController extends Controller
 			}
 			$categoryFilters = array_values(array_filter(array_unique(array_map(function($t){ return mb_strtolower($t); }, $categoryFilters))));
 			
-			// ==========================================
+			
 			// LÓGICA DIFERENCIADA POR ROL Y OPERACIÓN
-			// ==========================================
+			
 			
 			// CASO 1: HSEQ o Admin -> Usar asignaciones de cargo_productos
 			// CASO 2: Talento Humano + Operación Frío -> Usar asignaciones de cargo_productos
@@ -505,11 +505,23 @@ class FormularioEntregasController extends Controller
 				
 				$catalog = DB::connection($conn)->table($table)->select('sku','name_produc','categoria_produc');
 				
-				// Filtrar por término de búsqueda
-				$catalog->where(function($qq) use ($q){
-					$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
-					   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
-				});
+				// Filtrar por término de búsqueda - buscar por TODAS las palabras
+				$words = array_filter(explode(' ', $q), fn($w) => strlen(trim($w)) >= 2);
+				if (!empty($words)) {
+					foreach ($words as $word) {
+						$word = trim($word);
+						$catalog->where(function($qq) use ($word){
+							$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$word.'%'])
+							   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$word.'%']);
+						});
+					}
+				} else {
+					// Si no hay palabras válidas, buscar el término completo
+					$catalog->where(function($qq) use ($q){
+						$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
+						   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
+					});
+				}
 				
 				// Solo categoría Dotación
 				$catalog->whereRaw('LOWER(categoria_produc) LIKE ?', ['%dotacion%']);
@@ -540,10 +552,24 @@ class FormularioEntregasController extends Controller
 				$conn = $prodModel->getConnectionName() ?: config('database.default');
 				$table = $prodModel->getTable();
 				$catalog = DB::connection($conn)->table($table)->select('sku','name_produc','categoria_produc');
-				$catalog->where(function($qq) use ($q){
-					$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
-					   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
-				});
+				
+				// Buscar por TODAS las palabras
+				$words = array_filter(explode(' ', $q), fn($w) => strlen(trim($w)) >= 2);
+				if (!empty($words)) {
+					foreach ($words as $word) {
+						$word = trim($word);
+						$catalog->where(function($qq) use ($word){
+							$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$word.'%'])
+							   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$word.'%']);
+						});
+					}
+				} else {
+					$catalog->where(function($qq) use ($q){
+						$qq->whereRaw('LOWER(name_produc) LIKE ?', ['%'.$q.'%'])
+						   ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$q.'%']);
+					});
+				}
+				
 				if (!empty($categoryFilters)) {
 					$catalog->where(function($qc) use ($categoryFilters){
 						foreach ($categoryFilters as $i => $term) {

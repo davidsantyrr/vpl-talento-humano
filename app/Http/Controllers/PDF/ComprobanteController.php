@@ -72,64 +72,8 @@ class ComprobanteController extends Controller
                 }
             }
 
-            // Obtener historial de entregas anteriores para este usuario (por número de documento)
+            // Historial de entregas anteriores deshabilitado
             $historialEntregas = [];
-            $numeroDocumento = $registro['numero_documento'] ?? null;
-            if ($tipo === 'entrega' && !empty($numeroDocumento)) {
-                try {
-                    $entregasAnteriores = Entrega::where('numero_documento', $numeroDocumento)
-                        ->with('elementos')
-                        ->orderBy('created_at', 'asc')
-                        ->get();
-                    
-                    foreach ($entregasAnteriores as $entregaAnterior) {
-                        $elementosAnteriores = [];
-                        foreach ($entregaAnterior->elementos as $elem) {
-                            $elementosAnteriores[] = [
-                                'sku' => $elem->sku,
-                                'cantidad' => $elem->cantidad ?? 1,
-                            ];
-                        }
-                        
-                        // Obtener nombres de productos
-                        $skusHistorial = collect($elementosAnteriores)->pluck('sku')->filter()->unique()->values()->all();
-                        $nombresProductos = [];
-                        if (!empty($skusHistorial)) {
-                            try {
-                                $prodRows = DB::connection('mysql_second')->table('productos')
-                                    ->whereIn('sku', $skusHistorial)
-                                    ->select('sku', 'name_produc')
-                                    ->get();
-                                foreach ($prodRows as $pr) {
-                                    $nombresProductos[(string)$pr->sku] = $pr->name_produc;
-                                }
-                            } catch (\Throwable $e) {
-                                // Si falla, continuar sin nombres
-                            }
-                        }
-                        
-                        // Agregar nombres a los elementos
-                        foreach ($elementosAnteriores as &$elemHist) {
-                            $elemHist['name_produc'] = $nombresProductos[$elemHist['sku']] ?? '';
-                        }
-                        
-                        $historialEntregas[] = [
-                            'id' => $entregaAnterior->id,
-                            'fecha' => $entregaAnterior->created_at,
-                            'tipo' => $entregaAnterior->tipo_entrega ?? 'N/A',
-                            'entrega_user' => $entregaAnterior->entrega_user ?? 'Sistema',
-                            'elementos' => $elementosAnteriores,
-                        ];
-                    }
-                    
-                    Log::info('Historial de entregas obtenido', [
-                        'numero_documento' => $numeroDocumento,
-                        'cantidad_entregas' => count($historialEntregas)
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::warning('Error obteniendo historial de entregas', ['error' => $e->getMessage()]);
-                }
-            }
 
             // Preparar datos para la vista
             $viewData = [

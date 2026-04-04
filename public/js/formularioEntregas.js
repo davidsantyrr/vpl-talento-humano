@@ -412,11 +412,15 @@ document.addEventListener('DOMContentLoaded', function () {
         elementoDropdown.innerHTML = '';
         highlightedIndex = -1;
         
-        const filtered = filterText 
+        // Dividir el texto de búsqueda en palabras (mínimo 2 caracteres cada una)
+        const searchWords = filterText.toLowerCase().split(/\s+/).filter(w => w.length >= 2);
+        
+        const filtered = searchWords.length > 0
             ? lista.filter(p => {
-                const searchText = filterText.toLowerCase();
-                return (p.sku && p.sku.toLowerCase().includes(searchText)) || 
-                       (p.name_produc && p.name_produc.toLowerCase().includes(searchText));
+                const nameLC = (p.name_produc || '').toLowerCase();
+                const skuLC = (p.sku || '').toLowerCase();
+                // El producto debe contener TODAS las palabras (en nombre o SKU)
+                return searchWords.every(word => nameLC.includes(word) || skuLC.includes(word));
             })
             : lista;
         
@@ -424,8 +428,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const noResults = document.createElement('li');
             noResults.className = 'no-results';
             // Mensaje según la situación
-            if (lista.length === 0 && (!filterText || filterText.length < 2)) {
-                noResults.textContent = 'Escriba al menos 2 letras para buscar productos';
+            if (lista.length === 0 && searchWords.length === 0) {
+                noResults.textContent = 'Escriba para buscar productos (ej: jean dama talla 12)';
             } else {
                 noResults.textContent = 'No se encontraron productos';
             }

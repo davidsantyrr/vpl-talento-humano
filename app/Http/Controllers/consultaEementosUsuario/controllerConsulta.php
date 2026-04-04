@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class controllerConsulta extends Controller
@@ -133,5 +134,117 @@ class controllerConsulta extends Controller
         }
 
         return view('consultaElementoUsuario.consulta', compact('resultados', 'usuario_info'));
+    }
+    
+    /**
+     * Obtener entregas anteriores de un usuario para vista previa de PDFs
+     */
+    public function entregasAnteriores(Request $request)
+    {
+        $numeroDocumento = $request->input('documento');
+        $fechaFiltro = $request->input('fecha');
+        
+        if (!$numeroDocumento) {
+            return response()->json(['entregas' => [], 'message' => 'Documento requerido'], 400);
+        }
+        
+        try {
+            $query = \App\Models\Entrega::with('elementos')
+                ->where('numero_documento', $numeroDocumento)
+                ->orderBy('created_at', 'desc');
+            
+            // Filtrar por fecha si se proporciona
+            if ($fechaFiltro) {
+                $query->whereDate('created_at', $fechaFiltro);
+            }
+            
+            $entregas = $query->get();
+            
+            // Obtener todos los PDFs del directorio una sola vez
+            $pdfFiles = [];
+            $dir = storage_path('app/comprobantes_entregas');
+            if (is_dir($dir)) {
+                $files = scandir($dir);
+                foreach ($files as $file) {
+                    if ($file !== '.' && $file !== '..' && pathinfo($file, PATHINFO_EXTENSION) === 'pdf') {
+                        $pdfFiles[] = $file;
+                    }
+                }
+            }
+            
+            // Normalizar el documento para la búsqueda (igual que en ComprobanteController)
+            $docNorm = strtoupper(preg_replace('/[^A-Za-z0-9\-_]/', '_', substr($numeroDocumento, 0, 40)));
+            
+            $resultado = [];
+            
+            foreach ($entregas as $entrega) {
+                // Buscar PDF correspondiente por documento y fecha
+                $pdfPath = null;
+                $pdfUrl = null;
+                $fechaEntrega = $entrega->created_at->format('Y-m-d');
+                
+                // Buscar el PDF más cercano a la fecha de creación
+                foreach ($pdfFiles as $file) {
+                    $fileUpper = strtoupper($file);
+                    // El formato es: ENTREGA_NumeroDocumento_FECHA_TIMESTAMP.pdf
+                    if (strpos($fileUpper, 'ENTREGA_' . $docNorm) !== false && 
+                        strpos($file, $fechaEntrega) !== false) {
+                        $pdfPath = 'comprobantes_entregas/' . $file;
+                        $pdfUrl = route('comprobantes.ver', ['filename' => $file]);
+                        break;
+                    }
+                }
+                
+                // Obtener nombres de productos
+                $elementosConNombre = [];
+                foreach ($entrega->elementos as $elem) {
+                    $nombre = '';
+                    try {
+                        $prod = \App\Models\Producto::where('sku', $elem->sku)->first();
+                        if ($prod) $nombre = $prod->name_produc ?? '';
+                    } catch (\Throwable $e) {}
+                    
+                    $elementosConNombre[] = [
+                        'sku' => $elem->sku,
+                        'cantidad' => $elem->cantidad ?? 1,
+                        'nombre' => $nombre
+                    ];
+                }
+                
+                $resultado[] = [
+                    'id' => $entrega->id,
+                    'fecha' => $entrega->created_at->format('Y-m-d H:i:s'),
+                    'fecha_corta' => $entrega->created_at->format('d/m/Y'),
+                    'tipo_entrega' => $entrega->tipo_entrega ?? 'N/A',
+                    'entrega_user' => $entrega->entrega_user ?? 'Sistema',
+                    'elementos' => $elementosConNombre,
+                    'pdf_path' => $pdfPath,
+                    'pdf_url' => $pdfUrl
+                ];
+            }
+            
+            return response()->json(['entregas' => $resultado]);
+            
+        } catch (\Throwable $e) {
+            Log::error('Error obteniendo entregas anteriores', ['error' => $e->getMessage()]);
+            return response()->json(['entregas' => [], 'message' => 'Error: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Servir PDF para vista previa (inline)
+     */
+    public function verPdf($filename)
+    {
+        $path = storage_path('app/comprobantes_entregas/' . $filename);
+        
+        if (!file_exists($path)) {
+            abort(404, 'PDF no encontrado');
+        }
+        
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"'
+        ]);
     }
 }

@@ -158,6 +158,8 @@ Route::get('/comprobantes/{dir}/{file}', [HistorialEntregaController::class, 'do
 Route::resource('gestionUsuario', GestionUsuarioController::class);
 // Route para consulta de elementos por usuario (vista: consultaElementoUsuario.consulta)
 Route::get('/consulta-elementos', [controllerConsulta::class, 'index'])->name('consultaElementoUsuario.consulta');
+Route::get('/consulta-elementos/entregas-anteriores', [controllerConsulta::class, 'entregasAnteriores'])->name('consultaElementoUsuario.entregasAnteriores');
+Route::get('/comprobantes/ver/{filename}', [controllerConsulta::class, 'verPdf'])->name('comprobantes.ver');
 Route::resource('consultaElementos', controllerConsulta::class);
 Route::post('/formularioEntregas', [EntregaController::class, 'store'])
     ->name('entregas.store');
