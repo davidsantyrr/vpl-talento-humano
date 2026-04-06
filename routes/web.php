@@ -160,7 +160,7 @@ Route::resource('gestionUsuario', GestionUsuarioController::class);
 Route::get('/consulta-elementos', [controllerConsulta::class, 'index'])->name('consultaElementoUsuario.consulta');
 Route::get('/consulta-elementos/entregas-anteriores', [controllerConsulta::class, 'entregasAnteriores'])->name('consultaElementoUsuario.entregasAnteriores');
 Route::get('/comprobantes/ver/{filename}', [controllerConsulta::class, 'verPdf'])->where('filename', '.*')->name('comprobantes.ver');
-Route::get('/diagnostico-storage', [controllerConsulta::class, 'diagnosticoStorage'])->name('diagnostico.storage');
+Route::get('/comprobantes/entrega/{id}', [controllerConsulta::class, 'verPdfPorId'])->name('comprobantes.verPorId');
 Route::resource('consultaElementos', controllerConsulta::class);
 Route::post('/formularioEntregas', [EntregaController::class, 'store'])
     ->name('entregas.store');

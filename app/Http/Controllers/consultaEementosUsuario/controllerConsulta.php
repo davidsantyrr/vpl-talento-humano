@@ -160,27 +160,21 @@ class controllerConsulta extends Controller
             
             $entregas = $query->get();
             
-            $dir = storage_path('app/comprobantes_entregas');
-            
             $resultado = [];
             
             foreach ($entregas as $entrega) {
-                $pdfPath = null;
                 $pdfUrl = null;
+                $pdfExiste = false;
                 
-                // PRIORIDAD 1: Usar el comprobante_path guardado en la entrega
+                // Verificar si el archivo PDF existe físicamente
                 if (!empty($entrega->comprobante_path)) {
-                    $filename = basename($entrega->comprobante_path);
-                    $fullPath = $dir . DIRECTORY_SEPARATOR . $filename;
-                    
+                    $fullPath = storage_path('app/' . ltrim($entrega->comprobante_path, '/'));
                     if (file_exists($fullPath)) {
-                        $pdfPath = $entrega->comprobante_path;
-                        $pdfUrl = route('comprobantes.ver', ['filename' => $filename]);
+                        $pdfExiste = true;
+                        // Usar ruta por ID que es más confiable
+                        $pdfUrl = route('comprobantes.verPorId', ['id' => $entrega->id]);
                     }
                 }
-                
-                // Si no tiene comprobante_path guardado, el PDF no está disponible
-                // (las entregas antiguas sin PDF generado no se pueden mostrar con firma)
                 
                 // Obtener nombres de productos
                 $elementosConNombre = [];
@@ -205,7 +199,7 @@ class controllerConsulta extends Controller
                     'tipo_entrega' => $entrega->tipo_entrega ?? 'N/A',
                     'entrega_user' => $entrega->entrega_user ?? 'Sistema',
                     'elementos' => $elementosConNombre,
-                    'pdf_path' => $pdfPath,
+                    'pdf_existe' => $pdfExiste,
                     'pdf_url' => $pdfUrl
                 ];
             }
@@ -219,7 +213,7 @@ class controllerConsulta extends Controller
     }
     
     /**
-     * Servir PDF para vista previa (inline)
+     * Servir PDF para vista previa (inline) - solo si existe el archivo
      */
     public function verPdf($filename)
     {
@@ -241,75 +235,44 @@ class controllerConsulta extends Controller
             ]);
         }
         
-        // Si no existe, buscar la entrega por comprobante_path para intentar encontrar el archivo
-        $entrega = \App\Models\Entrega::where('comprobante_path', 'LIKE', '%' . $filename)->first();
-        if ($entrega && !empty($entrega->comprobante_path)) {
-            $altPath = storage_path('app/' . ltrim($entrega->comprobante_path, '/'));
-            if (file_exists($altPath)) {
-                return response()->file($altPath, [
+        Log::warning('verPdf: Archivo no encontrado', ['filename' => $filename]);
+        abort(404, 'PDF no encontrado - el archivo no existe en el servidor');
+    }
+    
+    /**
+     * Ver PDF de una entrega por su ID - solo si existe el archivo
+     */
+    public function verPdfPorId($id)
+    {
+        $entrega = \App\Models\Entrega::find($id);
+        
+        if (!$entrega) {
+            abort(404, 'Entrega no encontrada');
+        }
+        
+        // Solo devolver si existe el archivo físico
+        if (!empty($entrega->comprobante_path)) {
+            $fullPath = storage_path('app/' . ltrim($entrega->comprobante_path, '/'));
+            if (file_exists($fullPath)) {
+                return response()->file($fullPath, [
                     'Content-Type' => 'application/pdf',
-                    'Content-Disposition' => 'inline; filename="' . $filename . '"'
+                    'Content-Disposition' => 'inline; filename="' . basename($fullPath) . '"'
                 ]);
             }
         }
         
-        Log::warning('verPdf: Archivo no encontrado', [
-            'filename' => $filename,
-            'path_entregas' => $pathEntregas,
-            'path_recepciones' => $pathRecepciones
+        abort(404, 'PDF no disponible - el archivo con firma no existe');
+    }
+}
+            'elementos' => $elementos,
+            'firma' => ['entrega' => null],
+            'historialEntregas' => [],
+            'firmaNoDisponible' => true
         ]);
         
-        abort(404, 'PDF no encontrado');
-    }
-    
-    /**
-     * Endpoint de diagnóstico para verificar estado del storage
-     */
-    public function diagnosticoStorage()
-    {
-        $basePath = storage_path('app');
-        $entregasPath = storage_path('app/comprobantes_entregas');
-        $recepcionesPath = storage_path('app/comprobantes_recepciones');
+        $pdf->setPaper('A4', 'portrait');
         
-        $info = [
-            'storage_path' => storage_path(),
-            'app_path' => $basePath,
-            'base_exists' => file_exists($basePath),
-            'base_writable' => is_writable($basePath),
-            'entregas_path' => $entregasPath,
-            'entregas_exists' => file_exists($entregasPath),
-            'recepciones_path' => $recepcionesPath,
-            'recepciones_exists' => file_exists($recepcionesPath),
-            'entregas_files' => [],
-            'recepciones_files' => [],
-        ];
-        
-        // Listar archivos en comprobantes_entregas
-        if (file_exists($entregasPath) && is_dir($entregasPath)) {
-            $files = scandir($entregasPath);
-            $info['entregas_files'] = array_values(array_filter($files, fn($f) => $f !== '.' && $f !== '..'));
-            $info['entregas_count'] = count($info['entregas_files']);
-        }
-        
-        // Listar archivos en comprobantes_recepciones
-        if (file_exists($recepcionesPath) && is_dir($recepcionesPath)) {
-            $files = scandir($recepcionesPath);
-            $info['recepciones_files'] = array_values(array_filter($files, fn($f) => $f !== '.' && $f !== '..'));
-            $info['recepciones_count'] = count($info['recepciones_files']);
-        }
-        
-        // Intentar crear archivo de prueba
-        $testFile = $basePath . '/test_write_' . time() . '.txt';
-        try {
-            file_put_contents($testFile, 'test');
-            $info['write_test'] = file_exists($testFile) ? 'SUCCESS' : 'FAILED';
-            if (file_exists($testFile)) {
-                unlink($testFile);
-            }
-        } catch (\Exception $e) {
-            $info['write_test'] = 'ERROR: ' . $e->getMessage();
-        }
-        
-        return response()->json($info, 200, [], JSON_PRETTY_PRINT);
+        // stream() abre el PDF en el navegador sin descargar
+        return $pdf->stream('comprobante_entrega_' . $entrega->id . '.pdf');
     }
 }
