@@ -264,15 +264,3 @@ class controllerConsulta extends Controller
         abort(404, 'PDF no disponible - el archivo con firma no existe');
     }
 }
-            'elementos' => $elementos,
-            'firma' => ['entrega' => null],
-            'historialEntregas' => [],
-            'firmaNoDisponible' => true
-        ]);
-        
-        $pdf->setPaper('A4', 'portrait');
-        
-        // stream() abre el PDF en el navegador sin descargar
-        return $pdf->stream('comprobante_entrega_' . $entrega->id . '.pdf');
-    }
-}
