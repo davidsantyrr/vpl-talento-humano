@@ -625,24 +625,28 @@ class HistorialEntregaController extends Controller
                 $fecha = \Carbon\Carbon::parse($reg->created_at)->format('Ymd_His');
                 $filename = strtoupper($tipoReg) . '_' . $numeroDocNorm . '_' . $fecha . '.pdf';
 
-                // Si hay comprobante_path, intentar añadir archivo existente
+                // PRIORIDAD 1: Si hay comprobante_path, usar directamente ese archivo
                 $added = false;
                 if (!empty($reg->comprobante_path)) {
-                    $relative = ltrim(preg_replace('#^(/storage/|storage/app/|storage/app/public/)#', '', $reg->comprobante_path), '/');
-                    $candidates = [
-                        storage_path('app/' . $relative),
-                        storage_path('app/public/' . $relative),
-                    ];
-                    foreach ($candidates as $p) {
-                        if (is_string($p) && file_exists($p)) {
-                            $zip->addFile($p, $filename);
-                            $added = true;
-                            break;
-                        }
+                    // El comprobante_path viene como: comprobantes_entregas/ENTREGA_xxx.pdf
+                    $fullPath = storage_path('app/' . ltrim($reg->comprobante_path, '/'));
+                    
+                    if (file_exists($fullPath)) {
+                        $zip->addFile($fullPath, $filename);
+                        $added = true;
+                        Log::info('Descarga masiva: PDF encontrado por comprobante_path', [
+                            'comprobante_path' => $reg->comprobante_path,
+                            'fullPath' => $fullPath
+                        ]);
+                    } else {
+                        Log::warning('Descarga masiva: comprobante_path no existe', [
+                            'comprobante_path' => $reg->comprobante_path,
+                            'fullPath' => $fullPath
+                        ]);
                     }
                 }
 
-                // Si no se encontró por comprobante_path, buscar por patrón de nombre
+                // PRIORIDAD 2: Si no se encontró por comprobante_path, buscar por patrón de nombre
                 if (!$added) {
                     $pdfList = ($tipoReg === 'entrega') ? $pdfFilesEntregas : $pdfFilesRecepciones;
                     $baseDir = ($tipoReg === 'entrega') ? $dirEntregas : $dirRecepciones;
@@ -656,69 +660,39 @@ class HistorialEntregaController extends Controller
                             if (file_exists($fullPath)) {
                                 $zip->addFile($fullPath, $filename);
                                 $added = true;
+                                Log::info('Descarga masiva: PDF encontrado por patrón', [
+                                    'pdfFile' => $pdfFile,
+                                    'fullPath' => $fullPath
+                                ]);
                                 break;
                             }
                         }
                     }
                 }
 
+                // Si se encontró el PDF existente, continuar con el siguiente registro
                 if ($added) { continue; }
-
-                // Si no hay cargo, intentar buscar por numero_documento en usuarios_entregas
-                if (empty($reg->cargo) && !empty($reg->numero_documento)) {
-                    $usuarioCargo = DB::table('usuarios_entregas')
-                        ->leftJoin('cargos', 'usuarios_entregas.cargo_id', '=', 'cargos.id')
-                        ->where('usuarios_entregas.numero_documento', $reg->numero_documento)
-                        ->select('cargos.nombre as cargo')
-                        ->first();
-                    if ($usuarioCargo && !empty($usuarioCargo->cargo)) {
-                        $reg->cargo = $usuarioCargo->cargo;
-                    }
-                }
-
-                // Construir datos y renderizar PDF en memoria si no existe comprobante
-                if ($tipoReg === 'entrega') {
-                    $elementos = DB::table('elemento_x_entrega')
-                        ->where('entrega_id', $reg->id)
-                        ->select(['sku', 'cantidad'])
-                        ->get();
-                } else {
-                    $elementos = DB::table('elemento_x_recepcion')
-                        ->where('recepcion_id', $reg->id)
-                        ->select(['sku', 'cantidad'])
-                        ->get();
-                }
-
-                // Obtener nombres de productos desde la base de datos secundaria
-                $skus = $elementos->pluck('sku')->filter()->toArray();
-                if (!empty($skus)) {
-                    $productosMap = Producto::whereIn('sku', $skus)
-                        ->orWhereIn(DB::raw('LOWER(sku)'), array_map('mb_strtolower', $skus))
-                        ->pluck('name_produc', 'sku')
-                        ->toArray();
-                    $productosMapLower = [];
-                    foreach ($productosMap as $k => $v) {
-                        $productosMapLower[mb_strtolower($k)] = $v;
-                    }
-                    $elementos = $elementos->map(function ($el) use ($productosMap, $productosMapLower) {
-                        $el->name_produc = $productosMap[$el->sku] 
-                            ?? $productosMapLower[mb_strtolower($el->sku)] 
-                            ?? null;
-                        return $el;
-                    });
-                }
-
-                $pdf = Pdf::loadView('pdf.comprobante', [
+                
+                // PRIORIDAD 3: Si no existe el PDF, omitir este registro (no regenerar sin firma)
+                Log::warning('Descarga masiva: PDF no encontrado, omitiendo registro', [
+                    'registro_id' => $reg->id,
                     'tipo' => $tipoReg,
-                    'registro' => (object) $reg,
-                    'elementos' => $elementos,
-                    'firma' => []
-                ])->setPaper('A4', 'portrait');
-
-                $zip->addFromString($filename, $pdf->output());
+                    'comprobante_path' => $reg->comprobante_path ?? 'null'
+                ]);
             }
 
             $zip->close();
+            
+            // Verificar que el ZIP tenga contenido
+            $zipCheck = new ZipArchive();
+            if ($zipCheck->open($zipPath) === true) {
+                $numFiles = $zipCheck->numFiles;
+                $zipCheck->close();
+                if ($numFiles === 0) {
+                    @unlink($zipPath);
+                    return back()->with('error', 'No se encontraron PDFs disponibles para los registros seleccionados.');
+                }
+            }
 
             return response()->download($zipPath, $zipName, [
                 'Content-Type' => 'application/zip',

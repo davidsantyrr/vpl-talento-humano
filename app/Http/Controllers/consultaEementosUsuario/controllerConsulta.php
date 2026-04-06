@@ -160,54 +160,27 @@ class controllerConsulta extends Controller
             
             $entregas = $query->get();
             
-            // Obtener todos los PDFs del directorio una sola vez
-            $pdfFiles = [];
             $dir = storage_path('app/comprobantes_entregas');
-            if (is_dir($dir)) {
-                $files = scandir($dir);
-                foreach ($files as $file) {
-                    if ($file !== '.' && $file !== '..' && pathinfo($file, PATHINFO_EXTENSION) === 'pdf') {
-                        $pdfFiles[] = $file;
-                    }
-                }
-            }
-            
-            // Normalizar el documento para la búsqueda (igual que en ComprobanteController)
-            $docNorm = strtoupper(preg_replace('/[^A-Za-z0-9\-_]/', '_', substr($numeroDocumento, 0, 40)));
             
             $resultado = [];
             
             foreach ($entregas as $entrega) {
-                // Buscar PDF correspondiente por documento y fecha
                 $pdfPath = null;
                 $pdfUrl = null;
-                $fechaEntrega = $entrega->created_at->format('Y-m-d');
-                $encontrado = false;
                 
-                // Buscar el PDF que coincida con documento Y fecha
-                foreach ($pdfFiles as $file) {
-                    $fileUpper = strtoupper($file);
-                    // El formato es: ENTREGA_NumeroDocumento_FECHA_TIMESTAMP.pdf
-                    if (strpos($fileUpper, 'ENTREGA_' . $docNorm) !== false && 
-                        strpos($file, $fechaEntrega) !== false) {
-                        // Verificar que el archivo realmente exista
-                        $fullPath = $dir . DIRECTORY_SEPARATOR . $file;
-                        if (file_exists($fullPath)) {
-                            $pdfPath = 'comprobantes_entregas/' . $file;
-                            $pdfUrl = route('comprobantes.ver', ['filename' => $file]);
-                            $encontrado = true;
-                        }
-                        break;
+                // PRIORIDAD 1: Usar el comprobante_path guardado en la entrega
+                if (!empty($entrega->comprobante_path)) {
+                    $filename = basename($entrega->comprobante_path);
+                    $fullPath = $dir . DIRECTORY_SEPARATOR . $filename;
+                    
+                    if (file_exists($fullPath)) {
+                        $pdfPath = $entrega->comprobante_path;
+                        $pdfUrl = route('comprobantes.ver', ['filename' => $filename]);
                     }
                 }
                 
-                // Si no se encontró el archivo, generar URL que permita regenerarlo
-                if (!$encontrado) {
-                    $timestamp = $entrega->created_at->timestamp;
-                    $generatedFilename = "ENTREGA_{$docNorm}_{$fechaEntrega}_{$timestamp}.pdf";
-                    $pdfUrl = route('comprobantes.ver', ['filename' => $generatedFilename]);
-                    $pdfPath = 'comprobantes_entregas/' . $generatedFilename;
-                }
+                // Si no tiene comprobante_path guardado, el PDF no está disponible
+                // (las entregas antiguas sin PDF generado no se pueden mostrar con firma)
                 
                 // Obtener nombres de productos
                 $elementosConNombre = [];
@@ -250,152 +223,42 @@ class controllerConsulta extends Controller
      */
     public function verPdf($filename)
     {
-        $path = storage_path('app/comprobantes_entregas/' . $filename);
-        
-        // Si el archivo existe, servirlo directamente
-        if (file_exists($path)) {
-            return response()->file($path, [
+        // Buscar en comprobantes_entregas
+        $pathEntregas = storage_path('app/comprobantes_entregas/' . $filename);
+        if (file_exists($pathEntregas)) {
+            return response()->file($pathEntregas, [
                 'Content-Type' => 'application/pdf',
                 'Content-Disposition' => 'inline; filename="' . $filename . '"'
             ]);
         }
         
-        // Si no existe, intentar regenerarlo
-        // Formato esperado: ENTREGA_DOCUMENTO_FECHA_TIMESTAMP.pdf
-        if (preg_match('/^ENTREGA_([^_]+)_(\d{4}-\d{2}-\d{2})_(\d+)\.pdf$/i', $filename, $matches)) {
-            $documento = $matches[1];
-            $fecha = $matches[2];
-            $timestamp = $matches[3];
-            
-            Log::info('verPdf: Intentando regenerar PDF', [
-                'filename' => $filename,
-                'documento' => $documento,
-                'fecha' => $fecha,
-                'timestamp' => $timestamp
+        // Buscar en comprobantes_recepciones
+        $pathRecepciones = storage_path('app/comprobantes_recepciones/' . $filename);
+        if (file_exists($pathRecepciones)) {
+            return response()->file($pathRecepciones, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"'
             ]);
-            
-            // Buscar la entrega correspondiente - múltiples estrategias
-            $entrega = null;
-            
-            // 1. Buscar por documento exacto Y fecha
-            $entrega = \App\Models\Entrega::with('elementos')
-                ->where('numero_documento', $documento)
-                ->whereDate('created_at', $fecha)
-                ->orderBy('created_at', 'desc')
-                ->first();
-            
-            // 2. Si no se encuentra, buscar solo por documento
-            if (!$entrega) {
-                $entrega = \App\Models\Entrega::with('elementos')
-                    ->where('numero_documento', $documento)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-                Log::info('verPdf: Búsqueda por documento sin fecha', ['encontrada' => (bool)$entrega]);
-            }
-            
-            // 3. Si no se encuentra, buscar con documento normalizado (con guiones bajos)
-            if (!$entrega) {
-                $entrega = \App\Models\Entrega::with('elementos')
-                    ->whereRaw('UPPER(REPLACE(REPLACE(numero_documento, " ", "_"), "-", "_")) = ?', [strtoupper($documento)])
-                    ->whereDate('created_at', $fecha)
-                    ->orderBy('created_at', 'desc')
-                    ->first();
-                Log::info('verPdf: Búsqueda normalizada', ['encontrada' => (bool)$entrega]);
-            }
-            
-            // 4. Buscar en usuarios_entregas y luego las entregas relacionadas
-            if (!$entrega) {
-                $usuario = \App\Models\Usuarios::where('numero_documento', $documento)->first();
-                if ($usuario) {
-                    $entrega = \App\Models\Entrega::with('elementos')
-                        ->where('usuarios_id', $usuario->id)
-                        ->whereDate('created_at', $fecha)
-                        ->orderBy('created_at', 'desc')
-                        ->first();
-                    Log::info('verPdf: Búsqueda por usuarios_id', ['usuario_id' => $usuario->id, 'encontrada' => (bool)$entrega]);
-                }
-            }
-            
-            if ($entrega) {
-                try {
-                    // Obtener información del usuario
-                    $usuario = \App\Models\Usuarios::where('numero_documento', $entrega->numero_documento)->first();
-                    
-                    // Obtener nombres de productos
-                    $elementos = [];
-                    foreach ($entrega->elementos as $elem) {
-                        $nombre = '';
-                        try {
-                            $prod = \App\Models\Producto::where('sku', $elem->sku)->first();
-                            if ($prod) $nombre = $prod->name_produc ?? '';
-                        } catch (\Throwable $e) {}
-                        
-                        $elementos[] = [
-                            'sku' => $elem->sku,
-                            'cantidad' => $elem->cantidad ?? 1,
-                            'nombre' => $nombre,
-                            'talla' => $elem->talla ?? ''
-                        ];
-                    }
-                    
-                    // Obtener operación
-                    $operacion = null;
-                    if ($entrega->sub_area_id) {
-                        $operacion = \App\Models\SubArea::find($entrega->sub_area_id);
-                    }
-                    
-                    // Preparar datos para el PDF
-                    $registro = [
-                        'id' => $entrega->id,
-                        'numero_documento' => $entrega->numero_documento,
-                        'nombres' => $usuario->nombres ?? ($entrega->nombres ?? 'N/A'),
-                        'cargo' => $usuario->cargo->name_cargo ?? ($entrega->cargo ?? 'N/A'),
-                        'centro_costo' => $usuario->centroCosto->nombre_centro ?? '',
-                        'operacion' => $operacion->operationName ?? '',
-                        'tipo_entrega' => $entrega->tipo_entrega ?? 'N/A',
-                        'entrega_user' => $entrega->entrega_user ?? 'Sistema',
-                        'fecha' => $entrega->created_at->format('Y-m-d H:i:s'),
-                        'observaciones' => $entrega->observaciones ?? ''
-                    ];
-                    
-                    // Generar PDF sin firma (porque no la tenemos guardada)
-                    $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.comprobante', [
-                        'tipo' => 'entrega',
-                        'registro' => (object) $registro,
-                        'elementos' => $elementos,
-                        'firma' => [],
-                        'historialEntregas' => [],
-                        'regenerado' => true // Indicador de que es regenerado
-                    ]);
-                    
-                    $pdf->setPaper('A4', 'portrait');
-                    
-                    // Guardar el PDF para futuras consultas
-                    $dir = storage_path('app/comprobantes_entregas');
-                    if (!file_exists($dir)) {
-                        mkdir($dir, 0755, true);
-                    }
-                    file_put_contents($path, $pdf->output());
-                    
-                    Log::info('PDF regenerado exitosamente', ['filename' => $filename]);
-                    
-                    return response()->file($path, [
-                        'Content-Type' => 'application/pdf',
-                        'Content-Disposition' => 'inline; filename="' . $filename . '"'
-                    ]);
-                    
-                } catch (\Throwable $e) {
-                    Log::error('Error regenerando PDF', ['filename' => $filename, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
-                }
-            } else {
-                Log::warning('verPdf: No se encontró entrega para regenerar', [
-                    'filename' => $filename,
-                    'documento' => $documento,
-                    'fecha' => $fecha
+        }
+        
+        // Si no existe, buscar la entrega por comprobante_path para intentar encontrar el archivo
+        $entrega = \App\Models\Entrega::where('comprobante_path', 'LIKE', '%' . $filename)->first();
+        if ($entrega && !empty($entrega->comprobante_path)) {
+            $altPath = storage_path('app/' . ltrim($entrega->comprobante_path, '/'));
+            if (file_exists($altPath)) {
+                return response()->file($altPath, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'inline; filename="' . $filename . '"'
                 ]);
             }
         }
         
-        abort(404, 'PDF no encontrado y no se pudo regenerar');
+        Log::warning('verPdf: Archivo no encontrado', [
+            'filename' => $filename,
+            'path_entregas' => $pathEntregas,
+            'path_recepciones' => $pathRecepciones
+        ]);
+        
+        abort(404, 'PDF no encontrado');
     }
 }
