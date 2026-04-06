@@ -60,6 +60,30 @@
 .periodicidad-footer{padding:10px 16px;border-top:1px solid #eef2ff;background:transparent}
 .pagination-wrapper{display:flex;justify-content:flex-end}
 
+/* Paginación compacta */
+.pagination-wrapper .pagination {
+    margin: 0;
+    gap: 4px;
+}
+.pagination-wrapper .pagination .page-item .page-link {
+    padding: 6px 12px;
+    font-size: 14px;
+    border-radius: 6px;
+    min-width: auto;
+}
+.pagination-wrapper .pagination .page-item.active .page-link {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+.pagination-wrapper .pagination .page-item:not(.active) .page-link {
+    color: #2563eb;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+}
+.pagination-wrapper .pagination .page-item:not(.active) .page-link:hover {
+    background-color: #f3f4f6;
+}
+
 /* Small responsive adjustments */
 @media(max-width:900px){
     .form-select.form-select-sm{min-width:100px}

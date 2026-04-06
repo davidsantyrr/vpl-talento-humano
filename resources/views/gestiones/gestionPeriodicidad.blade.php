@@ -112,7 +112,7 @@
         <div class="periodicidad-footer">
             <div class="pagination-wrapper">
                 @if(method_exists($periodicidades, 'links'))
-                    {{ $periodicidades->links() }}
+                    {{ $periodicidades->links('pagination::bootstrap-5') }}
                 @else
                     <nav aria-label="Page navigation">
                         <ul class="pagination">
