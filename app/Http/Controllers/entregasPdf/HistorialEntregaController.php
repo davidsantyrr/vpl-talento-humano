@@ -617,6 +617,8 @@ class HistorialEntregaController extends Controller
                 }
             }
 
+            $archivosAgregados = 0;
+
             foreach ($registros as $reg) {
                 $tipoReg = $reg->registro_tipo;
                 $numeroDoc = $reg->numero_documento ?? ($reg->nombres ?? 'registro');
@@ -634,15 +636,7 @@ class HistorialEntregaController extends Controller
                     if (file_exists($fullPath)) {
                         $zip->addFile($fullPath, $filename);
                         $added = true;
-                        Log::info('Descarga masiva: PDF encontrado por comprobante_path', [
-                            'comprobante_path' => $reg->comprobante_path,
-                            'fullPath' => $fullPath
-                        ]);
-                    } else {
-                        Log::warning('Descarga masiva: comprobante_path no existe', [
-                            'comprobante_path' => $reg->comprobante_path,
-                            'fullPath' => $fullPath
-                        ]);
+                        $archivosAgregados++;
                     }
                 }
 
@@ -660,38 +654,26 @@ class HistorialEntregaController extends Controller
                             if (file_exists($fullPath)) {
                                 $zip->addFile($fullPath, $filename);
                                 $added = true;
-                                Log::info('Descarga masiva: PDF encontrado por patrón', [
-                                    'pdfFile' => $pdfFile,
-                                    'fullPath' => $fullPath
-                                ]);
+                                $archivosAgregados++;
                                 break;
                             }
                         }
                     }
                 }
+            }
 
-                // Si se encontró el PDF existente, continuar con el siguiente registro
-                if ($added) { continue; }
-                
-                // PRIORIDAD 3: Si no existe el PDF, omitir este registro (no regenerar sin firma)
-                Log::warning('Descarga masiva: PDF no encontrado, omitiendo registro', [
-                    'registro_id' => $reg->id,
-                    'tipo' => $tipoReg,
-                    'comprobante_path' => $reg->comprobante_path ?? 'null'
-                ]);
+            // Verificar si hay archivos antes de cerrar
+            if ($archivosAgregados === 0) {
+                $zip->close();
+                @unlink($zipPath);
+                return back()->with('error', 'No se encontraron PDFs disponibles para los registros seleccionados. Solo se pueden descargar entregas que tienen comprobante generado.');
             }
 
             $zip->close();
-            
-            // Verificar que el ZIP tenga contenido
-            $zipCheck = new ZipArchive();
-            if ($zipCheck->open($zipPath) === true) {
-                $numFiles = $zipCheck->numFiles;
-                $zipCheck->close();
-                if ($numFiles === 0) {
-                    @unlink($zipPath);
-                    return back()->with('error', 'No se encontraron PDFs disponibles para los registros seleccionados.');
-                }
+
+            // Verificar que el archivo ZIP existe
+            if (!file_exists($zipPath)) {
+                return back()->with('error', 'Error al crear el archivo ZIP.');
             }
 
             return response()->download($zipPath, $zipName, [
