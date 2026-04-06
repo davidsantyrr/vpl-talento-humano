@@ -261,4 +261,55 @@ class controllerConsulta extends Controller
         
         abort(404, 'PDF no encontrado');
     }
+    
+    /**
+     * Endpoint de diagnóstico para verificar estado del storage
+     */
+    public function diagnosticoStorage()
+    {
+        $basePath = storage_path('app');
+        $entregasPath = storage_path('app/comprobantes_entregas');
+        $recepcionesPath = storage_path('app/comprobantes_recepciones');
+        
+        $info = [
+            'storage_path' => storage_path(),
+            'app_path' => $basePath,
+            'base_exists' => file_exists($basePath),
+            'base_writable' => is_writable($basePath),
+            'entregas_path' => $entregasPath,
+            'entregas_exists' => file_exists($entregasPath),
+            'recepciones_path' => $recepcionesPath,
+            'recepciones_exists' => file_exists($recepcionesPath),
+            'entregas_files' => [],
+            'recepciones_files' => [],
+        ];
+        
+        // Listar archivos en comprobantes_entregas
+        if (file_exists($entregasPath) && is_dir($entregasPath)) {
+            $files = scandir($entregasPath);
+            $info['entregas_files'] = array_values(array_filter($files, fn($f) => $f !== '.' && $f !== '..'));
+            $info['entregas_count'] = count($info['entregas_files']);
+        }
+        
+        // Listar archivos en comprobantes_recepciones
+        if (file_exists($recepcionesPath) && is_dir($recepcionesPath)) {
+            $files = scandir($recepcionesPath);
+            $info['recepciones_files'] = array_values(array_filter($files, fn($f) => $f !== '.' && $f !== '..'));
+            $info['recepciones_count'] = count($info['recepciones_files']);
+        }
+        
+        // Intentar crear archivo de prueba
+        $testFile = $basePath . '/test_write_' . time() . '.txt';
+        try {
+            file_put_contents($testFile, 'test');
+            $info['write_test'] = file_exists($testFile) ? 'SUCCESS' : 'FAILED';
+            if (file_exists($testFile)) {
+                unlink($testFile);
+            }
+        } catch (\Exception $e) {
+            $info['write_test'] = 'ERROR: ' . $e->getMessage();
+        }
+        
+        return response()->json($info, 200, [], JSON_PRETTY_PRINT);
+    }
 }
