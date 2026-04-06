@@ -504,12 +504,14 @@ class HistorialEntregaController extends Controller
             'operacion_id' => ['nullable', 'integer'],
             'fecha_inicio' => ['required', 'date'],
             'fecha_fin' => ['required', 'date'],
+            'numero_documento' => ['nullable', 'string', 'max:50'],
         ]);
 
         $tipo = $data['tipo_registro'];
         $operacionId = $data['operacion_id'] ?? null;
         $inicio = $data['fecha_inicio'];
         $fin = $data['fecha_fin'];
+        $numeroDocumento = $data['numero_documento'] ?? null;
 
         try {
             $registros = collect();
@@ -535,6 +537,12 @@ class HistorialEntregaController extends Controller
                     ->whereNull('entregas.deleted_at')
                     ->whereBetween('entregas.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);
                 if ($operacionId) { $qEnt->where('entregas.sub_area_id', $operacionId); }
+                if ($numeroDocumento) {
+                    $qEnt->where(function($q) use ($numeroDocumento) {
+                        $q->where('entregas.numero_documento', $numeroDocumento)
+                          ->orWhere('usuarios_entregas.numero_documento', $numeroDocumento);
+                    });
+                }
                 $registros = $registros->merge($qEnt->get());
             }
 
@@ -559,6 +567,12 @@ class HistorialEntregaController extends Controller
                     ->whereNull('recepciones.deleted_at')
                     ->whereBetween('recepciones.created_at', [$inicio . ' 00:00:00', $fin . ' 23:59:59']);
                 if ($operacionId) { $qRec->where('recepciones.operacion_id', $operacionId); }
+                if ($numeroDocumento) {
+                    $qRec->where(function($q) use ($numeroDocumento) {
+                        $q->where('recepciones.numero_documento', $numeroDocumento)
+                          ->orWhere('usuarios_entregas.numero_documento', $numeroDocumento);
+                    });
+                }
                 $registros = $registros->merge($qRec->get());
             }
 

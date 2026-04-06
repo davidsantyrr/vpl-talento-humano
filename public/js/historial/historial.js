@@ -126,9 +126,22 @@
 		// Pre-llenar fechas (primer día del mes a hoy)
 		const fechaInicio = document.getElementById('descargaFechaInicio');
 		const fechaFin = document.getElementById('descargaFechaFin');
+		const descargaDocumento = document.getElementById('descargaDocumento');
 		
 		if (fechaInicio) fechaInicio.value = firstDay;
 		if (fechaFin) fechaFin.value = today;
+		
+		// Pre-llenar número de documento si hay filtro activo en la URL
+		if (descargaDocumento) {
+			const urlParams = new URLSearchParams(window.location.search);
+			const qParam = urlParams.get('q') || '';
+			// Si el parámetro q parece un número de documento (solo dígitos), pre-llenarlo
+			if (/^\d+$/.test(qParam.trim())) {
+				descargaDocumento.value = qParam.trim();
+			} else {
+				descargaDocumento.value = '';
+			}
+		}
 		
 		modal.classList.add('active');
 		document.body.style.overflow = 'hidden';
@@ -216,6 +229,12 @@
 		
 		if (operacionId) {
 			params.append('operacion_id', operacionId);
+		}
+		
+		// Agregar número de documento si está especificado
+		const numeroDocumento = formData.get('numero_documento');
+		if (numeroDocumento && numeroDocumento.trim()) {
+			params.append('numero_documento', numeroDocumento.trim());
 		}
 		
 		// Mostrar loading

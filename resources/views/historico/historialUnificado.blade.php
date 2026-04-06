@@ -233,8 +233,11 @@
 							<option value="todos">Todos</option>
 						</select>
 					</div>
-					<div class="form-field">
-						<label for="descargaOperacion">Operación</label>
+					<div class="form-field">						<label for="descargaDocumento">Número de Documento</label>
+						<input type="text" id="descargaDocumento" name="numero_documento" placeholder="Dejar vacío para todos">
+						<small style="color: #6b7280; font-size: 0.75rem;">Solo descargará registros de esta persona</small>
+					</div>
+					<div class="form-field">						<label for="descargaOperacion">Operación</label>
 						<select id="descargaOperacion" name="operacion_id">
 							<option value="">Todas las operaciones</option>
 							@foreach($operations ?? [] as $op)
