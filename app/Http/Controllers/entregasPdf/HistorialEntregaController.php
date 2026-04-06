@@ -597,12 +597,33 @@ class HistorialEntregaController extends Controller
                 return back()->with('error', 'No se pudo crear el archivo ZIP.');
             }
 
+            // Precargar lista de PDFs existentes para búsqueda rápida
+            $pdfFilesEntregas = [];
+            $pdfFilesRecepciones = [];
+            $dirEntregas = storage_path('app/comprobantes_entregas');
+            $dirRecepciones = storage_path('app/comprobantes_recepciones');
+            if (is_dir($dirEntregas)) {
+                foreach (scandir($dirEntregas) as $f) {
+                    if ($f !== '.' && $f !== '..' && pathinfo($f, PATHINFO_EXTENSION) === 'pdf') {
+                        $pdfFilesEntregas[] = $f;
+                    }
+                }
+            }
+            if (is_dir($dirRecepciones)) {
+                foreach (scandir($dirRecepciones) as $f) {
+                    if ($f !== '.' && $f !== '..' && pathinfo($f, PATHINFO_EXTENSION) === 'pdf') {
+                        $pdfFilesRecepciones[] = $f;
+                    }
+                }
+            }
+
             foreach ($registros as $reg) {
                 $tipoReg = $reg->registro_tipo;
                 $numeroDoc = $reg->numero_documento ?? ($reg->nombres ?? 'registro');
-                $numeroDoc = preg_replace('/[^A-Za-z0-9\-_]/', '_', substr($numeroDoc, 0, 40));
+                $numeroDocNorm = strtoupper(preg_replace('/[^A-Za-z0-9\-_]/', '_', substr($numeroDoc, 0, 40)));
+                $fechaCorta = \Carbon\Carbon::parse($reg->created_at)->format('Y-m-d');
                 $fecha = \Carbon\Carbon::parse($reg->created_at)->format('Ymd_His');
-                $filename = strtoupper($tipoReg) . '_' . $numeroDoc . '_' . $fecha . '.pdf';
+                $filename = strtoupper($tipoReg) . '_' . $numeroDocNorm . '_' . $fecha . '.pdf';
 
                 // Si hay comprobante_path, intentar añadir archivo existente
                 $added = false;
@@ -617,6 +638,26 @@ class HistorialEntregaController extends Controller
                             $zip->addFile($p, $filename);
                             $added = true;
                             break;
+                        }
+                    }
+                }
+
+                // Si no se encontró por comprobante_path, buscar por patrón de nombre
+                if (!$added) {
+                    $pdfList = ($tipoReg === 'entrega') ? $pdfFilesEntregas : $pdfFilesRecepciones;
+                    $baseDir = ($tipoReg === 'entrega') ? $dirEntregas : $dirRecepciones;
+                    $prefijo = strtoupper($tipoReg) . '_' . $numeroDocNorm;
+                    
+                    foreach ($pdfList as $pdfFile) {
+                        $pdfUpper = strtoupper($pdfFile);
+                        // Buscar archivo que coincida con tipo, documento y fecha
+                        if (strpos($pdfUpper, $prefijo) !== false && strpos($pdfFile, $fechaCorta) !== false) {
+                            $fullPath = $baseDir . DIRECTORY_SEPARATOR . $pdfFile;
+                            if (file_exists($fullPath)) {
+                                $zip->addFile($fullPath, $filename);
+                                $added = true;
+                                break;
+                            }
                         }
                     }
                 }

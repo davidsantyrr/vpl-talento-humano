@@ -267,20 +267,53 @@ class controllerConsulta extends Controller
             $fecha = $matches[2];
             $timestamp = $matches[3];
             
-            // Buscar la entrega correspondiente
+            Log::info('verPdf: Intentando regenerar PDF', [
+                'filename' => $filename,
+                'documento' => $documento,
+                'fecha' => $fecha,
+                'timestamp' => $timestamp
+            ]);
+            
+            // Buscar la entrega correspondiente - múltiples estrategias
+            $entrega = null;
+            
+            // 1. Buscar por documento exacto Y fecha
             $entrega = \App\Models\Entrega::with('elementos')
                 ->where('numero_documento', $documento)
                 ->whereDate('created_at', $fecha)
                 ->orderBy('created_at', 'desc')
                 ->first();
             
+            // 2. Si no se encuentra, buscar solo por documento
             if (!$entrega) {
-                // Intentar buscar con documento en mayúsculas (normalizado)
                 $entrega = \App\Models\Entrega::with('elementos')
-                    ->whereRaw('UPPER(REPLACE(numero_documento, " ", "_")) = ?', [strtoupper($documento)])
+                    ->where('numero_documento', $documento)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                Log::info('verPdf: Búsqueda por documento sin fecha', ['encontrada' => (bool)$entrega]);
+            }
+            
+            // 3. Si no se encuentra, buscar con documento normalizado (con guiones bajos)
+            if (!$entrega) {
+                $entrega = \App\Models\Entrega::with('elementos')
+                    ->whereRaw('UPPER(REPLACE(REPLACE(numero_documento, " ", "_"), "-", "_")) = ?', [strtoupper($documento)])
                     ->whereDate('created_at', $fecha)
                     ->orderBy('created_at', 'desc')
                     ->first();
+                Log::info('verPdf: Búsqueda normalizada', ['encontrada' => (bool)$entrega]);
+            }
+            
+            // 4. Buscar en usuarios_entregas y luego las entregas relacionadas
+            if (!$entrega) {
+                $usuario = \App\Models\Usuarios::where('numero_documento', $documento)->first();
+                if ($usuario) {
+                    $entrega = \App\Models\Entrega::with('elementos')
+                        ->where('usuarios_id', $usuario->id)
+                        ->whereDate('created_at', $fecha)
+                        ->orderBy('created_at', 'desc')
+                        ->first();
+                    Log::info('verPdf: Búsqueda por usuarios_id', ['usuario_id' => $usuario->id, 'encontrada' => (bool)$entrega]);
+                }
             }
             
             if ($entrega) {
@@ -352,8 +385,14 @@ class controllerConsulta extends Controller
                     ]);
                     
                 } catch (\Throwable $e) {
-                    Log::error('Error regenerando PDF', ['filename' => $filename, 'error' => $e->getMessage()]);
+                    Log::error('Error regenerando PDF', ['filename' => $filename, 'error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                 }
+            } else {
+                Log::warning('verPdf: No se encontró entrega para regenerar', [
+                    'filename' => $filename,
+                    'documento' => $documento,
+                    'fecha' => $fecha
+                ]);
             }
         }
         
