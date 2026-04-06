@@ -241,8 +241,16 @@
                                                 $dt = \Carbon\Carbon::parse($base);
                                                 switch ($period->periodicidad) {
                                                     case '1_mes': $dt->addMonth(); break;
+                                                    case '2_meses': $dt->addMonths(2); break;
                                                     case '3_meses': $dt->addMonths(3); break;
+                                                    case '4_meses': $dt->addMonths(4); break;
+                                                    case '5_meses': $dt->addMonths(5); break;
                                                     case '6_meses': $dt->addMonths(6); break;
+                                                    case '7_meses': $dt->addMonths(7); break;
+                                                    case '8_meses': $dt->addMonths(8); break;
+                                                    case '9_meses': $dt->addMonths(9); break;
+                                                    case '10_meses': $dt->addMonths(10); break;
+                                                    case '11_meses': $dt->addMonths(11); break;
                                                     case '12_meses': $dt->addYear(); break;
                                                     default: $dt = null; break;
                                                 }

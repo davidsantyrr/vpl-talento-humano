@@ -51,8 +51,16 @@
                         <td>
                             <select class="form-select form-select-sm" name="periodicidad[{{ $periodicidad->id }}]" disabled>
                                 <option value="1_mes" {{ $periodicidad->periodicidad == '1_mes' ? 'selected' : '' }}>1 mes</option>
+                                <option value="2_meses" {{ $periodicidad->periodicidad == '2_meses' ? 'selected' : '' }}>2 meses</option>
                                 <option value="3_meses" {{ $periodicidad->periodicidad == '3_meses' ? 'selected' : '' }}>3 meses</option>
+                                <option value="4_meses" {{ $periodicidad->periodicidad == '4_meses' ? 'selected' : '' }}>4 meses</option>
+                                <option value="5_meses" {{ $periodicidad->periodicidad == '5_meses' ? 'selected' : '' }}>5 meses</option>
                                 <option value="6_meses" {{ $periodicidad->periodicidad == '6_meses' ? 'selected' : '' }}>6 meses</option>
+                                <option value="7_meses" {{ $periodicidad->periodicidad == '7_meses' ? 'selected' : '' }}>7 meses</option>
+                                <option value="8_meses" {{ $periodicidad->periodicidad == '8_meses' ? 'selected' : '' }}>8 meses</option>
+                                <option value="9_meses" {{ $periodicidad->periodicidad == '9_meses' ? 'selected' : '' }}>9 meses</option>
+                                <option value="10_meses" {{ $periodicidad->periodicidad == '10_meses' ? 'selected' : '' }}>10 meses</option>
+                                <option value="11_meses" {{ $periodicidad->periodicidad == '11_meses' ? 'selected' : '' }}>11 meses</option>
                                 <option value="12_meses" {{ $periodicidad->periodicidad == '12_meses' ? 'selected' : '' }}>12 meses</option>
                             </select>
                         </td>
@@ -162,8 +170,16 @@
                         <label class="form-label">Periodicidad</label>
                         <select name="periodicidad" class="form-select">
                             <option value="1_mes">1 mes</option>
+                            <option value="2_meses">2 meses</option>
                             <option value="3_meses">3 meses</option>
+                            <option value="4_meses">4 meses</option>
+                            <option value="5_meses">5 meses</option>
                             <option value="6_meses">6 meses</option>
+                            <option value="7_meses">7 meses</option>
+                            <option value="8_meses">8 meses</option>
+                            <option value="9_meses">9 meses</option>
+                            <option value="10_meses">10 meses</option>
+                            <option value="11_meses">11 meses</option>
                             <option value="12_meses">12 meses</option>
                         </select>
                     </div>
@@ -217,8 +233,16 @@
                         <label class="form-label">Periodicidad</label>
                         <select name="periodicidad" class="form-select">
                             <option value="1_mes">1 mes</option>
+                            <option value="2_meses">2 meses</option>
                             <option value="3_meses">3 meses</option>
+                            <option value="4_meses">4 meses</option>
+                            <option value="5_meses">5 meses</option>
                             <option value="6_meses">6 meses</option>
+                            <option value="7_meses">7 meses</option>
+                            <option value="8_meses">8 meses</option>
+                            <option value="9_meses">9 meses</option>
+                            <option value="10_meses">10 meses</option>
+                            <option value="11_meses">11 meses</option>
                             <option value="12_meses">12 meses</option>
                         </select>
                     </div>
