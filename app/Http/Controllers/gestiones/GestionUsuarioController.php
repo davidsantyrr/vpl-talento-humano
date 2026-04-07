@@ -252,7 +252,7 @@ public function downloadTemplate()
     $lists->setTitle('Lists');
 
     // TIPOS DOCUMENTO
-    $types = ['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte'];
+    $types = ['Cédula de Ciudadanía', 'Cédula de Extranjería', 'Pasaporte', 'PPT'];
     foreach ($types as $r => $t) {
         $lists->setCellValueByColumnAndRow(1, $r + 1, $t);
     }

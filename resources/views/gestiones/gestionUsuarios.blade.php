@@ -176,6 +176,7 @@
                                 <option value="Cédula de Ciudadanía" {{ $tipoOld == 'Cédula de Ciudadanía' ? 'selected' : '' }}>Cédula de Ciudadanía</option>
                                 <option value="Cédula de Extranjería" {{ $tipoOld == 'Cédula de Extranjería' ? 'selected' : '' }}>Cédula de Extranjería</option>
                                 <option value="Pasaporte" {{ $tipoOld == 'Pasaporte' ? 'selected' : '' }}>Pasaporte</option>
+                                <option value="PPT" {{ $tipoOld == 'PPT' ? 'selected' : '' }}>PPT</option>
                             </select>
                         </div>
 
