@@ -52,76 +52,30 @@ class GestionUsuarioController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-        'nombres' => 'required|string|max:255',
-        'apellidos'=> 'nullable|string|max:255',
-        'tipo_documento'    => 'nullable|string|max:100',
-        'numero_documento'  => 'required|string|max:100|unique:usuarios_entregas,numero_documento',
-        'email'  => 'required|email|unique:usuarios_entregas,email',
-        'fecha_ingreso'=> 'required|date',
-        'operacion_id'=> 'required|exists:sub_areas,id',
-        'area_id'=> 'required|exists:area,id',
-]);
+            'nombres' => 'required|string|max:255',
+            'apellidos'=> 'nullable|string|max:255',
+            'tipo_documento'    => 'nullable|string|max:100',
+            'numero_documento'  => 'required|string|max:100|unique:usuarios_entregas,numero_documento',
+            'email'  => 'required|email|unique:usuarios_entregas,email',
+            'fecha_ingreso'=> 'required|date',
+            'operacion_id'=> 'required|exists:sub_areas,id',
+            'area_id'=> 'required|exists:area,id',
+            'vinculacion' => 'nullable|string|in:Vigia,Temporal',
+        ]);
 
-        // VALIDACIONES
-        $maxRows = 200;
+        Usuarios::create([
+            'nombres' => $request->input('nombres'),
+            'apellidos' => $request->input('apellidos'),
+            'tipo_documento' => $request->input('tipo_documento'),
+            'numero_documento' => $request->input('numero_documento'),
+            'email' => $request->input('email'),
+            'fecha_ingreso' => $request->input('fecha_ingreso'),
+            'operacion_id' => $request->input('operacion_id'),
+            'area_id' => $request->input('area_id'),
+            'vinculacion' => $request->input('vinculacion'),
+        ]);
 
-        // Calcular tamaños de listas
-        $typesCount = max(1, count($types));
-        $opsCount = max(1, count($operationsPairs));
-        $areasCount = max(1, count($areasPairs));
-        $cargosCount = max(1, count($cargosPairs));
-
-        for ($row = 2; $row <= $maxRows; $row++) {
-
-            // TIPO DOCUMENTO (C)
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_LIST);
-            $v->setAllowBlank(true);
-            $v->setFormula1('=Lists!$A$1:$A$' . $typesCount);
-            $v->setShowDropDown(true);
-            $sheet->getCell("C{$row}")->setDataValidation($v);
-
-            // OPERACIÓN (G)
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_LIST);
-            $v->setAllowBlank(true);
-            $v->setFormula1('=Lists!$B$1:$B$' . $opsCount);
-            $v->setShowDropDown(true);
-            $sheet->getCell("G{$row}")->setDataValidation($v);
-
-            // ÁREA (H)
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_LIST);
-            $v->setAllowBlank(true);
-            $v->setFormula1('=Lists!$D$1:$D$' . $areasCount);
-            $v->setShowDropDown(true);
-            $sheet->getCell("H{$row}")->setDataValidation($v);
-
-            // CARGO (I)
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_LIST);
-            $v->setAllowBlank(true);
-            $v->setFormula1('=Lists!$F$1:$F$' . $cargosCount);
-            $v->setShowDropDown(true);
-            $sheet->getCell("I{$row}")->setDataValidation($v);
-
-            // EMAIL VALIDACIÓN
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_CUSTOM);
-            $v->setFormula1('=AND(LEN(E'.$row.')>3,ISNUMBER(SEARCH("@",E'.$row.')) )');
-            $sheet->getCell("E{$row}")->setDataValidation($v);
-
-            // FECHA VALIDACIÓN
-            $v = new DataValidation();
-            $v->setType(DataValidation::TYPE_CUSTOM);
-            $v->setFormula1('=ISNUMBER(F'.$row.')');
-            $sheet->getCell("F{$row}")->setDataValidation($v);
-
-            // VLOOKUP IDs
-            $sheet->setCellValue("J{$row}", '=IFERROR(VLOOKUP(G'.$row.',Lists!$B$1:$C$'.$opsCount.',2,FALSE),"")');
-            $sheet->setCellValue("K{$row}", '=IFERROR(VLOOKUP(H'.$row.',Lists!$D$1:$E$'.$areasCount.',2,FALSE),"")');
-            $sheet->setCellValue("L{$row}", '=IFERROR(VLOOKUP(I'.$row.',Lists!$F$1:$G$'.$cargosCount.',2,FALSE),"")');
-        }
+        return redirect()->route('gestionUsuario.index')->with('success', 'Usuario creado correctamente.');
     }
 
     /**
@@ -179,15 +133,16 @@ class GestionUsuarioController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-        'nombres'           => 'required|string|max:255',
-        'apellidos'         => 'nullable|string|max:255',
-        'tipo_documento'    => 'nullable|string|max:100',
-        'numero_documento'  => 'required|string|max:100|unique:usuarios_entregas,numero_documento,' . $id,
-        'email'             => 'required|email|unique:usuarios_entregas,email,' . $id,
-        'fecha_ingreso'     => 'required|date',
-        'operacion_id'      => 'required|exists:sub_areas,id',
-        'area_id'           => 'required|exists:area,id',
-]);
+            'nombres'           => 'required|string|max:255',
+            'apellidos'         => 'nullable|string|max:255',
+            'tipo_documento'    => 'nullable|string|max:100',
+            'numero_documento'  => 'required|string|max:100|unique:usuarios_entregas,numero_documento,' . $id,
+            'email'             => 'required|email|unique:usuarios_entregas,email,' . $id,
+            'fecha_ingreso'     => 'required|date',
+            'operacion_id'      => 'required|exists:sub_areas,id',
+            'area_id'           => 'required|exists:area,id',
+            'vinculacion'       => 'nullable|string|in:Vigia,Temporal',
+        ]);
 
         $usuario = Usuarios::findOrFail($id);
         $usuario->update([
@@ -199,6 +154,7 @@ class GestionUsuarioController extends Controller
             'fecha_ingreso' => $request->input('fecha_ingreso'),
             'operacion_id' => $request->input('operacion_id'),
             'area_id' => $request->input('area_id'),
+            'vinculacion' => $request->input('vinculacion'),
         ]);
 
         return redirect()->route('gestionUsuario.index')->with('success', 'Usuario actualizado correctamente.');
@@ -260,7 +216,7 @@ public function downloadTemplate()
     $headers = [
         'Nombres', 'Apellidos', 'Tipo_documento', 'numero_documento',
         'Email', 'fecha_ingreso',
-        'operacion', 'area', 'cargo'
+        'operacion', 'area', 'cargo', 'vinculacion'
     ];
 
     foreach ($headers as $col => $h) {
@@ -268,15 +224,15 @@ public function downloadTemplate()
     }
 
     // Columnas ocultas para IDs
-    $sheet->setCellValue('J1', 'Operación ID');
-    $sheet->setCellValue('K1', 'Área ID');
-    $sheet->setCellValue('L1', 'Cargo ID');
+    $sheet->setCellValue('K1', 'Operación ID');
+    $sheet->setCellValue('L1', 'Área ID');
+    $sheet->setCellValue('M1', 'Cargo ID');
 
     // ================= FILA EJEMPLO =================
     $example = [
         'Juan', 'Pérez', 'Cédula de Ciudadanía', '12345678',
         'juan.perez@ejemplo.com', date('Y-m-d'),
-        'Administración', 'Finanzas', 'Coordinador'
+        'Administración', 'Finanzas', 'Coordinador', 'Vigia'
     ];
 
     foreach ($example as $col => $v) {
@@ -320,11 +276,18 @@ public function downloadTemplate()
         $r++;
     }
 
+    // VINCULACIONES
+    $vinculaciones = ['Vigia', 'Temporal'];
+    foreach ($vinculaciones as $r => $v) {
+        $lists->setCellValueByColumnAndRow(8, $r + 1, $v);
+    }
+
     // ================= NAMED RANGES =================
     $spreadsheet->addNamedRange(new NamedRange('TipoDocs', $lists, '$A$1:$A$' . max(1, count($types))));
     $spreadsheet->addNamedRange(new NamedRange('OperacionesList', $lists, '$B$1:$B$' . max(1, count($operationsPairs))));
     $spreadsheet->addNamedRange(new NamedRange('AreasList', $lists, '$D$1:$D$' . max(1, count($areasPairs))));
     $spreadsheet->addNamedRange(new NamedRange('CargosList', $lists, '$F$1:$F$' . max(1, count($cargosPairs))));
+    $spreadsheet->addNamedRange(new NamedRange('VinculacionesList', $lists, '$H$1:$H$2'));
 
     // ================= VALIDACIONES =================
     $maxRows = 300;
@@ -411,12 +374,24 @@ public function downloadTemplate()
     $v->setErrorTitle('Selección obligatoria');
     $v->setError('Debe seleccionar un cargo.');
     $sheet->getCell("I{$row}")->setDataValidation(clone $v);
+
+    // ================= VINCULACIÓN =================
+    $v = new DataValidation();
+    $v->setType(DataValidation::TYPE_LIST);
+    $v->setAllowBlank(true);
+    $v->setFormula1('=VinculacionesList');
+    $v->setShowDropDown(true);
+    $v->setErrorStyle(DataValidation::STYLE_STOP);
+    $v->setShowErrorMessage(true);
+    $v->setErrorTitle('Selección inválida');
+    $v->setError('Debe seleccionar Vigia o Temporal.');
+    $sheet->getCell("J{$row}")->setDataValidation(clone $v);
 }
 
         // ================= VLOOKUP IDs =================
-        $sheet->setCellValue("J{$row}", '=IFERROR(VLOOKUP(G'.$row.',Lists!$B$1:$C$'.count($operationsPairs).',2,FALSE),"")');
-        $sheet->setCellValue("K{$row}", '=IFERROR(VLOOKUP(H'.$row.',Lists!$D$1:$E$'.count($areasPairs).',2,FALSE),"")');
-        $sheet->setCellValue("L{$row}", '=IFERROR(VLOOKUP(I'.$row.',Lists!$F$1:$G$'.count($cargosPairs).',2,FALSE),"")');
+        $sheet->setCellValue("K{$row}", '=IFERROR(VLOOKUP(G'.$row.',Lists!$B$1:$C$'.count($operationsPairs).',2,FALSE),"")');
+        $sheet->setCellValue("L{$row}", '=IFERROR(VLOOKUP(H'.$row.',Lists!$D$1:$E$'.count($areasPairs).',2,FALSE),"")');
+        $sheet->setCellValue("M{$row}", '=IFERROR(VLOOKUP(I'.$row.',Lists!$F$1:$G$'.count($cargosPairs).',2,FALSE),"")'); 
 
     // ================= FORMATO DE COLUMNAS =================
     $sheet->getStyle("D2:D{$maxRows}")
@@ -429,21 +404,21 @@ public function downloadTemplate()
 
     // ================= ESTILO =================
     $sheet->freezePane('A2');
-    $sheet->getStyle('A1:L1')->getFont()->setBold(true);
+    $sheet->getStyle('A1:M1')->getFont()->setBold(true);
 
     // ================= OCULTAR IDs =================
-    $sheet->getColumnDimension('J')->setVisible(false);
     $sheet->getColumnDimension('K')->setVisible(false);
     $sheet->getColumnDimension('L')->setVisible(false);
+    $sheet->getColumnDimension('M')->setVisible(false);
 
     // ================= PROTEGER HOJA =================
     // ================= PERMITIR EDICIÓN EN COLUMNAS USUARIAS =================
-$sheet->getStyle("A2:I{$maxRows}")
+$sheet->getStyle("A2:J{$maxRows}")
     ->getProtection()
     ->setLocked(false);
 
 // ================= BLOQUEAR SOLO COLUMNAS DE IDS =================
-$sheet->getStyle("J2:L{$maxRows}")
+$sheet->getStyle("K2:M{$maxRows}")
     ->getProtection()
     ->setLocked(true);
 

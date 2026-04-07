@@ -31,7 +31,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
             // detectar si la fila usa índices numéricos (sin encabezado)
             $hasNumeric = array_key_exists(0, $data) || array_key_exists(1, $data);
 
-            $nombres = $apellidos = $tipo_documento = $numero_documento = $email = $fecha_ingreso = $operacion = $area = $cargo = '';
+            $nombres = $apellidos = $tipo_documento = $numero_documento = $email = $fecha_ingreso = $operacion = $area = $cargo = $vinculacion = '';
 
             if ($hasNumeric) {
                 $nombres = trim((string)($data[0] ?? ''));
@@ -52,6 +52,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                 $operacion = trim((string)($data[6] ?? ''));
                 $area = trim((string)($data[7] ?? ''));
                 $cargo = trim((string)($data[8] ?? ''));
+                $vinculacion = trim((string)($data[9] ?? ''));
             } else {
                 // normalizar claves a formato simple
                 $normalized = [];
@@ -79,6 +80,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                     'operacion' => ['operacion','operaci_n','operation','operacion_id'],
                     'area' => ['area','area_id','nombre_area'],
                     'cargo' => ['cargo','cargo_id','nombre_cargo'],
+                    'vinculacion' => ['vinculacion','vinculaci_n','tipo_vinculacion'],
                 ];
 
                 $get = function($keys) use ($normalized) {
@@ -112,6 +114,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                 $operacion = trim((string)$get($aliases['operacion']));
                 $area = trim((string)$get($aliases['area']));
                 $cargo = trim((string)$get($aliases['cargo']));
+                $vinculacion = trim((string)$get($aliases['vinculacion']));
 
                 if ($index < 3) {
                     \Illuminate\Support\Facades\Log::info('UsuariosImport mapping', ['index' => $index + 2, 'nombres' => $nombres, 'numero_documento' => $numero_documento, 'email' => $email, 'fecha_ingreso' => $fecha_ingreso]);
@@ -120,7 +123,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
 
             // ignorar filas completamente vacías (sin columnas relevantes)
             $allEmpty = true;
-            foreach ([$nombres, $apellidos, $tipo_documento, $numero_documento, $email, $fecha_ingreso, $operacion, $area, $cargo] as $v) {
+            foreach ([$nombres, $apellidos, $tipo_documento, $numero_documento, $email, $fecha_ingreso, $operacion, $area, $cargo, $vinculacion] as $v) {
                 if ($v !== null && trim((string)$v) !== '') { $allEmpty = false; break; }
             }
             if ($allEmpty) {
@@ -174,6 +177,9 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                 if ($c) $cargo_id = $c->id;
             }
 
+            // Validar vinculación
+            $vinculacion_value = in_array($vinculacion, ['Vigia', 'Temporal']) ? $vinculacion : null;
+
             try {
                 Usuarios::create([
                     'nombres' => $nombres,
@@ -185,6 +191,7 @@ class UsuariosImport implements ToCollection, WithHeadingRow
                     'fecha_ingreso' => $fecha_ingreso,
                     'operacion_id' => $operacion_id,
                     'area_id' => $area_id,
+                    'vinculacion' => $vinculacion_value,
                 ]);
                 $this->created++;
             } catch (\Exception $e) {

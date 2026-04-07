@@ -214,6 +214,16 @@
                             </select>
                         </div>
 
+                        <div class="col-md-6">
+                            <label class="form-label">Vinculación</label>
+                            <select name="vinculacion" class="form-select">
+                                <option value="">Seleccione</option>
+                                @php $vinculacionOld = old('vinculacion', $editUsuario->vinculacion ?? '') @endphp
+                                <option value="Vigia" {{ $vinculacionOld == 'Vigia' ? 'selected' : '' }}>Vigia</option>
+                                <option value="Temporal" {{ $vinculacionOld == 'Temporal' ? 'selected' : '' }}>Temporal</option>
+                            </select>
+                        </div>
+
                     </div>
                 </div>
 

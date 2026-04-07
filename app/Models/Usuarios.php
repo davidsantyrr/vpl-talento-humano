@@ -21,6 +21,7 @@ class Usuarios extends Model
         'fecha_ingreso',
         'operacion_id',
         'area_id',
+        'vinculacion',
     ];
     protected $dates = ['fecha_ingreso'];
 
