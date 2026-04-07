@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignId('cargo_id')->nullable()->constrained('cargos')->onDelete('cascade');
             $table->date('fecha_ingreso');
             $table->foreignId('operacion_id')->nullable()->constrained('sub_areas')->onDelete('cascade');
+            $table->string('vinculacion')->nullable();
             $table->foreignId('area_id')->nullable()->constrained('area')->onDelete('cascade');
             $table->timestamps();
             $table->softDeletes();
