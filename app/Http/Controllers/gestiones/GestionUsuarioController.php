@@ -28,6 +28,7 @@ class GestionUsuarioController extends Controller
 
         $operations = SubArea::orderBy('operationName')->get();
         $areas      = Area::orderBy('nombre_area')->get();
+        $cargos     = Cargo::orderBy('nombre')->get();
         $productos  = Producto::orderBy('name_produc')->get(['sku','name_produc']);
 
         if ($q !== '') {
@@ -44,6 +45,7 @@ class GestionUsuarioController extends Controller
             'usuarios',
             'operations',
             'areas',
+            'cargos',
             'productos',
             'q'
         ));
@@ -60,6 +62,7 @@ class GestionUsuarioController extends Controller
             'fecha_ingreso'=> 'required|date',
             'operacion_id'=> 'required|exists:sub_areas,id',
             'area_id'=> 'required|exists:area,id',
+            'cargo_id'=> 'nullable|exists:cargos,id',
             'vinculacion' => 'nullable|string|in:Vigia,Temporal',
         ]);
 
@@ -72,6 +75,7 @@ class GestionUsuarioController extends Controller
             'fecha_ingreso' => $request->input('fecha_ingreso'),
             'operacion_id' => $request->input('operacion_id'),
             'area_id' => $request->input('area_id'),
+            'cargo_id' => $request->input('cargo_id'),
             'vinculacion' => $request->input('vinculacion'),
         ]);
 
@@ -110,6 +114,7 @@ class GestionUsuarioController extends Controller
         $usuarios    = Usuarios::orderBy('id', 'desc')->get();
         $operations  = SubArea::orderBy('operationName')->get();
         $areas       = Area::orderBy('nombre_area')->get();
+        $cargos      = Cargo::orderBy('nombre')->get();
         $productos   = Producto::orderBy('name_produc')->get(['sku','name_produc']);
 
         return view('gestiones.gestionUsuarios', compact(
@@ -117,6 +122,7 @@ class GestionUsuarioController extends Controller
         'editUsuario',
         'operations',
         'areas',
+        'cargos',
         'productos'
     ));
     }
@@ -141,6 +147,7 @@ class GestionUsuarioController extends Controller
             'fecha_ingreso'     => 'required|date',
             'operacion_id'      => 'required|exists:sub_areas,id',
             'area_id'           => 'required|exists:area,id',
+            'cargo_id'          => 'nullable|exists:cargos,id',
             'vinculacion'       => 'nullable|string|in:Vigia,Temporal',
         ]);
 
@@ -154,6 +161,7 @@ class GestionUsuarioController extends Controller
             'fecha_ingreso' => $request->input('fecha_ingreso'),
             'operacion_id' => $request->input('operacion_id'),
             'area_id' => $request->input('area_id'),
+            'cargo_id' => $request->input('cargo_id'),
             'vinculacion' => $request->input('vinculacion'),
         ]);
 

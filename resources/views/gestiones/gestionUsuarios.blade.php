@@ -215,6 +215,16 @@
                         </div>
 
                         <div class="col-md-6">
+                            <label class="form-label">Cargo</label>
+                            <select name="cargo_id" class="form-select">
+                                <option value="">Seleccione</option>
+                                @foreach($cargos as $cargo)
+                                    <option value="{{ $cargo->id }}" {{ (string) old('cargo_id', $editUsuario->cargo_id ?? '') === (string) $cargo->id ? 'selected' : '' }}>{{ $cargo->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
                             <label class="form-label">Vinculación</label>
                             <select name="vinculacion" class="form-select">
                                 <option value="">Seleccione</option>
