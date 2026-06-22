@@ -133,6 +133,28 @@ class HistorialEntregaController extends Controller
             }
         }
 
+        // Filtrar por subtipo/tipo específico (ej: 'primera vez', 'periodica', 'cambio',
+        // o valores prefijados para recepciones como 'recepcion prestamo', 'recepcion cambio')
+        if ($request->filled('tipo')) {
+            $tipoFiltro = trim((string)$request->input('tipo'));
+
+            // Si el filtro indica 'recepcion ...', aplicarlo solo a recepciones
+            if (str_starts_with(mb_strtolower($tipoFiltro), 'recepcion ')) {
+                $sub = trim(mb_substr($tipoFiltro, mb_strlen('recepcion ')));
+                $queryEntregas = null; // queremos solo recepciones de este subtipo
+                if ($queryRecepciones) {
+                    $queryRecepciones->whereRaw('LOWER(recepciones.tipo_recepcion) = ?', [mb_strtolower($sub)]);
+                }
+            } else {
+                // Para valores como 'primera vez', 'periodica', 'cambio' aplicamos a entregas
+                if ($queryEntregas) {
+                    $queryEntregas->whereRaw('LOWER(entregas.tipo_entrega) = ?', [mb_strtolower($tipoFiltro)]);
+                }
+                // También prevenir que aparezcan recepciones si el usuario busca un tipo de entrega
+                $queryRecepciones = null;
+            }
+        }
+
         // Unir ambas consultas
         $registros = collect();
         if ($queryEntregas) {

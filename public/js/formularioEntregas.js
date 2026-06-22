@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const lookupBox = document.getElementById('usuarioLookup');
     const elementoSelect = document.getElementById('elementoSelect');
     const btnAnadirElemento = document.getElementById('btnAnadirElemento');
-    const btnSeleccionarRecepcion = document.getElementById('btnSeleccionarRecepcion');
+    const btnSeleccionarEntrega = document.getElementById('btnSeleccionarEntrega');
 
     // El select de elementos se poblará desde cargo_productos SIN filtros
     if (elementoSelect) {
@@ -47,10 +47,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Mostrar/ocultar botones según el tipo
         if (btnAnadirElemento) {
-            btnAnadirElemento.style.display = isCambio ? 'none' : '';
+            btnAnadirElemento.style.display = '';
         }
-        if (btnSeleccionarRecepcion) {
-            btnSeleccionarRecepcion.style.display = isCambio ? '' : 'none';
+        if (btnSeleccionarEntrega) {
+            btnSeleccionarEntrega.style.display = 'none';
         }
 
         // Mostrar campo cargo solo para primera vez y periódica (no para cambio)
@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // abrir/cerrar modal y eventos
-    window.abrirModal = function(){
+    window.abrirModalEntregaElementos = function(){
         if (!modal) return;
         tempElementos = elementos.slice();
         modal.classList.add('active');
@@ -301,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
     
-    window.cerrarModal = function(){ 
+    window.cerrarModalEntrega = function(){ 
         if (!modal) return; 
         tempElementos = [];
         modal.classList.remove('active');
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (elementoInput) elementoInput.value = '';
     }
 
-    window.guardarModal = function(){
+    window.guardarModalEntrega = function(){
         if (!modal) return;
         if (tempElementos.length === 0) {
             Toast.fire({
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    window.agregarElementoModal = function(){
+    window.agregarElementoModalEntrega = function(){
         let sel = null;
         // elementoSelect ahora es un hidden input, elementoInput es el campo de texto
         if (elementoSelect && (elementoSelect.value || elementoSelect.dataset.name_produc)) {
@@ -593,21 +593,21 @@ document.addEventListener('DOMContentLoaded', function () {
     const buscarRecepcionInput = document.getElementById('buscarRecepcionInput');
     const recepcionesTbody = document.getElementById('recepcionesTbody');
 
-    window.abrirModalRecepcion = function(){
+    window.abrirModalEntregasCambio = function(){
         if (!modalRecepciones) return;
         modalRecepciones.classList.add('active');
         if (buscarRecepcionInput) buscarRecepcionInput.value = '';
         if (recepcionesTbody) {
-            recepcionesTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Ingrese un número de documento para buscar recepciones</td></tr>';
+            recepcionesTbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Ingrese un número de documento para buscar entregas</td></tr>';
         }
     }
 
-    window.cerrarModalRecepcion = function(){
+    window.cerrarModalEntregasCambio = function(){
         if (!modalRecepciones) return;
         modalRecepciones.classList.remove('active');
     }
 
-    window.buscarRecepciones = async function(){
+    window.buscarEntregasCambio = async function(){
         const numero = buscarRecepcionInput ? buscarRecepcionInput.value.trim() : '';
         if (!numero) {
             Toast.fire({
@@ -620,27 +620,27 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             Toast.fire({
                 icon: 'info',
-                title: 'Buscando recepciones...'
+                title: 'Buscando entregas...'
             });
 
-            const url = `${window.location.origin}/recepciones/buscar?numero=${encodeURIComponent(numero)}`;
+            const url = `${window.location.origin}/entregas/recepcion/buscar?numero=${encodeURIComponent(numero)}`;
             const resp = await fetch(url);
             
             if (!resp.ok) throw new Error('Error en la búsqueda');
             
-            const recepciones = await resp.json();
+            const entregas = await resp.json();
             
-            if (!Array.isArray(recepciones) || recepciones.length === 0) {
-                recepcionesTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron recepciones para este documento</td></tr>';
+            if (!Array.isArray(entregas) || entregas.length === 0) {
+                recepcionesTbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">No se encontraron entregas para este documento</td></tr>';
                 Toast.fire({
                     icon: 'info',
-                    title: 'No se encontraron recepciones'
+                    title: 'No se encontraron entregas'
                 });
                 return;
             }
 
-            // Renderizar recepciones encontradas
-            recepcionesTbody.innerHTML = recepciones.map(r => {
+            // Renderizar entregas encontradas
+            recepcionesTbody.innerHTML = entregas.map(r => {
                 // Formatear elementos recibidos
                 const elementosTexto = r.elementos && r.elementos.length > 0
                     ? r.elementos.map(e => `${e.sku} (${e.cantidad})`).join(', ')
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <td>${escapeHtml(r.numero_documento)}</td>
                     <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(elementosTexto)}">${escapeHtml(elementosTexto)}</td>
                     <td>
-                        <button type="button" class="btn btn-sm primary" onclick='seleccionarRecepcion(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
+                        <button type="button" class="btn btn-sm primary" onclick='seleccionarEntregaCambio(${JSON.stringify(r).replace(/'/g, "&apos;")})'>
                             Seleccionar
                         </button>
                     </td>
@@ -663,30 +663,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
             Toast.fire({
                 icon: 'success',
-                title: `${recepciones.length} recepción(es) encontrada(s)`
+                title: `${entregas.length} entrega(s) encontrada(s)`
             });
         } catch (e) {
-            console.error('Error buscando recepciones:', e);
+            console.error('Error buscando entregas:', e);
             Toast.fire({
                 icon: 'error',
-                title: 'Error al buscar recepciones'
+                title: 'Error al buscar entregas'
             });
         }
     }
 
-    window.seleccionarRecepcion = async function(recepcion){
-        if (!recepcion || !recepcion.elementos) return;
+    window.seleccionarEntregaCambio = async function(entrega){
+        if (!entrega || !entrega.elementos) return;
 
         // Rellenar datos del usuario
-        if (nombreInput) nombreInput.value = recepcion.nombres || '';
-        if (apellidosInput) apellidosInput.value = recepcion.apellidos || '';
-        if (numeroInput) numeroInput.value = recepcion.numero_documento || '';
-        if (tipoDocumentoSelect) tipoDocumentoSelect.value = recepcion.tipo_documento || 'CC';
+        if (nombreInput) nombreInput.value = entrega.nombres || '';
+        if (apellidosInput) apellidosInput.value = entrega.apellidos || '';
+        if (numeroInput) numeroInput.value = entrega.numero_documento || '';
+        if (tipoDocumentoSelect) tipoDocumentoSelect.value = entrega.tipo_documento || 'CC';
 
         // Buscar y cargar datos completos del usuario desde la base de datos
-        if (recepcion.numero_documento) {
+        if (entrega.numero_documento) {
             try {
-                const fetchUrl = `${window.location.origin}/usuarios/buscar?numero=${encodeURIComponent(recepcion.numero_documento)}`;
+                const fetchUrl = `${window.location.origin}/usuarios/buscar?numero=${encodeURIComponent(entrega.numero_documento)}`;
                 const respUsuario = await fetch(fetchUrl);
                 
                 if (respUsuario.ok) {
@@ -720,12 +720,12 @@ document.addEventListener('DOMContentLoaded', function () {
         // Guardar ID de recepción en campo hidden
         const recepcionIdHidden = document.getElementById('recepcionIdHidden');
         if (recepcionIdHidden) {
-            recepcionIdHidden.value = recepcion.id || '';
+            recepcionIdHidden.value = entrega.id || '';
         }
 
         // Obtener nombres de productos desde cargo_productos
         try {
-            const skus = recepcion.elementos.map(e => e.sku);
+            const skus = entrega.elementos.map(e => e.sku);
             const url = `${window.location.origin}/productos/nombres`;
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || 
                             document.querySelector('input[name="_token"]')?.value || '';
@@ -748,8 +748,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
             }
 
-            // Cargar elementos de la recepción con sus nombres
-            elementos = recepcion.elementos.map(e => ({
+            // Cargar elementos de la entrega con sus nombres
+            elementos = entrega.elementos.map(e => ({
                 sku: e.sku,
                 name: productosMap[e.sku] || e.sku,
                 cantidad: parseInt(e.cantidad) || 1
@@ -757,7 +757,7 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (err) {
             console.error('Error obteniendo nombres de productos:', err);
             // Si falla, cargar solo con SKU
-            elementos = recepcion.elementos.map(e => ({
+            elementos = entrega.elementos.map(e => ({
                 sku: e.sku,
                 name: e.sku,
                 cantidad: parseInt(e.cantidad) || 1
@@ -765,20 +765,20 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         syncFormTable();
-        cerrarModalRecepcion();
+        cerrarModalEntregasCambio();
         
         // Habilitar botón "Añadir elemento" para edición
         if (btnAnadirElemento) {
             btnAnadirElemento.style.display = '';
         }
-        // Ocultar botón "Seleccionar recepción"
-        if (btnSeleccionarRecepcion) {
-            btnSeleccionarRecepcion.style.display = 'none';
+        // Ocultar botón "Seleccionar entrega"
+        if (btnSeleccionarEntrega) {
+            btnSeleccionarEntrega.style.display = 'none';
         }
         
         Toast.fire({
             icon: 'success',
-            title: 'Recepción cargada. Puede editar los elementos'
+            title: 'Entrega cargada. Puede editar los elementos'
         });
     }
 
@@ -787,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function () {
         buscarRecepcionInput.addEventListener('keypress', function(e){
             if (e.key === 'Enter') {
                 e.preventDefault();
-                buscarRecepciones();
+                buscarEntregasCambio();
             }
         });
     }

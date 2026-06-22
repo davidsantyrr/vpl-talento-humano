@@ -28,7 +28,7 @@ class RecepcionController extends Controller
             'apellidos' => ['nullable','string'],
             'usuarios_id' => ['nullable','integer'],
             'operation_id' => ['required','integer','exists:sub_areas,id'],
-            'tipo' => ['required','string','in:cambio,prestamo'],
+            'tipo' => ['required','string','in:cambio,prestamo,paz_y_salva'],
             'entrega_id' => ['nullable','integer','exists:entregas,id'],
             'items' => ['required','string'],
             'firma' => ['nullable','string'],
@@ -322,9 +322,9 @@ class RecepcionController extends Controller
                         break;
 
                     case 'cambio':
-                        // Sumar a disponible (artículo devuelto para cambio)
-                        $this->sumarInventario($sku, $cantidad, 'disponible', $ubicacionId);
-                        Log::info('Inventario actualizado: recepción para cambio', [
+                        // Para recepciones por cambio, marcar los elementos como 'usados'
+                        $this->sumarInventario($sku, $cantidad, 'usados', $ubicacionId);
+                        Log::info('Inventario actualizado: recepción para cambio (marcado como usados)', [
                             'recepcion_id' => $recepcionId,
                             'sku' => $sku,
                             'cantidad' => $cantidad

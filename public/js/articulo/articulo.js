@@ -43,6 +43,21 @@
     return { id: '', isName: false };
   }
 
+  function getCurrentPage() {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      const p = sp.get('page');
+      return p && String(p).trim() !== '' ? String(p) : '1';
+    } catch (e) { return '1'; }
+  }
+
+  function getQueryParam(name) {
+    try {
+      const sp = new URLSearchParams(window.location.search || '');
+      return sp.get(name) || '';
+    } catch (e) { return ''; }
+  }
+
   function openLocation(row){
     const identifier = getIdentifier(row);
     const bodega = row.dataset.bodega || '';
@@ -123,13 +138,18 @@
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
+      const queryCategory = getQueryParam('category');
+      const querySearch = getQueryParam('search');
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
+      const pageInput = document.createElement('input'); pageInput.type = 'hidden'; pageInput.name = 'page'; pageInput.value = getCurrentPage();
+      const categoryInput = document.createElement('input'); categoryInput.type = 'hidden'; categoryInput.name = 'category'; categoryInput.value = queryCategory;
+      const searchInput = document.createElement('input'); searchInput.type = 'hidden'; searchInput.name = 'search'; searchInput.value = querySearch;
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = res.value.bodega || '';
       const u = document.createElement('input'); u.type = 'hidden'; u.name = 'ubicacion'; u.value = res.value.ubicacion || '';
       const e = document.createElement('input'); e.type = 'hidden'; e.name = 'estatus'; e.value = row.dataset.estatus || 'disponible';
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = mode === 'new' ? '0' : String(row.dataset.stock || 0);
-      form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
+      form.appendChild(csrf); form.appendChild(per); form.appendChild(pageInput); form.appendChild(categoryInput); form.appendChild(searchInput); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
       if (mode === 'new') { const nl = document.createElement('input'); nl.type = 'hidden'; nl.name = 'new_location'; nl.value = '1'; form.appendChild(nl); }
       if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
@@ -164,7 +184,7 @@
           </div>
           <div class="field">
             <label>Precio</label>
-            <input id="sw-price" type="text" class="sw-input" placeholder="Dejar vacío para no cambiar" />
+            <div id="sw-price-display" class="sw-input" style="background:#f7f7f7;">${row.dataset.price || ''}</div>
           </div>
         </div>
       `,
@@ -191,23 +211,13 @@
         }
         sel.addEventListener('change', updateHint);
         updateHint();
-        // Prefill price from row dataset (table inputs are disabled)
-        try {
-          const priceInp = document.getElementById('sw-price');
-          if (priceInp) {
-            priceInp.value = (row.dataset.price || '').toString();
-          }
-        } catch (e) { console.warn('Error prefilling price', e); }
+        // Price is display-only in the modal; no editable field.
       },
       preConfirm: () => {
         const target = document.getElementById('sw-estatus').value;
         const qtyStr = document.getElementById('sw-stock').value;
         const qty = Number(qtyStr);
-        const priceStr = (document.getElementById('sw-price') || {}).value || '';
-        if (priceStr !== '' && isNaN(Number(priceStr))) {
-          Swal.showValidationMessage('Precio inválido');
-          return false;
-        }
+        // Price is display-only; no validation required here.
         if (qtyStr === '' || qty < 0) {
           Swal.showValidationMessage('Cantidad inválida');
           return false;
@@ -228,15 +238,18 @@
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
+      const queryCategory = getQueryParam('category');
+      const querySearch = getQueryParam('search');
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
+      const pageInput = document.createElement('input'); pageInput.type = 'hidden'; pageInput.name = 'page'; pageInput.value = getCurrentPage();
+      const categoryInput = document.createElement('input'); categoryInput.type = 'hidden'; categoryInput.name = 'category'; categoryInput.value = queryCategory;
+      const searchInput = document.createElement('input'); searchInput.type = 'hidden'; searchInput.name = 'search'; searchInput.value = querySearch;
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = row.dataset.bodega || '';
       const u = document.createElement('input'); u.type = 'hidden'; u.name = 'ubicacion'; u.value = row.dataset.ubicacion || '';
       const e = document.createElement('input'); e.type = 'hidden'; e.name = 'estatus'; e.value = res.value.targetStatus || currentStatus;
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = String(res.value.qty || 0);
-      const p = document.createElement('input'); p.type = 'hidden'; p.name = 'price'; p.value = (res.value.price || '').toString();
-      form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
-      form.appendChild(p);
+      form.appendChild(csrf); form.appendChild(per); form.appendChild(pageInput); form.appendChild(categoryInput); form.appendChild(searchInput); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s);
       if (res.value.targetStatus !== currentStatus) { const f = document.createElement('input'); f.type = 'hidden'; f.name = 'from_status'; f.value = currentStatus; form.appendChild(f); }
       if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
@@ -282,12 +295,13 @@
       form.action = `${baseUrl}/${encodeURIComponent(identifier.id)}`;
       const csrf = document.createElement('input'); csrf.type = 'hidden'; csrf.name = '_token'; csrf.value = csrfToken;
       const per = document.createElement('input'); per.type = 'hidden'; per.name = 'per_page'; per.value = String(perPage);
+      const pageInput = document.createElement('input'); pageInput.type = 'hidden'; pageInput.name = 'page'; pageInput.value = getCurrentPage();
       const b = document.createElement('input'); b.type = 'hidden'; b.name = 'bodega'; b.value = row.dataset.bodega || '';
       const u = document.createElement('input'); u.type = 'hidden'; u.name = 'ubicacion'; u.value = row.dataset.ubicacion || '';
       const e = document.createElement('input'); e.type = 'hidden'; e.name = 'estatus'; e.value = 'destruido';
       const s = document.createElement('input'); s.type = 'hidden'; s.name = 'stock'; s.value = String(res.value.qty || 0);
       const f = document.createElement('input'); f.type = 'hidden'; f.name = 'from_status'; f.value = currentStatus;
-      form.appendChild(csrf); form.appendChild(per); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s); form.appendChild(f);
+      form.appendChild(csrf); form.appendChild(per); form.appendChild(pageInput); form.appendChild(b); form.appendChild(u); form.appendChild(e); form.appendChild(s); form.appendChild(f);
       if (identifier.isName) { const nm = document.createElement('input'); nm.type = 'hidden'; nm.name = 'by_name'; nm.value = '1'; form.appendChild(nm); }
       document.body.appendChild(form);
       form.submit();

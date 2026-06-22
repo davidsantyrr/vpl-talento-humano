@@ -62,6 +62,10 @@
   // Tipo de entrega explícito (mostrar en motivo)
   $tipoEntregaLabel = $registro->tipo ?? ($registro->tipo_entrega ?? ($registro->tipo_recepcion ?? ''));
   $tipoEntregaLabel = is_string($tipoEntregaLabel) ? trim($tipoEntregaLabel) : '';
+  // Normalizar etiquetas internas a etiquetas legibles
+  if ($tipoEntregaLabel === 'paz_y_salva') {
+    $tipoEntregaLabel = 'Paz y Salva';
+  }
 @endphp
 
 <!-- HEADER -->
@@ -135,6 +139,8 @@
   <span style="display:inline-block; width:12px; height:12px; background:#f8fafc; border:1px solid #dbeafe; vertical-align:middle;"></span> Entregas anteriores
   &nbsp;&nbsp;
   <span style="display:inline-block; width:12px; height:12px; background:#fffde7; border:1px solid #fef08a; vertical-align:middle;"></span> <strong>Entrega actual</strong>
+  <br />
+  <span style="display:inline-block; margin-top:4px;">Las entregas anteriores muestran la firma cuando está disponible; en caso contrario se indica "Sin firma".</span>
 </div>
 @endif
 
@@ -190,7 +196,13 @@
             <td class="center">{{ $fechaHist }}</td>
             <td>{{ $elementoDisplayHist }}</td>
             <td class="center">{{ $motivoHist }}</td>
-            <td class="center"><span style="font-size:10px; color:#64748b;">✓</span></td>
+            <td class="center">
+              @if(!empty($entregaHist['firma']))
+                <img src="{{ $entregaHist['firma'] }}" alt="Firma" style="height:28px; max-width:60px;" />
+              @else
+                <span style="font-size:10px; color:#64748b;">Sin firma</span>
+              @endif
+            </td>
             <td class="center">{{ $entregaUserHist }}</td>
           </tr>
           @endif

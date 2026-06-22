@@ -22,12 +22,12 @@ function escapeHtml(text){
         .replace(/>/g,'&gt;');
 }
 
-window.abrirModalEntregas = function(){
+window.abrirModalEntregasRecepcion = function(){
     modal.classList.add('active');
     tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;">Ingrese documento</td></tr>`;
 };
 
-window.cerrarModalEntregas = function(){
+window.cerrarModalEntregasRecepcion = function(){
     modal.classList.remove('active');
 };
 
@@ -116,22 +116,52 @@ window.seleccionarEntregaPrestamo = function(entrega){
     document.getElementById('tipoDocumento').value = entrega.tipo_documento || 'CC';
     document.getElementById('entregaIdHidden').value = entrega.id;
 
+    // Resolver nombre del producto si no viene en la entrega usando la configuración de la página
+    const cfg = window.RecepcionPageConfig || {};
+    const allProducts = Array.isArray(cfg.allProducts) ? cfg.allProducts : [];
+    function lookupNameBySku(sku){
+        if (!sku) return '';
+        const s = String(sku).trim().toLowerCase();
+        const found = allProducts.find(p => String(p.sku || '').trim().toLowerCase() === s);
+        if (found) return found.name || found.name_produc || '';
+        return '';
+    }
+
     items = (entrega.elementos || []).map(e => ({
         sku: e.sku,
-        name: e.name,
+        name: e.name || e.name_produc || lookupNameBySku(e.sku) || '',
         cantidad: parseInt(e.cantidad) || 1
     }));
 
     itemsField.value = JSON.stringify(items);
+    // Intentar actualizar la tabla principal de recepción
+    try {
+        console.log('Seleccionar entrega: items ->', items);
+        if (typeof window.setRecepcionItems === 'function') {
+            window.setRecepcionItems(items);
+        } else {
+            // Fallback: actualizar el campo hidden y despachar evento global
+            if (itemsField) itemsField.value = JSON.stringify(items);
+            try {
+                window.dispatchEvent(new CustomEvent('recepcion.items', { detail: items }));
+            } catch(e) { console.warn('No se pudo despachar evento recepcion.items', e); }
+            // Reintentar en breve por si el listener se registra después
+            setTimeout(function(){
+                try { window.dispatchEvent(new CustomEvent('recepcion.items', { detail: items })); } catch(e) {}
+            }, 250);
+        }
+    } catch (err) {
+        console.error('Error aplicando items de entrega:', err);
+    }
 
-    cerrarModalEntregas();
+    cerrarModalEntregasRecepcion();
 
     Toast.fire({ icon: 'success', title: 'Entrega cargada' });
 };
 
 // Abrir modal desde el botón "Seleccionar entrega"
 btnSeleccionarEntrega && btnSeleccionarEntrega.addEventListener('click', function(){
-    abrirModalEntregas();
+    abrirModalEntregasRecepcion();
 });
 
 })();

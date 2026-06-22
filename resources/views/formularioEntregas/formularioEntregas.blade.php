@@ -74,8 +74,8 @@
                     </div>
                 </div>
                 <div class="actions">
-                    <button type="button" class="btn add" id="btnAnadirElemento" onclick="abrirModal()">Añadir elemento</button>
-                    <button type="button" class="btn primary" id="btnSeleccionarRecepcion" onclick="abrirModalRecepcion()" style="display:none;">Seleccionar recepción</button>
+                    <button type="button" class="btn add" id="btnAnadirElemento" onclick="abrirModalEntregaElementos()">Añadir elemento</button>
+                    <button type="button" class="btn primary" id="btnSeleccionarEntrega" onclick="abrirModalEntregasCambio()" style="display:none;">Seleccionar entrega</button>
                 </div>
             </div>
 
@@ -135,7 +135,7 @@
             </div>
         </div>
         <div class="modal-actions">
-            <button type="button" class="btn add" onclick="agregarElementoModal()">Agregar a lista</button>
+            <button type="button" class="btn add" onclick="agregarElementoModalEntrega()">Agregar a lista</button>
         </div>
         <table class="modal-table">
             <thead>
@@ -151,15 +151,15 @@
                 <input type="checkbox" id="chkEnviarGestionCorreos">
                 <label for="chkEnviarGestionCorreos" style="margin:0;">Enviar también a correos de gestión</label>
             </div>
-            <button type="button" class="btn primary" onclick="guardarModal()">Añadir</button>
-            <button type="button" class="btn secondary" onclick="cerrarModal()">Cancelar</button>
+            <button type="button" class="btn primary" onclick="guardarModalEntrega()">Añadir</button>
+            <button type="button" class="btn secondary" onclick="cerrarModalEntrega()">Cancelar</button>
         </div>
     </div>
 </div>
 
 <div class="modal" id="modalRecepciones">
     <div>
-        <h1>Seleccionar Recepción</h1>
+        <h1>Seleccionar Entrega</h1>
         <div class="modal-grid" style="grid-template-columns: 1fr;">
             <div class="modal-field">
                 <label>Buscar por número de documento</label>
@@ -167,7 +167,7 @@
             </div>
         </div>
         <div class="modal-actions">
-            <button type="button" class="btn primary" onclick="buscarRecepciones()">Buscar</button>
+            <button type="button" class="btn primary" onclick="buscarEntregasCambio()">Buscar</button>
         </div>
         <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
             <table class="modal-table">
@@ -176,21 +176,21 @@
                         <th>Fecha</th>
                         <th>Nombre</th>
                         <th>Documento</th>
-                        <th>Elementos Recibidos</th>
+                        <th>Elementos Entregados</th>
                         <th>Acción</th>
                     </tr>
                 </thead>
                 <tbody id="recepcionesTbody">
                     <tr>
                         <td colspan="5" style="text-align: center; padding: 20px;">
-                            Ingrese un número de documento para buscar recepciones
+                            Ingrese un número de documento para buscar entregas
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
         <div class="modal-actions" style="margin-top:16px;">
-            <button type="button" class="btn secondary" onclick="cerrarModalRecepcion()">Cancelar</button>
+            <button type="button" class="btn secondary" onclick="cerrarModalRecepcionesEntrega()">Cancelar</button>
         </div>
     </div>
 </div>
@@ -367,6 +367,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
       const formData = new FormData(form);
       formData.append('comprobante_path', jsonPDF.path);
+      formData.append('firma', firmaField.value);
 
       const respForm = await fetch(form.action, {
         method: 'POST',

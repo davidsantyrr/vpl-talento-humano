@@ -39,6 +39,7 @@
             <select id="tipoRecepcionSelect" name="tipo">
               <option value="cambio">Recepción para cambio</option>
               <option value="prestamo">Recepción de préstamo</option>
+              <option value="paz_y_salva">Paz y Salva</option>
             </select>
           </div>
           <div class="field" id="field-operacion-recepcion">
@@ -99,7 +100,7 @@
 
 <div class="modal" id="modalEntregas">
   <div>
-    <h1>Seleccionar Entrega (Préstamo)</h1>
+    <h1>Seleccionar Entrega (Cambio)</h1>
     <div class="modal-grid" style="grid-template-columns: 1fr;">
       <div class="modal-field">
         <label>Buscar por número de documento</label>
@@ -130,7 +131,7 @@
       </table>
     </div>
     <div class="modal-actions" style="margin-top:16px;">
-      <button type="button" class="btn secondary" onclick="cerrarModalEntregas()">Cancelar</button>
+      <button type="button" class="btn secondary" onclick="cerrarModalEntregasRecepcion()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -164,7 +165,7 @@
     </table>
     <div class="modal-actions" style="margin-top:16px;">
       <button type="button" class="btn primary" onclick="guardarModalRecepcion()">Añadir</button>
-      <button type="button" class="btn secondary" onclick="cerrarModalRecepcion()">Cancelar</button>
+      <button type="button" class="btn secondary" onclick="cerrarModalElementosRecepcion()">Cancelar</button>
     </div>
   </div>
 </div>

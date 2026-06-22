@@ -187,7 +187,8 @@ Route::middleware([VplAuth::class])->group(function(){
 Route::post('comprobantes/generar', [ComprobanteController::class, 'generar'])->name('comprobantes.generar');
 Route::get('/articulos', [ArticulosController::class, 'index'])->name('articulos.index');
 Route::get('/debug/usados', [ArticulosController::class, 'debugUsados'])->name('debug.usados');
-Route::get('/articulos/export-inventario', [App\Http\Controllers\articulos\ArticulosController::class, 'exportInventario'])->name('articulos.exportInventario');
+Route::post('/articulos/export-inventario', [App\Http\Controllers\articulos\ArticulosController::class, 'exportInventario'])->name('articulos.exportInventario');
+Route::post('/articulos/import-inventario', [App\Http\Controllers\articulos\ArticulosController::class, 'importInventario'])->name('articulos.importInventario');
 Route::get('/articulos/constancias', [ArticulosController::class, 'listarConstancias'])->name('articulos.constancias');
 Route::get('/articulos/constancias/{sku}', [ArticulosController::class, 'obtenerConstanciasPorSku'])->name('articulos.constancias.sku');
 Route::get('/articulos/constancia/{archivo}', [ArticulosController::class, 'descargarConstancia'])->name('articulos.constancia.descargar');

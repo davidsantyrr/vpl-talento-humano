@@ -22,41 +22,87 @@
 
     <p class="page-subtitle">Gestiona inventario en la BD 3 (bodega, ubicación, estatus y stock) para artículos provenientes de requisición.</p>
 
-    <div class="filters" style="display:flex; gap:16px; align-items:center; margin: 12px 0; flex-wrap: wrap;">
-      <!-- Barra de búsqueda -->
-      <form method="GET" action="{{ route('articulos.index') }}" class="search-filter-form" style="display:flex; gap:8px; align-items:center;">
-        <label for="search">Buscar</label>
-        <input type="text" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Nombre o SKU..." style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 200px;">
-        <button type="submit" class="btn btn-sm" style="padding: 6px 12px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-        </button>
-        @if(!empty($search))
-          <a href="{{ route('articulos.index', ['per_page' => $perPage ?? 20, 'category' => $selectedCategory ?? '']) }}" class="btn btn-sm secondary" style="padding: 6px 12px;" title="Limpiar búsqueda">✕</a>
-        @endif
-        <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
-        <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
-      </form>
+    <!-- SECCIÓN DE FILTROS -->
+    <div class="controls-section filters-section" style="margin-bottom: 16px;">
+      <div style="display:grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center;">
+        <!-- Grupo izquierda: Búsqueda y Categoría -->
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <!-- Barra de búsqueda -->
+          <form method="GET" action="{{ route('articulos.index') }}" class="search-filter-form" style="display:flex; gap:8px; align-items:center;">
+            <label for="search" style="font-weight: 500; color: #555;">Buscar:</label>
+            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Nombre o SKU..." style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; min-width: 220px; font-size: 14px;">
+            <button type="submit" class="btn btn-sm" style="padding: 8px 12px; background-color: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Buscar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+            </button>
+            @if(!empty($search))
+              <a href="{{ route('articulos.index', ['per_page' => $perPage ?? 20, 'category' => $selectedCategory ?? '']) }}" class="btn btn-sm" style="padding: 8px 12px; background-color: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: 0.2s;" title="Limpiar búsqueda">✕</a>
+            @endif
+            <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
+            <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
+          </form>
 
-      <form method="GET" action="{{ route('articulos.index') }}" class="category-filter-form" style="display:flex; gap:8px; align-items:center;">
-        <label for="category">Categoría</label>
-        <select id="category" name="category" onchange="this.form.submit()">
-          <option value="">Todas</option>
-          @foreach(($categories ?? []) as $cat)
-            <option value="{{ $cat }}" {{ ($selectedCategory ?? '')===$cat ? 'selected' : '' }}>{{ $cat }}</option>
-          @endforeach
-        </select>
-        <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
-        <input type="hidden" name="search" value="{{ $search ?? '' }}">
-      </form>
-      @if($canExport)
-        <div class="btn btn-primary" style="margin-left:auto;">
-          <a href="{{ route('articulos.exportInventario') }}" class="btn" style="display:inline-flex; align-items:center; gap:8px;">Exportar Excel</a>
+          <!-- Filtro de categoría -->
+          <form method="GET" action="{{ route('articulos.index') }}" class="category-filter-form" style="display:flex; gap:8px; align-items:center;">
+            <label for="category" style="font-weight: 500; color: #555;">Categoría:</label>
+            <select id="category" name="category" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background-color: white; cursor: pointer;">
+              <option value="">Todas</option>
+              @foreach(($categories ?? []) as $cat)
+                <option value="{{ $cat }}" {{ ($selectedCategory ?? '')===$cat ? 'selected' : '' }}>{{ $cat }}</option>
+              @endforeach
+            </select>
+            <input type="hidden" name="per_page" value="{{ (int)($perPage ?? 20) }}">
+            <input type="hidden" name="search" value="{{ $search ?? '' }}">
+          </form>
         </div>
-      @endif
+      </div>
     </div>
+
+    <!-- SECCIÓN DE ACCIONES (Exportar e Importar) -->
+    @if($canExport || $canImport)
+      <div class="controls-section actions-section" style="margin-bottom: 20px; padding: 16px; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 6px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <!-- Exportar -->
+          @if($canExport)
+            <div class="action-group" style="display: flex; align-items: center; gap: 12px; padding: 12px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="flex: 1;">
+                <label style="display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">📤 Exportar Inventario</label>
+                <form action="{{ route('articulos.exportInventario') }}" method="POST" style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                  @csrf
+                  <input type="hidden" name="search" value="{{ $search ?? '' }}">
+                  <input type="hidden" name="category" value="{{ $selectedCategory ?? '' }}">
+                  <select name="export_type" id="export_type" style="padding:8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background-color: white; cursor: pointer; flex: 1; min-width: 200px;">
+                    <option value="template">📋 Plantilla para actualizar stock</option>
+                    <option value="full">📊 Inventario completo</option>
+                  </select>
+                  <button type="submit" class="btn btn-primary" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: background-color 0.2s;">Exportar Excel</button>
+                </form>
+              </div>
+            </div>
+          @endif
+
+          <!-- Importar -->
+          @if($canImport)
+            <div class="action-group" style="display: flex; align-items: center; gap: 12px; padding: 12px; background-color: white; border-radius: 4px; border: 1px solid #e0e0e0;">
+              <div style="flex: 1;">
+                <label style="display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">📥 Importar Inventario</label>
+                <form action="{{ route('articulos.importInventario') }}" method="POST" enctype="multipart/form-data" style="display:flex; gap:8px; align-items:center; flex-wrap: wrap;">
+                  @csrf
+                  <input type="file" name="file" accept=".xlsx,.xls,.csv" required style="padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; flex: 1; min-width: 180px;">
+                  <select name="mode" id="mode" style="padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; background-color: white; cursor: pointer;">
+                    <option value="set">Reemplazar stock</option>
+                    <option value="add">Sumar al stock</option>
+                  </select>
+                  <button type="submit" class="btn btn-secondary" style="padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 600; white-space: nowrap; transition: background-color 0.2s;">Importar Excel</button>
+                </form>
+              </div>
+            </div>
+          @endif
+        </div>
+      </div>
+    @endif
 
     <div class="table-wrapper">
       <table class="tabla-articulos">
@@ -243,42 +289,7 @@
 <script src="{{ asset('js/articulo/destruccion.js') }}?v={{ time() }}"></script>
 <script src="{{ asset('js/articulo/constancias.js') }}?v={{ time() }}"></script>
 <script>
-  (function(){
-    const token = window.ArticulosPageConfig.csrfToken || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    function savePrice(sku, price, inputEl) {
-      fetch('{{ route('articulos.savePrice') }}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': token
-        },
-        body: JSON.stringify({ sku: sku, price: price })
-      }).then(r => r.json()).then(j => {
-        if (j && j.success) {
-          inputEl.classList.remove('price-error');
-          inputEl.classList.add('price-saved');
-          setTimeout(()=>inputEl.classList.remove('price-saved'),1200);
-        } else {
-          inputEl.classList.add('price-error');
-        }
-      }).catch(e=>{ inputEl.classList.add('price-error'); });
-    }
-
-    document.addEventListener('DOMContentLoaded', function(){
-      document.querySelectorAll('.price-input').forEach(function(inp){
-        inp.addEventListener('blur', function(ev){
-          const sku = inp.getAttribute('data-sku');
-          const val = inp.value.trim();
-          if (val === '') { savePrice(sku, null, inp); return; }
-          // normalize number (allow comma)
-          const norm = val.replace(/,/g, '.');
-          if (!isFinite(norm)) { inp.classList.add('price-error'); return; }
-          savePrice(sku, parseFloat(norm), inp);
-        });
-        inp.addEventListener('keydown', function(e){ if (e.key === 'Enter') { inp.blur(); } });
-      });
-    });
-  })();
+  // Previamente se permitía editar precios inline; ahora solo se muestran como texto.
 </script>
 <script>
   (function(){

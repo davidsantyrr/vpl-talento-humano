@@ -215,6 +215,26 @@ class FormularioEntregasController extends Controller
 				$entregaData['comprobante_path'] = $comprobantePath;
 			}
 
+			// Guardar firma de entrega en storage para histórico de comprobantes
+			$firmaValue = $data['firma'] ?? null;
+			if (is_string($firmaValue) && str_starts_with($firmaValue, 'data:image')) {
+				try {
+					[$meta, $content] = explode(',', $firmaValue, 2);
+					$ext = 'png';
+					if (strpos($meta, 'image/jpeg') !== false) { $ext = 'jpg'; }
+					elseif (strpos($meta, 'image/webp') !== false) { $ext = 'webp'; }
+					$bin = base64_decode($content);
+					$dir = storage_path('app/firmas_entregas');
+					if (!file_exists($dir)) { mkdir($dir, 0755, true); }
+					$filename = 'firma_entrega_' . uniqid() . '.' . $ext;
+					$filePath = $dir . DIRECTORY_SEPARATOR . $filename;
+					file_put_contents($filePath, $bin);
+					$entregaData['firma_path'] = 'firmas_entregas/' . $filename;
+				} catch (\Throwable $e) {
+					// ignore if save fails, no firma_path stored
+				}
+			}
+
 			$entregaId = DB::table('entregas')->insertGetId($entregaData);
 
 			$items = json_decode($data['elementos'] ?? '[]', true) ?: [];

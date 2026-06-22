@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\InventariosExport;
+use App\Imports\InventariosImport;
 use Illuminate\Support\Collection;
 
 class ArticulosController extends Controller
@@ -76,6 +77,10 @@ class ArticulosController extends Controller
         $isAdmin = $this->matchesRoleStringArray($roleStrings, ['administrador','admin']);
         $isHseq = $this->matchesRoleStringArray($roleStrings, ['hseq']);
         $isTalento = $this->matchesRoleStringArray($roleStrings, ['talento','talentohumano']);
+        
+        // Permitir exportar e importar a usuarios autenticados (validación de permisos detallada en los métodos específicos)
+        $canExportImport = true;
+
 
         // Aplicar filtros solo si no es admin
         if (!$isAdmin) {
@@ -204,7 +209,83 @@ class ArticulosController extends Controller
                 continue;
             }
         }
-        $pricesBySku = collect($pricesBySku);
+        // Cachear resultados de búsqueda de precios por conjunto de SKUs por 30s para reducir consultas a conexiones externas
+        try {
+            $cacheKey = 'pricesBySku:' . md5(implode(',', $skusArr));
+            $pricesBySku = \Illuminate\Support\Facades\Cache::remember($cacheKey, 30, function() use ($connectionsToTry, $candidateCols, $skusArr) {
+                $result = collect();
+                foreach ($connectionsToTry as $connName) {
+                    try {
+                        $connection = $connName ? DB::connection($connName) : DB::connection();
+                        $qb = $connection->table('productoxproveedor');
+
+                        $cols = [];
+                        try { $cols = $connection->getSchemaBuilder()->getColumnListing('productoxproveedor'); } catch (\Throwable $_) { $cols = []; }
+
+                        if (in_array('sku', $cols)) {
+                            $rows = $qb->whereIn('sku', $skusArr)->get();
+                        } elseif (in_array('producto_id', $cols) || in_array('product_id', $cols)) {
+                            $skuToId = [];
+                            try {
+                                $prodRows = $connection->table('productos')->whereIn('sku', $skusArr)->select('id','sku')->get();
+                                foreach ($prodRows as $pr) { $skuToId[(string)$pr->sku] = $pr->id; }
+                                $ids = array_values($skuToId);
+                                if (!empty($ids)) {
+                                    $colId = in_array('producto_id', $cols) ? 'producto_id' : 'product_id';
+                                    $rows = $qb->whereIn($colId, $ids)->get();
+                                } else {
+                                    $rows = collect();
+                                }
+                            } catch (\Throwable $_) {
+                                $rows = collect();
+                            }
+                        } else {
+                            $rows = $qb->get();
+                        }
+
+                        if (empty($rows) || $rows->isEmpty()) continue;
+
+                        foreach ($rows as $r) {
+                            $rArr = (array)$r;
+                            $found = null;
+                            foreach ($candidateCols as $c) {
+                                if (array_key_exists($c, $rArr) && is_numeric($rArr[$c])) { $found = $rArr[$c]; break; }
+                            }
+                            if ($found === null) {
+                                foreach ($rArr as $k => $v) {
+                                    if (in_array($k, ['sku','producto_id','product_id'])) continue;
+                                    if (is_numeric($v)) { $found = $v; break; }
+                                }
+                            }
+                            if (array_key_exists('sku', $rArr)) {
+                                $key = (string)$rArr['sku'];
+                            } elseif (array_key_exists('producto_id', $rArr) || array_key_exists('product_id', $rArr)) {
+                                $prodId = $rArr['producto_id'] ?? ($rArr['product_id'] ?? null);
+                                $key = null;
+                                if ($prodId) {
+                                    try {
+                                        $prod = $connection->table('productos')->where('id', $prodId)->select('sku')->first();
+                                        if ($prod && isset($prod->sku)) $key = (string)$prod->sku;
+                                    } catch (\Throwable $_) { $key = null; }
+                                }
+                                if ($key === null) continue;
+                            } else {
+                                continue;
+                            }
+                            $result[$key] = $found;
+                        }
+
+                        if (!empty($result)) break;
+                    } catch (\Throwable $e) {
+                        Log::debug('ArticulosController: error leyendo productoxproveedor en ' . ($connName ?? 'default'), ['msg'=>$e->getMessage()]);
+                        continue;
+                    }
+                }
+                return $result;
+            });
+        } catch (\Throwable $_) {
+            $pricesBySku = collect($pricesBySku);
+        }
 
         $rowsHtml = '';
         $remoteSkus = collect($productos->pluck('sku'))->map(function($s){ return (string) $s; })->all();
@@ -256,6 +337,7 @@ class ArticulosController extends Controller
                             . csrf_field()
                             . '<input type="hidden" name="inventario_id" value="' . e($inv->inventario_id) . '">'
                             . '<input type="hidden" name="per_page" value="' . e($perPage) . '">'
+                            . '<input type="hidden" name="page" value="' . e($productos->currentPage()) . '">'
                             . '<input type="hidden" name="category" value="' . e($category) . '">'
                             . '<input type="hidden" name="search" value="' . e($search) . '">'
                             . '<button type="submit" class="btn-icon delete-location" title="Eliminar ubicación" aria-label="Eliminar ubicación">'
@@ -275,7 +357,7 @@ class ArticulosController extends Controller
                                         . '<td>' . e($bodegaSel ?: '-') . '</td>'
                                         . '<td>' . e($ubicacionSel ?: '-') . '</td>'
                                         . '<td>' . e(ucfirst($estatus)) . '</td>'
-                                        . '<td><input type="text" disabled class="price-input" data-sku="' . e($p->sku) . '" value="' . e($priceDisplay) . '" style="width:90px; text-align:right;" /></td>'
+                                        . '<td class="price-display" data-sku="' . e($p->sku) . '" style="width:90px; text-align:right;">' . e($priceDisplay) . '</td>'
                                         . '<td>' . e($stock) . '</td>'
                                         . '<td>'
                                             . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
@@ -354,7 +436,7 @@ class ArticulosController extends Controller
                                         . '<td>' . e($bodegaSel ?: '-') . '</td>'
                                         . '<td>' . e($ubicacionSel ?: '-') . '</td>'
                                         . '<td>' . e(ucfirst($estatus)) . '</td>'
-                                        . '<td><input type="text" disabled class="price-input" data-sku="' . e($loc->sku) . '" value="' . e($priceDisplayLocal) . '" style="width:90px; text-align:right;" /></td>'
+                                        . '<td class="price-display" data-sku="' . e($loc->sku) . '" style="width:90px; text-align:right;">' . e($priceDisplayLocal) . '</td>'
                                         . '<td>' . e($stock) . '</td>'
                                         . '<td>'
                                             . '<div class="actions" style="display:inline-flex; gap:8px; align-items:center;">'
@@ -425,8 +507,9 @@ class ArticulosController extends Controller
             'selectedCategory' => $category,
             'search' => $search,
             'status' => session('status'),
-            'canExport' => ($isAdmin || $isHseq || $isTalento),
-                    'usadosHtml' => $usadosHtml,
+            'canExport' => $canExportImport,
+            'canImport' => $canExportImport,
+            'usadosHtml' => $usadosHtml,
         ]);
     }
 
@@ -503,6 +586,9 @@ class ArticulosController extends Controller
             'estatus' => ['nullable','in:disponible,perdido,prestado,destruido'],
             'stock' => ['required','integer','min:0'],
             'per_page' => ['nullable','integer'],
+            'page' => ['nullable','integer'],
+            'category' => ['nullable','string','max:255'],
+            'search' => ['nullable','string','max:255'],
             'from_status' => ['nullable','in:disponible,perdido,prestado,destruido'],
             'new_location' => ['nullable','in:1'],
             'by_name' => ['nullable','in:1']
@@ -651,8 +737,12 @@ class ArticulosController extends Controller
             }
         }
 
-        return redirect()->route('articulos.index', ['per_page' => (int) ($data['per_page'] ?? 20)])
-            ->with('status', 'Inventario actualizado');
+        return redirect()->route('articulos.index', [
+            'per_page' => (int) ($data['per_page'] ?? 20),
+            'page' => (int) ($data['page'] ?? 1),
+            'category' => $data['category'] ?? '',
+            'search' => $data['search'] ?? '',
+        ])->with('status', 'Inventario actualizado');
     }
 
     /**
@@ -1002,6 +1092,7 @@ class ArticulosController extends Controller
         $data = $request->validate([
             'inventario_id' => ['required','integer'],
             'per_page' => ['nullable','integer'],
+            'page' => ['nullable','integer'],
             'category' => ['nullable','string'],
             'search' => ['nullable','string']
         ]);
@@ -1030,6 +1121,7 @@ class ArticulosController extends Controller
             }
             return redirect()->route('articulos.index', [
                 'per_page' => (int)($data['per_page'] ?? 20),
+                'page' => (int) ($data['page'] ?? 1),
                 'category' => $data['category'] ?? '',
                 'search' => $data['search'] ?? ''
             ])->with('status', 'Ubicación eliminada');
@@ -1055,22 +1147,79 @@ class ArticulosController extends Controller
             abort(403, 'No autorizado');
         }
 
+        $category = trim((string)$request->get('category', ''));
+        $search = trim((string)$request->get('search', ''));
+        $exportType = in_array($request->get('export_type'), ['template', 'full']) ? $request->get('export_type') : 'full';
+
         // Determinar rol para aplicar filtros de categoría similares a la vista
         $isAdmin = $this->matchesRoleStringArray($roles, ['administrador','admin']);
         $isHseq = $this->matchesRoleStringArray($roles, ['hseq']);
         $isTalento = $this->matchesRoleStringArray($roles, ['talento','talentohumano']);
 
+        $productQuery = Producto::query();
+        if (!$isAdmin) {
+            $patterns = [];
+            if ($isHseq) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
+            } elseif ($isTalento) {
+                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
+            }
+
+            if (!empty($patterns)) {
+                $productQuery->where(function($q) use ($patterns) {
+                    foreach ($patterns as $p) {
+                        if ($p !== '') {
+                            $q->orWhere('categoria_produc', 'like', '%' . $p . '%');
+                        }
+                    }
+                });
+            }
+        }
+
+        if ($category !== '') {
+            $productQuery->where('categoria_produc', $category);
+        }
+
+        if ($search !== '') {
+            $productQuery->where(function($q) use ($search) {
+                $q->where('name_produc', 'like', '%' . $search . '%')
+                  ->orWhere('sku', 'like', '%' . $search . '%');
+            });
+        }
+
+        $skuList = $productQuery->pluck('sku')->map(function($s){ return (string)$s; })->unique()->values()->all();
         $out = collect();
 
-        if ($isAdmin) {
-            // traer inventarios con ubicaciones (todos)
-            $rows = DB::connection('mysql_third')
-                ->table('inventarios as i')
-                ->leftJoin('ubicaciones as u', 'u.id', '=', 'i.ubicaciones_id')
-                ->select('i.sku', 'i.stock', 'i.estatus', 'u.bodega', 'u.ubicacion')
-                ->orderBy('i.sku')
-                ->get();
+        $inventoryQuery = DB::connection('mysql_third')
+            ->table('inventarios as i')
+            ->leftJoin('ubicaciones as u', 'u.id', '=', 'i.ubicaciones_id')
+            ->select('i.id as inventario_id', 'i.ubicaciones_id', 'i.sku', 'i.stock', 'i.estatus', 'u.bodega', 'u.ubicacion')
+            ->orderBy('i.sku');
 
+        if (!$isAdmin || $category !== '' || $search !== '') {
+            $inventoryQuery->whereIn('i.sku', $skuList);
+        }
+
+        $rows = $inventoryQuery->get();
+        
+        if ($exportType === 'template') {
+            // Plantilla simple: solo SKU y stock
+            foreach ($rows as $r) {
+                $sku = (string)($r->sku ?? '');
+                $out->push([
+                    'sku' => $sku,
+                    'stock' => (int)($r->stock ?? 0),
+                ]);
+            }
+            $rowsForExport = $out->map(function($i){
+                return [
+                    $i['sku'],
+                    $i['stock']
+                ];
+            });
+            return Excel::download(new InventariosExport(collect($rowsForExport), ['sku', 'stock']), 'plantilla_stock.xlsx');
+        } else {
+            // Inventario completo con todos los detalles
             foreach ($rows as $r) {
                 $sku = (string)($r->sku ?? '');
                 $prod = null;
@@ -1091,6 +1240,8 @@ class ArticulosController extends Controller
                     } catch (\Throwable $__) { }
                 }
                 $out->push([
+                    'inventario_id' => $r->inventario_id ?? '',
+                    'ubicaciones_id' => $r->ubicaciones_id ?? '',
                     'sku' => $sku,
                     'name' => $name,
                     'categoria' => $cat,
@@ -1101,113 +1252,113 @@ class ArticulosController extends Controller
                     'price' => is_null($price) ? '' : (string)$price,
                 ]);
             }
+
+            $rowsForExport = $out->map(function($i){
+                return [
+                    $i['inventario_id'] ?? '',
+                    $i['ubicaciones_id'] ?? '',
+                    $i['sku'],
+                    $i['name'],
+                    $i['categoria'],
+                    $i['bodega'],
+                    $i['ubicacion'],
+                    $i['estatus'],
+                    $i['stock'],
+                    $i['price']
+                ];
+            });
+
+            $headings = ['inventario_id', 'ubicaciones_id', 'sku', 'nombre', 'categoria', 'bodega', 'ubicacion', 'estatus', 'stock', 'precio'];
+            return Excel::download(new InventariosExport(collect($rowsForExport), $headings), 'inventario.xlsx');
+        }
+    }
+
+    /**
+     * Importar inventarios desde Excel para actualizar stock, ubicación y otros campos.
+     */
+    public function importInventario(Request $request)
+    {
+        $user = session('auth.user');
+        $roles = $this->collectRoleStringsFromUser($user);
+        $allowed = $this->matchesRoleStringArray($roles, ['administrador','admin','hseq','talento','talentohumano']);
+        if (!$allowed) {
+            abort(403, 'No autorizado');
+        }
+
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv']
+        ]);
+
+        try {
+            $mode = in_array($request->input('mode'), ['add','set']) ? $request->input('mode') : 'set';
+            Excel::import(new InventariosImport($mode), $request->file('file'));
+            $sync = $this->syncProductosStockFromInventarios();
+
+            return redirect()->back()->with('status', 'Inventario importado con éxito. Stock sincronizado en productos (' . $sync['updated'] . ' actualizados, ' . $sync['zeroed'] . ' en cero).');
+        } catch (\Throwable $e) {
+            Log::error('Error importando inventario', ['error' => $e->getMessage()]);
+            return redirect()->back()->with('error', 'Ocurrió un error al importar el inventario');
+        }
+    }
+
+    private function syncProductosStockFromInventarios(): array
+    {
+        $prodModel = new Producto();
+        $prodConn = $prodModel->getConnectionName() ?: config('database.default');
+        $prodTable = $prodModel->getTable();
+
+        $totales = DB::connection('mysql_third')
+            ->table('inventarios')
+            ->select('sku', DB::raw('SUM(stock) as total_stock'))
+            ->groupBy('sku')
+            ->get();
+
+        $updated = 0;
+        $seenSkus = [];
+
+        foreach ($totales as $row) {
+            $sku = (string) ($row->sku ?? '');
+            if ($sku === '') {
+                continue;
+            }
+
+            $affected = DB::connection($prodConn)
+                ->table($prodTable)
+                ->where('sku', $sku)
+                ->update(['stock_produc' => (int) ($row->total_stock ?? 0)]);
+
+            $updated += (int) $affected;
+            $seenSkus[] = $sku;
+        }
+
+        $seenSkus = array_values(array_unique($seenSkus));
+
+        // Productos sin fila en inventarios deben quedar con stock 0 para mantener consistencia.
+        $zeroed = 0;
+        if (empty($seenSkus)) {
+            $zeroed = (int) DB::connection($prodConn)
+                ->table($prodTable)
+                ->where('stock_produc', '!=', 0)
+                ->update(['stock_produc' => 0]);
         } else {
-            // Para roles no-admin, incluir TODOS los SKU pertenecientes a las categorías permitidas
-            $patterns = [];
-            if ($isHseq) {
-                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
-            } elseif ($isTalento) {
-                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
-            }
-
-            $skuList = collect();
-            if (!empty($patterns)) {
-                // traer desde tabla externa productos
-                $prodQuery = Producto::query();
-                $prodQuery->where(function($q) use ($patterns) {
-                    foreach ($patterns as $p) { if ($p !== '') $q->orWhere('categoria_produc', 'like', '%' . $p . '%'); }
-                });
-                $skuList = $skuList->merge($prodQuery->pluck('sku')->map(function($s){ return (string)$s; }));
-
-                // traer locales desde GestionArticulos
-                $extraQuery = GestionArticulos::query();
-                $extraQuery->where(function($q) use ($patterns) {
-                    foreach ($patterns as $p) { if ($p !== '') $q->orWhere('categoria', 'like', '%' . $p . '%'); }
-                });
-                $skuList = $skuList->merge($extraQuery->pluck('sku')->map(function($s){ return (string)$s; }));
-            }
-
-            $skuList = $skuList->unique()->values()->all();
-
-            foreach ($skuList as $sku) {
-                $prod = Producto::where('sku', $sku)->first();
-                $name = $prod ? ($prod->name_produc ?? '') : (string) (GestionArticulos::where('sku', $sku)->value('nombre_articulo') ?? '');
-                $cat = $prod ? ($prod->categoria_produc ?? '') : (string) (GestionArticulos::where('sku', $sku)->value('categoria') ?? '');
-
-                // obtener stock agregado y una bodega/ubicacion representativa si existe
-                $invRows = DB::connection('mysql_third')->table('inventarios as i')
-                    ->leftJoin('ubicaciones as u','u.id','=','i.ubicaciones_id')
-                    ->where('i.sku', $sku)
-                    ->select('i.stock','i.estatus','u.bodega','u.ubicacion')
-                    ->get();
-                $stockSum = 0;
-                $bodega = '';
-                $ubicacion = '';
-                $estatus = '';
-                if ($invRows && !$invRows->isEmpty()) {
-                    foreach ($invRows as $ir) { $stockSum += (int)($ir->stock ?? 0); }
-                    $first = $invRows->first();
-                    $bodega = $first->bodega ?? '';
-                    $ubicacion = $first->ubicacion ?? '';
-                    $estatus = $first->estatus ?? '';
-                }
-
-                // precio
-                $price = null;
-                try {
-                    $p = DB::connection('mysql_second')->table('productoxproveedor')->where('sku', $sku)->select('price_produc')->first();
-                    if ($p && isset($p->price_produc)) $price = $p->price_produc;
-                } catch (\Throwable $_) {
-                    try {
-                        $prodRow = DB::connection('mysql_second')->table('productos')->where('sku', $sku)->select('id')->first();
-                        if ($prodRow && isset($prodRow->id)) {
-                            $p2 = DB::connection('mysql_second')->table('productoxproveedor')->where('producto_id', $prodRow->id)->select('price_produc')->first();
-                            if ($p2 && isset($p2->price_produc)) $price = $p2->price_produc;
-                        }
-                    } catch (\Throwable $__) { }
-                }
-
-                $out->push([
-                    'sku' => $sku,
-                    'name' => $name,
-                    'categoria' => $cat,
-                    'bodega' => $bodega,
-                    'ubicacion' => $ubicacion,
-                    'estatus' => $estatus,
-                    'stock' => (int)$stockSum,
-                    'price' => is_null($price) ? '' : (string)$price,
-                ]);
-            }
+            $zeroed = (int) DB::connection($prodConn)
+                ->table($prodTable)
+                ->whereNotIn('sku', $seenSkus)
+                ->where('stock_produc', '!=', 0)
+                ->update(['stock_produc' => 0]);
         }
 
-        // Si el usuario no es admin, filtrar por categorías permitidas según rol
-        if (!$isAdmin) {
-            $patterns = [];
-            if ($isHseq) {
-                $patterns = array_map('trim', explode(',', config('vpl.role_filters.hseq')));
-            } elseif ($isTalento) {
-                $patterns = array_map('trim', explode(',', config('vpl.role_filters.talento')));
-            }
-            if (!empty($patterns)) {
-                $out = $out->filter(function($row) use ($patterns) {
-                    $cat = (string)($row['categoria'] ?? '');
-                    foreach ($patterns as $p) {
-                        if ($p === '') continue;
-                        if (stripos($cat, $p) !== false) return true;
-                    }
-                    return false;
-                })->values();
-            }
-        }
+        Log::info('Sincronizacion global productos.stock_produc desde inventarios', [
+            'productos_connection' => $prodConn,
+            'updated' => $updated,
+            'zeroed' => $zeroed,
+            'sku_totales_inventario' => count($seenSkus),
+        ]);
 
-        // transformar a colección de filas simples (arrays en orden de headings)
-        $rowsForExport = $out->map(function($i){
-            return [
-                $i['sku'], $i['name'], $i['categoria'], $i['bodega'], $i['ubicacion'], $i['estatus'], $i['stock'], $i['price']
-            ];
-        });
-
-        return Excel::download(new InventariosExport(collect($rowsForExport)), 'inventario.xlsx');
+        return [
+            'updated' => $updated,
+            'zeroed' => $zeroed,
+        ];
     }
 
     /**

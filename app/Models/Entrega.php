@@ -34,7 +34,9 @@ class Entrega extends Model
         'usuarios_id',
         'sub_area_id',
         'recepciones_id',
-        'recibido'
+        'recibido',
+        'comprobante_path',
+        'firma_path'
     ];
 
     /**

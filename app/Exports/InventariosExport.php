@@ -13,10 +13,12 @@ use Illuminate\Support\Collection;
 class InventariosExport implements FromCollection, WithHeadings, ShouldAutoSize, WithColumnWidths, WithStyles
 {
     protected $rows;
+    protected $customHeadings;
 
-    public function __construct(Collection $rows)
+    public function __construct(Collection $rows, $headings = null)
     {
         $this->rows = $rows;
+        $this->customHeadings = $headings;
     }
 
     public function collection()
@@ -26,7 +28,13 @@ class InventariosExport implements FromCollection, WithHeadings, ShouldAutoSize,
 
     public function headings(): array
     {
+        if ($this->customHeadings !== null) {
+            return is_array($this->customHeadings) ? $this->customHeadings : [];
+        }
+        
         return [
+            'Inventario ID',
+            'Ubicacion ID',
             'SKU',
             'Nombre',
             'Categoria',
@@ -43,15 +51,39 @@ class InventariosExport implements FromCollection, WithHeadings, ShouldAutoSize,
      */
     public function columnWidths(): array
     {
+        $columns = $this->customHeadings ?? [
+            'Inventario ID',
+            'Ubicacion ID',
+            'SKU',
+            'Nombre',
+            'Categoria',
+            'Bodega',
+            'Ubicacion',
+            'Estatus',
+            'Stock',
+            'Precio'
+        ];
+        
+        $count = count($columns);
+        $widths = [];
+        
+        if ($count === 2 && isset($columns[0]) && strtolower(str_replace(' ', '', $columns[0])) === 'sku') {
+            // Plantilla simple: SKU, Stock
+            return ['A' => 15, 'B' => 10];
+        }
+        
+        // Inventario completo
         return [
-            'A' => 15, // SKU
-            'B' => 50, // Nombre (wrap enabled)
-            'C' => 25, // Categoria
-            'D' => 18, // Bodega
-            'E' => 18, // Ubicacion
-            'F' => 15, // Estatus
-            'G' => 10, // Stock
-            'H' => 14, // Precio
+            'A' => 12, // Inventario ID
+            'B' => 12, // Ubicacion ID
+            'C' => 15, // SKU
+            'D' => 50, // Nombre (wrap enabled)
+            'E' => 25, // Categoria
+            'F' => 18, // Bodega
+            'G' => 18, // Ubicacion
+            'H' => 15, // Estatus
+            'I' => 10, // Stock
+            'J' => 14, // Precio
         ];
     }
 

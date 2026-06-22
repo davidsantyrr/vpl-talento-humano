@@ -47,6 +47,15 @@
 					<option value="entrega" {{ request('tipo_registro') == 'entrega' ? 'selected' : '' }}>Solo Entregas</option>
 					<option value="recepcion" {{ request('tipo_registro') == 'recepcion' ? 'selected' : '' }}>Solo Recepciones</option>
 				</select>
+				<!-- Nuevo filtro por subtipo/tipo de entrega -->
+				<select name="tipo" style="margin-left:6px;">
+					<option value="">Todos los subtipos</option>
+					<option value="primera vez" {{ request('tipo') == 'primera vez' ? 'selected' : '' }}>Primera vez</option>
+					<option value="periodica" {{ request('tipo') == 'periodica' ? 'selected' : '' }}>Periódica</option>
+					<option value="cambio" {{ request('tipo') == 'cambio' ? 'selected' : '' }}>Por cambio</option>
+					<option value="recepcion prestamo" {{ request('tipo') == 'recepcion prestamo' ? 'selected' : '' }}>Recepción de préstamo</option>
+					<option value="recepcion cambio" {{ request('tipo') == 'recepcion cambio' ? 'selected' : '' }}>Recepción de cambio</option>
+				</select>
 				<button class="btn primary" type="submit">Filtrar</button>
 				<a class="btn secondary" href="{{ route('historial.unificado') }}">Limpiar</a>
 			</form>

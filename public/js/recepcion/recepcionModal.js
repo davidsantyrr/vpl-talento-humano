@@ -1,4 +1,3 @@
-// filepath: c:\laragon\www\vpl-talento-humano\public\js\recepcion\recepcionModal.js
 (function(){
     const cfg = window.RecepcionPageConfig || {};
     const allProducts = Array.isArray(cfg.allProducts) ? cfg.allProducts : [];
@@ -36,10 +35,10 @@
         const isPrestamo = (tipo === 'prestamo');
 
         if (addBtnTrigger) {
-            addBtnTrigger.style.display = isPrestamo ? 'none' : '';
+            addBtnTrigger.style.display = isPrestamo ? '' : 'none';
         }
         if (btnSeleccionarEntrega) {
-            btnSeleccionarEntrega.style.display = isPrestamo ? '' : 'none';
+            btnSeleccionarEntrega.style.display = isPrestamo ? 'none' : '';
         }
     }
 
@@ -63,25 +62,67 @@
     }
 
     function renderFormTable(){
-        if (!tableBody) return;
+        // Ensure we have the table body
+        if (!tableBody) tableBody = document.querySelector('#itemsTable tbody');
+        if (!tableBody) { console.warn('renderFormTable: table body not found'); return; }
         tableBody.innerHTML = items.map((it, idx) => 
             `<tr data-idx="${idx}"><td>${escapeHtml(it.sku)} — ${escapeHtml(it.name)}</td><td style="text-align:center;">${it.cantidad}</td><td><button type="button" class="btn btn-sm btn-danger" data-idx="${idx}">Quitar</button></td></tr>`
         ).join('');
-        
-        Array.from(tableBody.querySelectorAll('button[data-idx]')).forEach(btn => {
-            btn.addEventListener('click', () => {
-                const i = Number(btn.dataset.idx);
-                items.splice(i, 1);
-                syncFormTable();
+
+        // Use event delegation for remove buttons
+        if (!tableBody._hasDelegation) {
+            tableBody.addEventListener('click', function(ev){
+                const btn = ev.target.closest && ev.target.closest('button[data-idx]');
+                if (!btn) return;
+                const i = Number(btn.getAttribute('data-idx'));
+                if (!Number.isNaN(i)) {
+                    items.splice(i, 1);
+                    syncFormTable();
+                }
             });
-        });
-        
+            tableBody._hasDelegation = true;
+        }
+
         if (itemsField) itemsField.value = JSON.stringify(items);
     }
 
     function syncFormTable(){
         renderFormTable();
     }
+
+    // Exponer función para actualizar items desde otros módulos (por ejemplo, al seleccionar una entrega)
+    window.setRecepcionItems = function(newItems){
+        try {
+            if (!Array.isArray(newItems)) return;
+            // Completar nombre con catálogo `allProducts` si hace falta
+            const lookup = function(sku){
+                try{
+                    const key = String(sku || '').trim().toLowerCase();
+                    const found = allProducts.find(p => String(p.sku || '').trim().toLowerCase() === key);
+                    if (found) return found.name || found.name_produc || '';
+                } catch(e){}
+                return '';
+            };
+            items = newItems.map(it => ({
+                sku: it.sku,
+                name: (it.name || it.name_produc || lookup(it.sku) || ''),
+                cantidad: Number((it.cantidad ?? it.qty) || 1)
+            }));
+            console.debug('setRecepcionItems called - items count:', items.length, items);
+            if (itemsField) itemsField.value = JSON.stringify(items);
+            syncFormTable();
+        } catch(e){ console.error('setRecepcionItems error', e); }
+    };
+
+    // Escuchar evento global por si otros módulos despachan items (fallback)
+    window.addEventListener('recepcion.items', function(ev){
+        try {
+            const payload = ev && ev.detail ? ev.detail : [];
+            if (Array.isArray(payload)) {
+                window.setRecepcionItems(payload);
+            }
+        } catch (err) { console.error('Error handling recepcion.items event', err); }
+    });
 
     // Poblar select con productos desde cargo_productos filtrado por operación
     async function populateSelect(){
@@ -127,7 +168,7 @@
     }
 
     // Abrir modal
-    window.abrirModalRecepcion = async function(){
+    window.abrirModalElementosRecepcion = async function(){
         if (!modal) return;
         tempItems = items.slice();
         modal.classList.add('active');
@@ -145,7 +186,7 @@
     };
 
     // Cerrar modal
-    window.cerrarModalRecepcion = function(){
+    window.cerrarModalElementosRecepcion = function(){
         if (!modal) return;
         tempItems = [];
         modal.classList.remove('active');
@@ -325,7 +366,7 @@
     // Vincular botón de añadir elemento
     if (addBtnTrigger) {
         addBtnTrigger.addEventListener('click', function(){
-            abrirModalRecepcion();
+            abrirModalElementosRecepcion();
         });
     }
     
