@@ -229,7 +229,16 @@ class FormularioEntregasController extends Controller
 					$filename = 'firma_entrega_' . uniqid() . '.' . $ext;
 					$filePath = $dir . DIRECTORY_SEPARATOR . $filename;
 					file_put_contents($filePath, $bin);
-					$entregaData['firma_path'] = 'firmas_entregas/' . $filename;
+					// Sólo añadir firma_path al array de datos si la columna existe en la tabla entregas.
+					try {
+						if (Schema::hasColumn('entregas', 'firma_path')) {
+							$entregaData['firma_path'] = 'firmas_entregas/' . $filename;
+						}
+					} catch (\Throwable $schemaEx) {
+						// En entornos de testing o si la conexión/migración no incluye la columna,
+						// omitimos guardar la ruta en la base de datos. La firma queda en disco para
+						// su inclusión en los documentos generados.
+					}
 				} catch (\Throwable $e) {
 					// ignore if save fails, no firma_path stored
 				}
